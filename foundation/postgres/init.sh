@@ -1,0 +1,31 @@
+#!/bin/bash
+set -e
+
+LIQUIBASE_PASSWORD=$(cat /run/secrets/liquibase-password)
+APP_PASSWORD=$(cat /run/secrets/app-password)
+
+psql -v ON_ERROR_STOP=1 --username postgres <<-EOSQL
+  CREATE USER liquibase WITH PASSWORD '${LIQUIBASE_PASSWORD}';
+  CREATE USER app_user WITH PASSWORD '${APP_PASSWORD}';
+
+  GRANT ALL PRIVILEGES ON DATABASE "ecoDB" TO liquibase;
+
+  \c "ecoDB";
+
+  GRANT ALL ON SCHEMA public TO liquibase;
+
+  ALTER DEFAULT PRIVILEGES IN SCHEMA public
+  GRANT ALL ON TABLES TO liquibase;
+
+  ALTER DEFAULT PRIVILEGES IN SCHEMA public
+  GRANT ALL ON SEQUENCES TO liquibase;
+
+  GRANT CONNECT ON DATABASE "ecoDB" TO app_user;
+  GRANT USAGE ON SCHEMA public TO app_user;
+
+  ALTER DEFAULT PRIVILEGES IN SCHEMA public
+  GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO app_user;
+
+  ALTER DEFAULT PRIVILEGES IN SCHEMA public
+  GRANT USAGE, SELECT ON SEQUENCES TO app_user;
+EOSQL

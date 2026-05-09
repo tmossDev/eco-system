@@ -1,0 +1,5 @@
+FROM liquibase/liquibase:4.27
+
+COPY . .
+
+CMD ["bash", "-c", "liquibase --defaultsFile=liquibase.properties --password=$(cat /run/secrets/liquibase-password) update"]

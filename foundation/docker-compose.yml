@@ -1,0 +1,43 @@
+services:
+  db:
+    image: postgres:15
+    restart: always
+    user: postgres
+    secrets:
+      - db-password
+      - liquibase-password
+      - app-password
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./postgres/init.sh:/docker-entrypoint-initdb.d/init.sh:ro
+    environment:
+      POSTGRES_DB: ecoDB
+      POSTGRES_PASSWORD_FILE: /run/secrets/db-password
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  liquibase:
+    build:
+      context: ./liquibase
+      dockerfile: dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+    secrets:
+      - liquibase-password
+
+volumes:
+  db-data:
+
+secrets:
+  db-password:
+    file: ./postgres/config/password.txt
+  liquibase-password:
+    file: ./postgres/config/liquibase.txt
+  app-password:
+    file: ./postgres/config/app.txt
