@@ -1,5 +1,9 @@
 # Project Change Log
 
+## v1.3.0 - (2 Changes)
+- Added user-service controller for user management external calls.
+- Added user-service routes for user management external calls using user-service controller.
+
 ## v1.2.0 - (4 Changes)
 - Added user package for user management code reuse.
 - Added user-gateway controller for user management external calls.

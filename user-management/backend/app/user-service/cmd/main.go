@@ -6,31 +6,31 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
-	"github.com/golang-jwt/jwt/v4"
 	"github.com/kataras/iris/v12"
 	"github.com/kataras/iris/v12/middleware/accesslog"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/config/aws"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/config/local"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/config/types"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/constants"
-	"tmossDev.github.com/eco-system/shared-components/backend/package/datastore/postgres"
+	storePostgres "tmossDev.github.com/eco-system/shared-components/backend/package/datastore/postgres"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/env"
 	envConstants "tmossDev.github.com/eco-system/shared-components/backend/package/env/constants"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/logger"
-	"tmossDev.github.com/eco-system/shared-components/backend/package/transport/http"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/transport/http/middleware"
-	httpTypes "tmossDev.github.com/eco-system/shared-components/backend/package/transport/http/types"
+	"tmossDev.github.com/eco-system/shared-components/backend/package/validator"
+	"tmossDev.github.com/eco-system/user-management/backend/app/user-service/routes"
+	"tmossDev.github.com/eco-system/user-management/backend/package/user/repository/postgres"
+	"tmossDev.github.com/eco-system/user-management/backend/package/user/service"
 )
 
-var sqlStoreConn *postgres.PostgresDataStore
+var sqlStore *storePostgres.PostgresDataStore
 
 var config *types.ConfigModel
 
 var axxessLogs *accesslog.AccessLog
 
-var irisServer *iris.Application
+var irisApp *iris.Application
 
 var port string
 
@@ -46,6 +46,8 @@ func main() {
 		return
 	}
 
+	logger.Info(constants.DefaultRequestId, "Set up complete")
+
 	go start()
 
 	<-ctx.Done()
@@ -56,17 +58,13 @@ func main() {
 
 func shutdown() {
 	//Close Sql Conn to DB
-	writerCloseError, readerCloseError := sqlStoreConn.Close()
-	if writerCloseError != nil {
-		logger.Errorf(constants.CTXRequestIdKey, "Unable to close DB writer: %s", writerCloseError.Error())
-	}
-	if readerCloseError != nil {
-		logger.Errorf(constants.CTXRequestIdKey, "Unable to close DB reader: %s", writerCloseError.Error())
+	err := sqlStore.Close()
+	if err != nil {
+		logger.Errorf(constants.CTXRequestIdKey, "Unable to close reader or writer DB: %s", err.Error())
 	}
 
 	//Close Accesslogs to Server
-	err := axxessLogs.Close()
-
+	err = axxessLogs.Close()
 	if err != nil {
 		logger.Errorf(constants.CTXRequestIdKey, "Unable to stop HTTP Server gracefully: %s", err.Error())
 	}
@@ -85,37 +83,41 @@ func setup() error {
 		return fmt.Errorf("unable to load secret config: %s, exiting", err.Error())
 	}
 
-	sqlStoreConn = postgres.NewPostgresDataStore(config.Database)
-	cErr := sqlStoreConn.Connect()
+	sqlStore = storePostgres.NewPostgresDataStore(config.Database)
+	cErr := sqlStore.Connect()
 	if cErr != nil {
 		return fmt.Errorf("unable to connect to db: %s, exiting", cErr.Error())
 	}
 
-	irisServer = iris.New()
+	irisApp = iris.New()
 	axxessLogs = middleware.MakeAccessLog()
 
-	config := httpTypes.JWTConfig{
-		SecretKey:     []byte("super_duper_secret_key"), // Should be loaded from environment variables
-		TokenExpiry:   72 * time.Hour,
-		SigningMethod: jwt.SigningMethodHS256,
-		TokenPrefix:   "Bearer ",
-	}
-	jwtFunction := http.NewJWTMiddleware(config)
-
-	irisServer.Use(
+	irisApp.Use(
 		axxessLogs.Handler,
 		middleware.CaselessMatcherMiddleware,
 		middleware.RequestIDMiddleware,
-		jwtFunction([]string{"/login", "/logout", "/refresh", "/health"}),
 	)
 
 	port = env.Getenv(envConstants.Port, envConstants.DefaultPort)
+
+	validater := validator.NewValidator()
+	logger.Info(constants.CTXRequestIdKey, "Set up validator...")
+
+	userRepo := postgres.NewPostgresUserRepository(sqlStore)
+	logger.Info(constants.CTXRequestIdKey, "Set up repositories...")
+
+	publicUserService := service.NewPublicService(validater, userRepo)
+	privateUserService := service.NewPrivateService(validater, userRepo)
+	logger.Info(constants.CTXRequestIdKey, "Set up services...")
+
+	routes.Setup(irisApp, publicUserService, privateUserService)
+	logger.Info(constants.CTXRequestIdKey, "Set up routes...")
 
 	return nil
 }
 
 func start() {
-	if err := irisServer.Listen(fmt.Sprintf(":%s", port)); err != nil {
+	if err := irisApp.Listen(fmt.Sprintf(":%s", port)); err != nil {
 		logger.Errorf("failed to start server reason: %s", err.Error())
 	}
 }
