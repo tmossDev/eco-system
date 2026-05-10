@@ -1,5 +1,11 @@
 # Project Change Log
 
+## v1.2.0 - (4 Changes)
+- Added user package for user management code reuse.
+- Added user-gateway controller for user management external calls.
+- Added user-gateway middleware for user management external calls.
+- Added user-gateway routes for user management external calls using user-gateway controller.
+
 ## v1.1.0 - (4 Changes)
 - Added shared-components for common components.
 - Added GoLang common libraries to shared-components/backend/lib.
