@@ -1,5 +1,12 @@
 # Project Change Log
 
+## v1.4.0 - (5 Changes)
+- Added pnpm for frontend package management.
+- Added user-management web-app which is just hello world angular project
+- Added angular design system for all angular web-apps in mono repo.
+- Added button to angular design system.
+- Added storybook for angular design system.
+
 ## v1.3.0 - (2 Changes)
 - Added user-service controller for user management external calls.
 - Added user-service routes for user management external calls using user-service controller.
