@@ -1,0 +1,37 @@
+{
+  "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
+  "version": 1,
+  "cli": {
+    "packageManager": "pnpm",
+    "analytics": "193c01d7-5762-4b24-a53b-146e58325b64"
+  },
+  "newProjectRoot": "ds",
+  "projects": {
+    "button": {
+      "projectType": "library",
+      "root": "ds/button",
+      "sourceRoot": "ds/button/src",
+      "prefix": "lib",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:ng-packagr",
+          "configurations": {
+            "production": {
+              "tsConfig": "ds/button/tsconfig.lib.prod.json"
+            },
+            "development": {
+              "tsConfig": "ds/button/tsconfig.lib.json"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "tsConfig": "ds/button/tsconfig.spec.json"
+          }
+        }
+      }
+    }
+  }
+}

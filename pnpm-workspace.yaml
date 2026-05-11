@@ -1,0 +1,4 @@
+packages:
+  - "user-management/frontend/app/*"
+  - "shared-components/frontend/package/*"
+  - "shared-components/frontend/app/*"

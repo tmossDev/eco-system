@@ -1,0 +1,17 @@
+{
+  "extends": "../tsconfig.storybook.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "moduleResolution": "bundler"
+  },
+  "exclude": ["../src/test.ts", "../src/**/*.spec.ts"],
+  "include": [
+    "../src/**/*.stories.*",
+    "./preview.ts",
+    "../../../package/design-system/**/*.component.ts",
+    "../../../package/design-system/**/*.stories.ts"
+  ],
+  "files": ["./typings.d.ts"],
+}
