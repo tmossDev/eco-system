@@ -1,5 +1,10 @@
 # Project Change Log
 
+## v1.4.1 - (3 Changes)
+- Added Icon component to angular design system.
+- Added Header component to angular design system which uses Icon component.
+- Using Header component in user-management admin-web-app.
+
 ## v1.4.0 - (5 Changes)
 - Added pnpm for frontend package management.
 - Added user-management web-app which is just hello world angular project

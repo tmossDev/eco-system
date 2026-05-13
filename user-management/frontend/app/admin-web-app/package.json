@@ -20,6 +20,9 @@
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"
   },
+  "peerDependencies": {
+    "@ds/header": "workspace:*"
+  },
   "devDependencies": {
     "@angular/build": "^21.2.10",
     "@angular/cli": "^21.2.10",

@@ -32,6 +32,58 @@
           }
         }
       }
+    },
+    "header": {
+      "projectType": "library",
+      "root": "ds/header",
+      "sourceRoot": "ds/header/src",
+      "prefix": "lib",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:ng-packagr",
+          "configurations": {
+            "production": {
+              "tsConfig": "ds/header/tsconfig.lib.prod.json"
+            },
+            "development": {
+              "tsConfig": "ds/header/tsconfig.lib.json"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "tsConfig": "ds/header/tsconfig.spec.json"
+          }
+        }
+      }
+    },
+    "icon": {
+      "projectType": "library",
+      "root": "ds/icon",
+      "sourceRoot": "ds/icon/src",
+      "prefix": "lib",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:ng-packagr",
+          "configurations": {
+            "production": {
+              "tsConfig": "ds/icon/tsconfig.lib.prod.json"
+            },
+            "development": {
+              "tsConfig": "ds/icon/tsconfig.lib.json"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "tsConfig": "ds/icon/tsconfig.spec.json"
+          }
+        }
+      }
     }
   }
 }

@@ -1,5 +1,5 @@
 {
-  "name": "@ds/button",
+  "name": "@ds/icon",
   "version": "0.0.1",
   "peerDependencies": {
     "@angular/common": "catalog:",

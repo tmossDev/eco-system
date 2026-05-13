@@ -1,9 +1,10 @@
 {
-  "name": "@ds/button",
+  "name": "@ds/header",
   "version": "0.0.1",
   "peerDependencies": {
     "@angular/common": "catalog:",
-    "@angular/core": "catalog:"
+    "@angular/core": "catalog:",
+    "@ds/icon": "workspace:*"
   },
   "dependencies": {
     "tslib": "catalog:"

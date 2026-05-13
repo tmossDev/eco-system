@@ -4,7 +4,7 @@
   "compileOnSave": false,
   "compilerOptions": {
     "paths": {
-      "button": ["./dist/button"]
+      "@ds/*": ["./dist/*"],
     },
     "strict": true,
     "noImplicitOverride": true,
@@ -31,6 +31,18 @@
     },
     {
       "path": "./ds/button/tsconfig.spec.json"
+    },
+    {
+      "path": "./ds/header/tsconfig.lib.json"
+    },
+    {
+      "path": "./ds/header/tsconfig.spec.json"
+    },
+    {
+      "path": "./ds/icon/tsconfig.lib.json"
+    },
+    {
+      "path": "./ds/icon/tsconfig.spec.json"
     }
   ]
 }
