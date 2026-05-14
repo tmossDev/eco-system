@@ -1,0 +1,54 @@
+<nav
+  class="navigation-bar"
+  [class.navigation-bar--sidebar]="variant === 'sidebar'"
+  [class.navigation-bar--header]="variant === 'header'"
+  [class.navigation-bar--to-header]="transitioningTo === 'header'"
+  [class.navigation-bar--to-sidebar]="transitioningTo === 'sidebar'"
+  aria-label="Main navigation"
+>
+  <div class="navigation-bar__brand-row">
+    <div class="navigation-bar__brand">
+      <span class="navigation-bar__title">{{ title }}</span>
+      <span class="navigation-bar__subtitle">{{ subtitle }}</span>
+    </div>
+
+    <button
+      type="button"
+      class="navigation-bar__toggle navigation-bar__toggle--brand"
+      [attr.aria-label]="toggleAriaLabel"
+      [title]="toggleAriaLabel"
+      [disabled]="isTransitioning"
+      (click)="toggleVariant()"
+    >
+      <ds-icon [name]="toggleIcon"></ds-icon>
+    </button>
+  </div>
+
+  <div class="navigation-bar__items-row">
+    <div class="navigation-bar__items">
+      @for (item of items; track item.route) {
+        <a
+          [routerLink]="item.route"
+          routerLinkActive="active"
+          [routerLinkActiveOptions]="{ exact: item.route === '/' }"
+        >
+          <span class="navigation-bar__icon">
+            <ds-icon [name]="item.icon"></ds-icon>
+          </span>
+          <span class="navigation-bar__item-text">{{ item.text }}</span>
+        </a>
+      }
+    </div>
+
+    <button
+      type="button"
+      class="navigation-bar__toggle navigation-bar__toggle--items"
+      [attr.aria-label]="toggleAriaLabel"
+      [title]="toggleAriaLabel"
+      [disabled]="isTransitioning"
+      (click)="toggleVariant()"
+    >
+      <ds-icon [name]="toggleIcon"></ds-icon>
+    </button>
+  </div>
+</nav>

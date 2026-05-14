@@ -1,0 +1,13 @@
+<div class="main-layout" [class.main-layout--header]="navigationVariant === 'header'">
+  <ds-navigation-bar
+    title="Admin"
+    subtitle="Management"
+    [variant]="navigationVariant"
+    [items]="mainOptions"
+    (variantChange)="navigationVariant = $event"
+  />
+
+  <section class="content-shell">
+    <router-outlet />
+  </section>
+</div>

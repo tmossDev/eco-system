@@ -5,6 +5,7 @@
   "compilerOptions": {
     "paths": {
       "@ds/*": ["./dist/*"],
+      "login-form": ["./dist/login-form"]
     },
     "strict": true,
     "noImplicitOverride": true,
@@ -33,16 +34,22 @@
       "path": "./ds/button/tsconfig.spec.json"
     },
     {
-      "path": "./ds/header/tsconfig.lib.json"
+      "path": "./ds/navigation-bar/tsconfig.lib.json"
     },
     {
-      "path": "./ds/header/tsconfig.spec.json"
+      "path": "./ds/navigation-bar/tsconfig.spec.json"
     },
     {
       "path": "./ds/icon/tsconfig.lib.json"
     },
     {
       "path": "./ds/icon/tsconfig.spec.json"
+    },
+    {
+      "path": "./ds/login-form/tsconfig.lib.json"
+    },
+    {
+      "path": "./ds/login-form/tsconfig.spec.json"
     }
   ]
 }

@@ -33,20 +33,20 @@
         }
       }
     },
-    "header": {
+    "navigation-bar": {
       "projectType": "library",
-      "root": "ds/header",
-      "sourceRoot": "ds/header/src",
+      "root": "ds/navigation-bar",
+      "sourceRoot": "ds/navigation-bar/src",
       "prefix": "lib",
       "architect": {
         "build": {
           "builder": "@angular/build:ng-packagr",
           "configurations": {
             "production": {
-              "tsConfig": "ds/header/tsconfig.lib.prod.json"
+              "tsConfig": "ds/navigation-bar/tsconfig.lib.prod.json"
             },
             "development": {
-              "tsConfig": "ds/header/tsconfig.lib.json"
+              "tsConfig": "ds/navigation-bar/tsconfig.lib.json"
             }
           },
           "defaultConfiguration": "production"
@@ -54,7 +54,7 @@
         "test": {
           "builder": "@angular/build:unit-test",
           "options": {
-            "tsConfig": "ds/header/tsconfig.spec.json"
+            "tsConfig": "ds/navigation-bar/tsconfig.spec.json"
           }
         }
       }
@@ -81,6 +81,32 @@
           "builder": "@angular/build:unit-test",
           "options": {
             "tsConfig": "ds/icon/tsconfig.spec.json"
+          }
+        }
+      }
+    },
+    "login-form": {
+      "projectType": "library",
+      "root": "ds/login-form",
+      "sourceRoot": "ds/login-form/src",
+      "prefix": "lib",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:ng-packagr",
+          "configurations": {
+            "production": {
+              "tsConfig": "ds/login-form/tsconfig.lib.prod.json"
+            },
+            "development": {
+              "tsConfig": "ds/login-form/tsconfig.lib.json"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "tsConfig": "ds/login-form/tsconfig.spec.json"
           }
         }
       }

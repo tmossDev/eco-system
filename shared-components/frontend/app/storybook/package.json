@@ -18,7 +18,7 @@
     "@angular/forms": "catalog:",
     "@angular/platform-browser": "catalog:",
     "@ds/button": "workspace:*",
-    "@ds/header": "workspace:*",
+    "@ds/navigation-bar": "workspace:*",
     "@ds/icon": "workspace:*",
     "@angular/router": "catalog:",
     "@storybook/test": "catalog:",

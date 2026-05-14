@@ -3,13 +3,15 @@
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
-    "build": "pnpm build:button && pnpm build:icon && pnpm build:header",
+    "build": "pnpm build:button && pnpm build:icon && pnpm build:navigation-bar && pnpm build:login-form",
     "build:button": "ng build button",
     "build:icon": "ng build icon",
-    "build:header": "ng build header",
+    "build:navigation-bar": "ng build navigation-bar",
+    "build:login-form": "ng build login-form",
     "watch:button": "ng build button --watch --configuration development",
     "watch:icon": "ng build icon --watch --configuration development",
-    "watch:header": "ng build header --watch --configuration development",
+    "watch:navigation-bar": "ng build navigation-bar --watch --configuration development",
+    "watch:login-for ": "ng build login-form --watch --configuration development",
     "test": "ng test"
   },
   "private": true,

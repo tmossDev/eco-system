@@ -1,5 +1,13 @@
 # Project Change Log
 
+## v1.5.0 - (6 Changes)
+- Renamed/reworked Header Component to Navigation Component.
+- Added Login Form Component to angular design system.
+- Added Login, Forgot Password, User Management and Settings pages to user-management admin-web-app.
+- Added Guard to user-management admin-web-app forcing users to login first.
+- Added Interceptors for authentication, error handling and api-mocking.
+- Added mocking for user-service and auth-service.
+
 ## v1.4.1 - (3 Changes)
 - Added Icon component to angular design system.
 - Added Header component to angular design system which uses Icon component.
