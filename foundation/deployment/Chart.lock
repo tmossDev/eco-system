@@ -1,0 +1,9 @@
+dependencies:
+- name: postgres
+  repository: file://../postgres/deployment
+  version: 0.1.0
+- name: liquibase
+  repository: file://../liquibase/deployment
+  version: 0.1.1
+digest: sha256:ca8f934651b3ca6e166df192151d19cdff938227195768a460cf91a9408bb457
+generated: "2026-05-14T16:49:12.400712+02:00"

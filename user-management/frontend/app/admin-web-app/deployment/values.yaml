@@ -1,0 +1,26 @@
+app:
+  nameOverride: admin-web-app
+  fullnameOverride: admin-web-app
+  partOf: user-management
+  component: frontend
+  image:
+    repository: eco-system/admin-web-app
+    tag: latest
+    pullPolicy: IfNotPresent
+  ports:
+    - name: http
+      containerPort: 80
+      protocol: TCP
+  service:
+    enabled: true
+    ports:
+      - name: http
+        port: 80
+        targetPort: http
+        protocol: TCP
+  readinessProbe:
+    httpGet:
+      path: /
+      port: http
+    initialDelaySeconds: 10
+    periodSeconds: 10

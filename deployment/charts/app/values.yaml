@@ -1,0 +1,81 @@
+nameOverride: ""
+fullnameOverride: ""
+partOf: ""
+component: ""
+
+replicaCount: 1
+
+image:
+  repository: nginx
+  tag: latest
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+serviceAccount:
+  create: false
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+podLabels: {}
+podSecurityContext: {}
+securityContext: {}
+
+command: []
+args: []
+
+ports:
+  - name: http
+    containerPort: 8080
+    protocol: TCP
+
+env: {}
+envFrom: []
+
+configMap:
+  enabled: false
+  data: {}
+
+secret:
+  enabled: false
+  type: Opaque
+  stringData: {}
+
+service:
+  enabled: true
+  type: ClusterIP
+  annotations: {}
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts: []
+  tls: []
+
+resources: {}
+
+livenessProbe: {}
+readinessProbe: {}
+startupProbe: {}
+
+persistence:
+  enabled: false
+  accessModes:
+    - ReadWriteOnce
+  size: 1Gi
+  storageClassName: ""
+  annotations: {}
+
+volumes: []
+volumeMounts: []
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

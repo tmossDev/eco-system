@@ -1,0 +1,12 @@
+dependencies:
+- name: user-service
+  repository: file://../backend/app/user-service/deployment
+  version: 0.1.1
+- name: user-gateway
+  repository: file://../backend/app/user-gateway/deployment
+  version: 0.1.1
+- name: admin-web-app
+  repository: file://../frontend/app/admin-web-app/deployment
+  version: 0.1.0
+digest: sha256:86259bd20df10d889c69f3cecfba445841feeab13cff1a2564199472c345958f
+generated: "2026-05-14T16:49:12.409426+02:00"

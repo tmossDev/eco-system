@@ -1,5 +1,13 @@
 # Project Change Log
 
+## v1.6.0 - (6 Changes)
+- Added reusable Helm app chart for common Kubernetes deployment resources.
+- Added Helm deployment charts for foundation postgres and liquibase services.
+- Added Helm deployment charts for shared-components storybook.
+- Added Helm deployment charts for user-management user-service, user-gateway and admin-web-app.
+- Added umbrella Helm deployment charts for foundation, shared-components and user-management.
+- Added README instructions for building Helm dependencies and rendering Kubernetes resource files from Helm templates.
+
 ## v1.5.0 - (6 Changes)
 - Renamed/reworked Header Component to Navigation Component.
 - Added Login Form Component to angular design system.

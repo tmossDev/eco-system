@@ -1,0 +1,26 @@
+app:
+  nameOverride: storybook
+  fullnameOverride: storybook
+  partOf: shared-components
+  component: frontend
+  image:
+    repository: eco-system/storybook
+    tag: latest
+    pullPolicy: IfNotPresent
+  ports:
+    - name: http
+      containerPort: 6006
+      protocol: TCP
+  service:
+    enabled: true
+    ports:
+      - name: http
+        port: 80
+        targetPort: http
+        protocol: TCP
+  readinessProbe:
+    httpGet:
+      path: /
+      port: http
+    initialDelaySeconds: 10
+    periodSeconds: 10

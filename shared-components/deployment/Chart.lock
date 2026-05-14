@@ -1,0 +1,6 @@
+dependencies:
+- name: storybook
+  repository: file://../frontend/app/storybook/deployment
+  version: 0.1.0
+digest: sha256:a03d7876506eed133a567bb4a19f9dcb9fd070f0048ee809acd6c75e764bc2b8
+generated: "2026-05-14T16:47:18.853187+02:00"

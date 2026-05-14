@@ -1,0 +1,44 @@
+app:
+  nameOverride: postgres
+  fullnameOverride: postgres
+  partOf: foundation
+  component: database
+  image:
+    repository: postgres
+    tag: "15"
+    pullPolicy: IfNotPresent
+  ports:
+    - name: postgres
+      containerPort: 5432
+      protocol: TCP
+  service:
+    enabled: true
+    ports:
+      - name: postgres
+        port: 5432
+        targetPort: postgres
+        protocol: TCP
+  env:
+    POSTGRES_DB: ecoDB
+  secret:
+    enabled: true
+    stringData:
+      POSTGRES_PASSWORD: change-me
+  persistence:
+    enabled: true
+    size: 1Gi
+  volumeMounts:
+    - name: data
+      mountPath: /var/lib/postgresql/data
+  volumes:
+    - name: data
+      persistentVolumeClaim:
+        claimName: postgres
+  readinessProbe:
+    exec:
+      command:
+        - pg_isready
+        - -U
+        - postgres
+    initialDelaySeconds: 10
+    periodSeconds: 10
