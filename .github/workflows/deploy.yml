@@ -44,25 +44,25 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push user-service image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./dockerfile
-          build-args: |
-            SERVICE_PATH=./user-management/backend/app/user-service/cmd
-          push: true
-          tags: ${{ env.IMAGE_PREFIX }}/user-service:${{ env.IMAGE_TAG }}
-
-      - name: Build and push user-gateway image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./dockerfile
-          build-args: |
-            SERVICE_PATH=./user-management/backend/app/user-gateway/cmd
-          push: true
-          tags: ${{ env.IMAGE_PREFIX }}/user-gateway:${{ env.IMAGE_TAG }}
+#      - name: Build and push user-service image
+#        uses: docker/build-push-action@v6
+#        with:
+#          context: .
+#          file: ./dockerfile
+#          build-args: |
+#            SERVICE_PATH=./user-management/backend/app/user-service/cmd
+#          push: true
+#          tags: ${{ env.IMAGE_PREFIX }}/user-service:${{ env.IMAGE_TAG }}
+#
+#      - name: Build and push user-gateway image
+#        uses: docker/build-push-action@v6
+#        with:
+#          context: .
+#          file: ./dockerfile
+#          build-args: |
+#            SERVICE_PATH=./user-management/backend/app/user-gateway/cmd
+#          push: true
+#          tags: ${{ env.IMAGE_PREFIX }}/user-gateway:${{ env.IMAGE_TAG }}
 
       - name: Build and push admin-web-app image
         uses: docker/build-push-action@v6
