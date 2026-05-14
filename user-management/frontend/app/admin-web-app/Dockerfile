@@ -8,7 +8,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY shared-components/frontend/package/design-system ./shared-components/frontend/package/design-system
 COPY user-management/frontend/app/admin-web-app ./user-management/frontend/app/admin-web-app
 
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile --ignore-scripts=false
 RUN pnpm --filter admin-web-app build
 
 FROM nginx:1.27-alpine
