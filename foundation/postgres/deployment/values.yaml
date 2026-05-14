@@ -20,20 +20,63 @@ app:
         protocol: TCP
   env:
     POSTGRES_DB: ecoDB
+  configMap:
+    enabled: true
+    data:
+      init.sh: |
+        #!/bin/bash
+        set -e
+
+        LIQUIBASE_PASSWORD="${LIQUIBASE_PASSWORD:-$(cat /run/secrets/liquibase-password)}"
+        APP_PASSWORD="${APP_PASSWORD:-$(cat /run/secrets/app-password)}"
+
+        psql -v ON_ERROR_STOP=1 --username postgres <<-EOSQL
+          CREATE USER liquibase WITH PASSWORD '${LIQUIBASE_PASSWORD}';
+          CREATE USER app_user WITH PASSWORD '${APP_PASSWORD}';
+
+          GRANT ALL PRIVILEGES ON DATABASE "ecoDB" TO liquibase;
+
+          \c "ecoDB";
+
+          GRANT ALL ON SCHEMA public TO liquibase;
+
+          ALTER DEFAULT PRIVILEGES IN SCHEMA public
+          GRANT ALL ON TABLES TO liquibase;
+
+          ALTER DEFAULT PRIVILEGES IN SCHEMA public
+          GRANT ALL ON SEQUENCES TO liquibase;
+
+          GRANT CONNECT ON DATABASE "ecoDB" TO app_user;
+          GRANT USAGE ON SCHEMA public TO app_user;
+
+          ALTER DEFAULT PRIVILEGES IN SCHEMA public
+          GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO app_user;
+
+          ALTER DEFAULT PRIVILEGES IN SCHEMA public
+          GRANT USAGE, SELECT ON SEQUENCES TO app_user;
+        EOSQL
   secret:
     enabled: true
     stringData:
       POSTGRES_PASSWORD: change-me
+      LIQUIBASE_PASSWORD: change-me
+      APP_PASSWORD: change-me
   persistence:
     enabled: true
     size: 1Gi
   volumeMounts:
     - name: data
       mountPath: /var/lib/postgresql/data
+    - name: init
+      mountPath: /docker-entrypoint-initdb.d
   volumes:
     - name: data
       persistentVolumeClaim:
         claimName: postgres
+    - name: init
+      configMap:
+        name: postgres
+        defaultMode: 0755
   readinessProbe:
     exec:
       command:

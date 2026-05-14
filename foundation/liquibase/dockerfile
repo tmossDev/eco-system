@@ -2,4 +2,4 @@ FROM liquibase/liquibase:4.27
 
 COPY . .
 
-CMD ["bash", "-c", "liquibase --defaultsFile=liquibase.properties --password=$(cat /run/secrets/liquibase-password) update"]
+CMD ["bash", "-c", "liquibase --defaultsFile=liquibase.properties --url=\"${LIQUIBASE_COMMAND_URL:-jdbc:postgresql://db:5432/ecoDB}\" --username=\"${LIQUIBASE_COMMAND_USERNAME:-liquibase}\" --password=\"${LIQUIBASE_COMMAND_PASSWORD:-$(cat /run/secrets/liquibase-password 2>/dev/null)}\" update"]

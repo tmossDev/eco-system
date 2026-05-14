@@ -1,0 +1,12 @@
+.git
+.idea
+access.log
+build
+
+node_modules
+**/node_modules
+
+**/dist
+**/storybook-static
+
+**/deployment/charts/*.tgz

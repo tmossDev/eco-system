@@ -1,8 +1,8 @@
 #!/bin/bash
 set -e
 
-LIQUIBASE_PASSWORD=$(cat /run/secrets/liquibase-password)
-APP_PASSWORD=$(cat /run/secrets/app-password)
+LIQUIBASE_PASSWORD="${LIQUIBASE_PASSWORD:-$(cat /run/secrets/liquibase-password)}"
+APP_PASSWORD="${APP_PASSWORD:-$(cat /run/secrets/app-password)}"
 
 psql -v ON_ERROR_STOP=1 --username postgres <<-EOSQL
   CREATE USER liquibase WITH PASSWORD '${LIQUIBASE_PASSWORD}';

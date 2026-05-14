@@ -1,5 +1,11 @@
 # Project Change Log
 
+## v1.6.1 - (4 Changes)
+- Added README instructions for manually deploying Helm releases to Kubernetes.
+- Added GitHub Actions workflow for building container images and deploying Helm releases to Kubernetes.
+- Added frontend Dockerfiles for admin-web-app and storybook deployment images.
+- Added Kubernetes postgres init script wiring for database users used by liquibase and application services.
+
 ## v1.6.0 - (6 Changes)
 - Added reusable Helm app chart for common Kubernetes deployment resources.
 - Added Helm deployment charts for foundation postgres and liquibase services.
