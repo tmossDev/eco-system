@@ -1,12 +1,21 @@
 .git
 .idea
 access.log
-build
+build/*
+!build/bin
+!build/bin/**
 
 node_modules
 **/node_modules
 
 **/dist
 **/storybook-static
+
+!user-management/frontend/app/admin-web-app/dist
+!user-management/frontend/app/admin-web-app/dist/**
+!user-management/frontend/app/admin-web-app/storybook-static
+!user-management/frontend/app/admin-web-app/storybook-static/**
+!shared-components/frontend/app/storybook/storybook-static
+!shared-components/frontend/app/storybook/storybook-static/**
 
 **/deployment/charts/*.tgz

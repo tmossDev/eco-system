@@ -1,7 +1,9 @@
 import { HttpErrorResponse, HttpInterceptorFn, HttpResponse } from '@angular/common/http';
+import { inject } from '@angular/core';
 import { of, throwError } from 'rxjs';
 import { delay } from 'rxjs/operators';
 
+import { RuntimeConfigService } from '../../config/runtime-config.service';
 import {
   MOCK_LOGIN_RESPONSE,
   isMockLoginValid,
@@ -23,13 +25,13 @@ import {
 } from '../../services/user/user.model';
 
 const MOCK_API_DELAY_MS = 350;
-const ENABLE_MOCK_API = true;
 
 export const mockApiInterceptor: HttpInterceptorFn = (request, next) => {
+  const runtimeConfig = inject(RuntimeConfigService);
   const url = normaliseApiUrl(request.url);
   const method = request.method.toUpperCase();
 
-  if (!ENABLE_MOCK_API || !url.startsWith('/api')) {
+  if (!runtimeConfig.mockApiEnabled || !url.startsWith('/api')) {
     return next(request);
   }
 

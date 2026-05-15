@@ -4,11 +4,11 @@ packages:
   - "shared-components/frontend/package/design-system/ds/*"
   - "shared-components/frontend/app/*"
 
-onlyBuiltDependencies:
-  - "@parcel/watcher"
-  - "esbuild"
-  - "lmdb"
-  - "msgpackr-extract"
+allowBuilds:
+  "@parcel/watcher": true
+  esbuild: true
+  lmdb: true
+  msgpackr-extract: true
 
 catalog:
   "@angular/common": "^21.2.0"

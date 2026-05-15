@@ -18,6 +18,26 @@ app:
         port: 80
         targetPort: http
         protocol: TCP
+  configMap:
+    enabled: true
+    envFrom: false
+    data:
+      config.json: |
+        {
+          "BACKEND_API_URL": "http://user-gateway:8080",
+          "ENABLE_MOCK_API": false
+        }
+  volumeMounts:
+    - name: runtime-config
+      mountPath: /usr/share/nginx/html/assets/config.json
+      subPath: config.json
+  volumes:
+    - name: runtime-config
+      configMap:
+        name: admin-web-app
+        items:
+          - key: config.json
+            path: config.json
   readinessProbe:
     httpGet:
       path: /

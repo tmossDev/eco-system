@@ -1,0 +1,18 @@
+# Shell-compatible environment values consumed by .github/workflows/deploy.yml.
+# Feature pull requests must use feature/<10 lowercase alphanumeric chars>; that suffix becomes the namespace.
+
+ENVIRONMENT_NAME=hp-prodesk-homelab
+FOUNDATION_NAMESPACE=eco-foundation
+DEFAULT_APPLICATION_NAMESPACE=eco-test
+
+BASE_DOMAIN=com
+INGRESS_CLASS_NAME=traefik
+
+POSTGRES_DB=ecoDB
+POSTGRES_HOST=postgres.eco-foundation.svc.cluster.local
+POSTGRES_PORT=5432
+POSTGRES_APP_USER=app_user
+POSTGRES_LIQUIBASE_USER=liquibase
+LIQUIBASE_JDBC_URL=jdbc:postgresql://postgres.eco-foundation.svc.cluster.local:5432/ecoDB
+
+USER_SERVICE_INTERNAL_URL=http://user-service:8080

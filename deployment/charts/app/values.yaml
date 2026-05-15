@@ -35,6 +35,7 @@ envFrom: []
 
 configMap:
   enabled: false
+  envFrom: true
   data: {}
 
 secret:

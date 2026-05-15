@@ -48,17 +48,17 @@ Render all umbrella charts into `build/kubernetes/`:
 mkdir -p build/kubernetes
 
 helm template foundation foundation/deployment \
-  --namespace eco-system \
+  --namespace eco-foundation \
   --include-crds \
   --output-dir build/kubernetes
 
 helm template shared-components shared-components/deployment \
-  --namespace eco-system \
+  --namespace abc123def4 \
   --include-crds \
   --output-dir build/kubernetes
 
 helm template user-management user-management/deployment \
-  --namespace eco-system \
+  --namespace abc123def4 \
   --include-crds \
   --output-dir build/kubernetes
 ```
@@ -100,95 +100,74 @@ kubectl apply --recursive -f build/kubernetes/
 ## Deploy To Kubernetes Manually
 
 For a real cluster deploy, prefer `helm upgrade --install` over applying rendered
-YAML files directly. Helm tracks the release and makes later upgrades cleaner.
+YAML files directly. Helm tracks releases and makes later upgrades cleaner.
 
-### 1. Point kubectl At The Cluster
+The deployment is split into two layers:
 
-Confirm your local kube context is targeting the right cluster:
+- `foundation` deploys Postgres and Liquibase into `eco-foundation`.
+- `application` deploys user services, admin web app and the design-system Storybook into an application namespace.
+
+Feature deployments use a namespace derived from the branch name. Branches must
+match `feature/<10 lowercase alphanumeric chars>`, for example
+`feature/abc123def4`, and the namespace becomes `abc123def4`.
+
+### Prerequisites
+
+- Go installed for backend binaries.
+- Node 24 and pnpm 11.0.9 installed for frontend builds.
+- Docker installed for local runtime images.
+- Helm and kubectl installed.
+- kubectl must be able to read the kubeconfig.
+- Your user or GitHub runner user must be able to access the Docker daemon.
+
+On k3s, this may require fixing `/etc/rancher/k3s/k3s.yaml` permissions or
+copying it to your user kubeconfig:
 
 ```sh
-kubectl config current-context
+sudo chmod 644 /etc/rancher/k3s/k3s.yaml
+export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
 kubectl get nodes
 ```
 
-Set the namespace used by the examples:
+After this, run `kubectl` without `sudo`. In piped commands, `sudo` only
+applies to the command before the pipe unless both sides use it.
+
+### Load Environment Values
+
+The homelab values live in `config/hp-prodesk-homelab.txt`:
 
 ```sh
-export NAMESPACE=eco-system
-kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
-```
+set -a
+. config/hp-prodesk-homelab.txt
+set +a
 
-### 2. Build And Push Images
-
-The Helm charts deploy these application images:
-
-- `user-service`
-- `user-gateway`
-- `admin-web-app`
-- `storybook`
-- `liquibase`
-
-Choose a container registry and tag. This example uses GitHub Container Registry:
-
-```sh
-export REGISTRY=ghcr.io
-export OWNER=<your-github-user-or-org>
-export IMAGE_PREFIX="$REGISTRY/$OWNER/eco-system"
+export IMAGE_PREFIX=localhost/eco-system
 export IMAGE_TAG="$(git rev-parse --short HEAD)"
+export FOUNDATION_NAMESPACE="${FOUNDATION_NAMESPACE:-eco-foundation}"
+export NAMESPACE="${DEFAULT_APPLICATION_NAMESPACE:-eco-test}"
+export BACKEND_API_URL="http://${NAMESPACE}.user-gateway.${BASE_DOMAIN:-com}"
+export FRONTEND_ORIGIN="http://${NAMESPACE}.admin-web-app.${BASE_DOMAIN:-com}"
+export ADMIN_WEB_APP_HOST="${NAMESPACE}.admin-web-app.${BASE_DOMAIN:-com}"
+export USER_GATEWAY_HOST="${NAMESPACE}.user-gateway.${BASE_DOMAIN:-com}"
+export USER_SERVICE_HOST="${NAMESPACE}.user-service.${BASE_DOMAIN:-com}"
+export STORYBOOK_HOST="${NAMESPACE}.storybook.${BASE_DOMAIN:-com}"
 ```
 
-Log in to the registry:
+For a feature namespace, override `NAMESPACE` with the branch suffix:
 
 ```sh
-docker login ghcr.io
+export NAMESPACE=abc123def4
 ```
 
-Build and push the images:
+Set database passwords before deploying:
 
 ```sh
-docker buildx build --push \
-  -f dockerfile \
-  --build-arg SERVICE_PATH=./user-management/backend/app/user-service/cmd \
-  -t "$IMAGE_PREFIX/user-service:$IMAGE_TAG" \
-  .
-
-docker buildx build --push \
-  -f dockerfile \
-  --build-arg SERVICE_PATH=./user-management/backend/app/user-gateway/cmd \
-  -t "$IMAGE_PREFIX/user-gateway:$IMAGE_TAG" \
-  .
-
-docker buildx build --push \
-  -f user-management/frontend/app/admin-web-app/Dockerfile \
-  -t "$IMAGE_PREFIX/admin-web-app:$IMAGE_TAG" \
-  .
-
-docker buildx build --push \
-  -f shared-components/frontend/app/storybook/Dockerfile \
-  -t "$IMAGE_PREFIX/storybook:$IMAGE_TAG" \
-  .
-
-docker buildx build --push \
-  -f foundation/liquibase/dockerfile \
-  -t "$IMAGE_PREFIX/liquibase:$IMAGE_TAG" \
-  foundation/liquibase
+export POSTGRES_PASSWORD=very_secure_password
+export LIQUIBASE_PASSWORD=very_secure_password
+export APP_PASSWORD=very_secure_password
 ```
 
-If your registry images are private, create an image pull secret in the cluster:
-
-```sh
-kubectl create secret docker-registry ghcr-pull-secret \
-  --namespace "$NAMESPACE" \
-  --docker-server=ghcr.io \
-  --docker-username=<github-user> \
-  --docker-password=<github-token-with-read-packages>
-```
-
-If your registry images are public, remove the
-`--set <chart>.app.imagePullSecrets[0].name=ghcr-pull-secret` arguments from
-the Helm commands below.
-
-### 3. Deploy With Helm
+### Build Chart Dependencies
 
 Build chart dependencies:
 
@@ -205,74 +184,204 @@ helm dependency build shared-components/deployment
 helm dependency build user-management/deployment
 ```
 
-Set database passwords for the first deploy:
+### Deploy Foundation Layer
 
 ```sh
-export POSTGRES_PASSWORD=<postgres-password>
-export LIQUIBASE_PASSWORD=<liquibase-password>
-export APP_PASSWORD=<app-password>
-```
+docker build \
+  -f foundation/liquibase/dockerfile \
+  -t "$IMAGE_PREFIX/liquibase:$IMAGE_TAG" \
+  foundation/liquibase
 
-Deploy the foundation chart first because it provides postgres and liquibase:
+if command -v k3s >/dev/null 2>&1; then
+  docker save "$IMAGE_PREFIX/liquibase:$IMAGE_TAG" | sudo k3s ctr -n k8s.io images import -
+fi
 
-```sh
+kubectl create namespace "$FOUNDATION_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+
 helm upgrade --install foundation foundation/deployment \
-  --namespace "$NAMESPACE" \
-  --create-namespace \
+  --namespace "$FOUNDATION_NAMESPACE" \
+  --set postgres.app.env.POSTGRES_DB="${POSTGRES_DB:-ecoDB}" \
   --set liquibase.app.image.repository="$IMAGE_PREFIX/liquibase" \
   --set liquibase.app.image.tag="$IMAGE_TAG" \
-  --set 'liquibase.app.imagePullSecrets[0].name=ghcr-pull-secret' \
+  --set liquibase.app.image.pullPolicy=Never \
+  --set-string liquibase.app.env.LIQUIBASE_COMMAND_URL="$LIQUIBASE_JDBC_URL" \
+  --set-string liquibase.app.env.LIQUIBASE_COMMAND_USERNAME="${POSTGRES_LIQUIBASE_USER:-liquibase}" \
   --set-string postgres.app.secret.stringData.POSTGRES_PASSWORD="$POSTGRES_PASSWORD" \
   --set-string postgres.app.secret.stringData.LIQUIBASE_PASSWORD="$LIQUIBASE_PASSWORD" \
   --set-string postgres.app.secret.stringData.APP_PASSWORD="$APP_PASSWORD" \
   --set-string liquibase.app.secret.stringData.LIQUIBASE_COMMAND_PASSWORD="$LIQUIBASE_PASSWORD"
+
+kubectl get all -n "$FOUNDATION_NAMESPACE"
 ```
 
-Deploy shared components:
+### Build Application Layer
+
+Build the application artifacts first. The Dockerfiles copy these built files
+into lightweight runtime images:
 
 ```sh
+mkdir -p build/bin
+go build -o build/bin/user-service ./user-management/backend/app/user-service/cmd
+go build -o build/bin/user-gateway ./user-management/backend/app/user-gateway/cmd
+test -x build/bin/user-service
+test -x build/bin/user-gateway
+
+pnpm install --frozen-lockfile
+pnpm --filter admin-web-app build
+pnpm --filter admin-web-app build-storybook
+pnpm --filter storybook build-storybook
+
+docker build \
+  -f dockerfile \
+  --build-arg APP_NAME=user-service \
+  -t "$IMAGE_PREFIX/user-service:$IMAGE_TAG" \
+  .
+
+docker build \
+  -f dockerfile \
+  --build-arg APP_NAME=user-gateway \
+  -t "$IMAGE_PREFIX/user-gateway:$IMAGE_TAG" \
+  .
+
+docker build \
+  -f user-management/frontend/app/admin-web-app/Dockerfile \
+  -t "$IMAGE_PREFIX/admin-web-app:$IMAGE_TAG" \
+  .
+
+docker build \
+  -f shared-components/frontend/app/storybook/Dockerfile \
+  -t "$IMAGE_PREFIX/storybook:$IMAGE_TAG" \
+  .
+
+if command -v k3s >/dev/null 2>&1; then
+  for image in \
+    "$IMAGE_PREFIX/user-service:$IMAGE_TAG" \
+    "$IMAGE_PREFIX/user-gateway:$IMAGE_TAG" \
+    "$IMAGE_PREFIX/admin-web-app:$IMAGE_TAG" \
+    "$IMAGE_PREFIX/storybook:$IMAGE_TAG"; do
+    docker image inspect "$image" >/dev/null || {
+      echo "Missing Docker image: $image"
+      exit 1
+    }
+  done
+
+  docker save \
+    "$IMAGE_PREFIX/user-service:$IMAGE_TAG" \
+    "$IMAGE_PREFIX/user-gateway:$IMAGE_TAG" \
+    "$IMAGE_PREFIX/admin-web-app:$IMAGE_TAG" \
+    "$IMAGE_PREFIX/storybook:$IMAGE_TAG" \
+    | sudo k3s ctr -n k8s.io images import -
+
+  sudo k3s ctr -n k8s.io images list | grep "$IMAGE_PREFIX"
+fi
+```
+
+The workspace explicitly approves the install-time build scripts needed by
+Angular and Storybook in `pnpm-workspace.yaml` under `allowBuilds`. If pnpm asks
+you to run `pnpm approve-builds`, check that this file still includes
+`@parcel/watcher`, `esbuild`, `lmdb` and `msgpackr-extract` with `true` values.
+
+### Deploy Application Layer
+
+```sh
+kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+
 helm upgrade --install shared-components shared-components/deployment \
   --namespace "$NAMESPACE" \
-  --create-namespace \
   --set storybook.app.image.repository="$IMAGE_PREFIX/storybook" \
   --set storybook.app.image.tag="$IMAGE_TAG" \
-  --set 'storybook.app.imagePullSecrets[0].name=ghcr-pull-secret'
-```
+  --set storybook.app.image.pullPolicy=Never \
+  --set storybook.app.ingress.enabled=true \
+  --set storybook.app.ingress.className="${INGRESS_CLASS_NAME:-traefik}" \
+  --set storybook.app.ingress.hosts[0].host="$STORYBOOK_HOST" \
+  --set storybook.app.ingress.hosts[0].paths[0].path=/ \
+  --set storybook.app.ingress.hosts[0].paths[0].pathType=Prefix
 
-Deploy user management:
+printf '{"BACKEND_API_URL":"%s","ENABLE_MOCK_API":false}\n' "$BACKEND_API_URL" > runtime-config.json
 
-```sh
 helm upgrade --install user-management user-management/deployment \
   --namespace "$NAMESPACE" \
-  --create-namespace \
   --set user-service.app.image.repository="$IMAGE_PREFIX/user-service" \
   --set user-service.app.image.tag="$IMAGE_TAG" \
-  --set 'user-service.app.imagePullSecrets[0].name=ghcr-pull-secret' \
+  --set user-service.app.image.pullPolicy=Never \
+  --set user-service.app.configMap.enabled=true \
+  --set-string user-service.app.configMap.data.DB_DIALECT=postgresql \
+  --set-string user-service.app.configMap.data.DB_NAME="${POSTGRES_DB:-ecoDB}" \
+  --set-string user-service.app.configMap.data.DB_HOST="$POSTGRES_HOST" \
+  --set-string user-service.app.configMap.data.DB_PORT="${POSTGRES_PORT:-5432}" \
+  --set-string user-service.app.configMap.data.DB_USER="${POSTGRES_APP_USER:-app_user}" \
+  --set user-service.app.secret.enabled=true \
+  --set-string user-service.app.secret.stringData.DB_PASSWORD="$APP_PASSWORD" \
+  --set user-service.app.ingress.enabled=true \
+  --set user-service.app.ingress.className="${INGRESS_CLASS_NAME:-traefik}" \
+  --set user-service.app.ingress.hosts[0].host="$USER_SERVICE_HOST" \
+  --set user-service.app.ingress.hosts[0].paths[0].path=/ \
+  --set user-service.app.ingress.hosts[0].paths[0].pathType=Prefix \
   --set user-gateway.app.image.repository="$IMAGE_PREFIX/user-gateway" \
   --set user-gateway.app.image.tag="$IMAGE_TAG" \
-  --set 'user-gateway.app.imagePullSecrets[0].name=ghcr-pull-secret' \
+  --set user-gateway.app.image.pullPolicy=Never \
+  --set user-gateway.app.configMap.enabled=true \
+  --set-string user-gateway.app.configMap.data.DB_DIALECT=postgresql \
+  --set-string user-gateway.app.configMap.data.DB_NAME="${POSTGRES_DB:-ecoDB}" \
+  --set-string user-gateway.app.configMap.data.DB_HOST="$POSTGRES_HOST" \
+  --set-string user-gateway.app.configMap.data.DB_PORT="${POSTGRES_PORT:-5432}" \
+  --set-string user-gateway.app.configMap.data.DB_USER="${POSTGRES_APP_USER:-app_user}" \
+  --set-string user-gateway.app.configMap.data.USER_SERVICE_URL="${USER_SERVICE_INTERNAL_URL:-http://user-service:8080}" \
+  --set-string user-gateway.app.configMap.data.FRONTEND_ORIGIN="$FRONTEND_ORIGIN" \
+  --set user-gateway.app.secret.enabled=true \
+  --set-string user-gateway.app.secret.stringData.DB_PASSWORD="$APP_PASSWORD" \
+  --set user-gateway.app.ingress.enabled=true \
+  --set user-gateway.app.ingress.className="${INGRESS_CLASS_NAME:-traefik}" \
+  --set user-gateway.app.ingress.hosts[0].host="$USER_GATEWAY_HOST" \
+  --set user-gateway.app.ingress.hosts[0].paths[0].path=/ \
+  --set user-gateway.app.ingress.hosts[0].paths[0].pathType=Prefix \
   --set admin-web-app.app.image.repository="$IMAGE_PREFIX/admin-web-app" \
   --set admin-web-app.app.image.tag="$IMAGE_TAG" \
-  --set 'admin-web-app.app.imagePullSecrets[0].name=ghcr-pull-secret'
+  --set admin-web-app.app.image.pullPolicy=Never \
+  --set admin-web-app.app.configMap.enabled=true \
+  --set admin-web-app.app.configMap.envFrom=false \
+  --set-file admin-web-app.app.configMap.data.config\\.json=runtime-config.json \
+  --set admin-web-app.app.ingress.enabled=true \
+  --set admin-web-app.app.ingress.className="${INGRESS_CLASS_NAME:-traefik}" \
+  --set admin-web-app.app.ingress.hosts[0].host="$ADMIN_WEB_APP_HOST" \
+  --set admin-web-app.app.ingress.hosts[0].paths[0].path=/ \
+  --set admin-web-app.app.ingress.hosts[0].paths[0].pathType=Prefix
 ```
 
 Check the result:
 
 ```sh
 helm list -n "$NAMESPACE"
-kubectl get pods,svc,pvc -n "$NAMESPACE"
+kubectl get all,ingress,configmap -n "$NAMESPACE"
+kubectl get all,pvc -n "$FOUNDATION_NAMESPACE"
+```
+
+For local browser access, map the ingress address to the configured hostnames.
+On the hp-prodesk homelab this is usually Traefik's external IP:
+
+```sh
+kubectl get ingress -n "$NAMESPACE"
+INGRESS_ADDRESS="$(kubectl get ingress admin-web-app -n "$NAMESPACE" -o jsonpath='{.status.loadBalancer.ingress[0].ip}')"
+echo "$INGRESS_ADDRESS $ADMIN_WEB_APP_HOST $STORYBOOK_HOST $USER_GATEWAY_HOST $USER_SERVICE_HOST" | sudo tee -a /etc/hosts
+```
+
+Then open the admin web app over HTTP:
+
+```text
+http://eco-test.admin-web-app.com
 ```
 
 If you need to remove the releases:
 
 ```sh
-helm uninstall user-management shared-components foundation -n "$NAMESPACE"
+helm uninstall user-management shared-components -n "$NAMESPACE"
+helm uninstall foundation -n "$FOUNDATION_NAMESPACE"
 ```
 
 ## Deploy With GitHub Actions
 
-The workflow at `.github/workflows/deploy.yml` builds the deployable images,
-pushes them to GitHub Container Registry, and deploys the Helm releases to the
+The workflow at `.github/workflows/deploy.yml` builds deployable images locally,
+imports them into k3s when available, and deploys the Helm releases to the
 cluster.
 
 ### Required GitHub Secrets
@@ -281,8 +390,6 @@ Add these in GitHub under `Settings > Secrets and variables > Actions`:
 
 ```text
 KUBE_CONFIG_B64
-GHCR_USERNAME
-GHCR_TOKEN
 POSTGRES_PASSWORD
 LIQUIBASE_PASSWORD
 APP_PASSWORD
@@ -295,17 +402,29 @@ deploy into the target namespace:
 base64 -i ~/.kube/config | pbcopy
 ```
 
-`GHCR_TOKEN` should be a GitHub token with `read:packages` permission so the
-cluster can pull private GHCR images. The workflow uses the built-in
-`GITHUB_TOKEN` to push images during the GitHub Actions run.
+The workflow expects a self-hosted Linux runner with Go, Node 24, pnpm, Docker,
+Helm and kubectl installed. If the runner deploys to k3s, it also expects
+passwordless `sudo k3s ctr -n k8s.io images import -` so locally built Docker
+images are available to the cluster runtime.
 
 ### Run The Workflow
 
-The workflow runs automatically on pushes to `main`. You can also run it
-manually from the GitHub Actions tab and choose the namespace.
+The workflow runs automatically on pushes to `main` and on pull requests.
+
+Manual runs support three layer choices:
+
+```text
+foundation
+application
+all
+```
+
+Pull request feature deploys only deploy the application layer and require a
+source branch named `feature/<10 lowercase alphanumeric chars>`. That suffix
+becomes the namespace and ingress prefix.
 
 The deploy order is:
 
 ```text
-foundation -> shared-components -> user-management
+foundation -> shared-components storybook -> user-management
 ```

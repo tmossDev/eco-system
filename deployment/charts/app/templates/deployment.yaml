@@ -1,4 +1,5 @@
 {{- $deployment := .Values.deployment | default dict -}}
+{{- $configMapEnvFrom := ne (toString .Values.configMap.envFrom) "false" -}}
 {{- if ($deployment.enabled | default true) }}
 apiVersion: apps/v1
 kind: Deployment
@@ -59,9 +60,9 @@ spec:
               value: {{ $value | quote }}
             {{- end }}
           {{- end }}
-          {{- if or .Values.envFrom .Values.configMap.enabled .Values.secret.enabled }}
+          {{- if or .Values.envFrom (and .Values.configMap.enabled $configMapEnvFrom) .Values.secret.enabled }}
           envFrom:
-            {{- if .Values.configMap.enabled }}
+            {{- if and .Values.configMap.enabled $configMapEnvFrom }}
             - configMapRef:
                 name: {{ include "app.fullname" . }}
             {{- end }}

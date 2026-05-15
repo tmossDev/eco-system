@@ -1,5 +1,16 @@
 # Project Change Log
 
+## v1.7.0 - (9 Changes)
+- Split deployment automation into foundation and application layers.
+- Added `config/hp-prodesk-homelab.txt` for shell-compatible homelab deployment values.
+- Added feature pull request namespace handling for `feature/<10 lowercase alphanumeric chars>` branches.
+- Changed application Dockerfiles to copy prebuilt Go, Angular and Storybook artifacts instead of building from registry-pulled images.
+- Added runtime frontend config map support for `BACKEND_API_URL` and mock API toggling.
+- Added ingress host wiring for application services and the shared design-system Storybook deploy.
+- Added k3s image import support for locally built images that are not pushed to a registry.
+- Changed homelab ingress defaults to Traefik with HTTP local hostnames.
+- Updated Docker ignore rules so prebuilt backend, admin web app and Storybook artifacts are available to runtime image builds.
+
 ## v1.6.1 - (4 Changes)
 - Added README instructions for manually deploying Helm releases to Kubernetes.
 - Added GitHub Actions workflow for building container images and deploying Helm releases to Kubernetes.

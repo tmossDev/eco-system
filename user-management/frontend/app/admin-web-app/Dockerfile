@@ -1,20 +1,7 @@
-FROM node:24-alpine AS builder
-
-WORKDIR /workspace
-
-RUN corepack enable
-RUN corepack prepare pnpm@latest --activate
-
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY shared-components/frontend/package/design-system ./shared-components/frontend/package/design-system
-COPY user-management/frontend/app/admin-web-app ./user-management/frontend/app/admin-web-app
-
-RUN pnpm config set ignore-scripts false
-RUN pnpm install --frozen-lockfile
-RUN pnpm --filter admin-web-app build
-
 FROM nginx:1.27-alpine
 
-COPY --from=builder /workspace/user-management/frontend/app/admin-web-app/dist/admin-web-app/browser /usr/share/nginx/html
+COPY user-management/frontend/app/admin-web-app/dist/admin-web-app/browser /usr/share/nginx/html
+COPY user-management/frontend/app/admin-web-app/storybook-static /usr/share/nginx/html/storybook
+RUN mkdir -p /usr/share/nginx/html/assets
 
 EXPOSE 80

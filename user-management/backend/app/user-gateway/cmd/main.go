@@ -105,11 +105,13 @@ func setup() error {
 	jwtFunction := http.NewJWTMiddleware(config)
 
 	irisApp.Use(
+		corsMiddleware,
 		axxessLogs.Handler,
 		middleware.CaselessMatcherMiddleware,
 		middleware.RequestIDMiddleware,
 		jwtFunction([]string{"/login", "/logout", "/refresh", "/health"}),
 	)
+	irisApp.Options("/{path:path}", corsMiddleware)
 
 	port = env.Getenv(envConstants.Port, envConstants.DefaultPort)
 
@@ -133,4 +135,26 @@ func start() {
 	if err := irisApp.Listen(fmt.Sprintf(":%s", port)); err != nil {
 		logger.Errorf("failed to start server reason: %s", err.Error())
 	}
+}
+
+func corsMiddleware(ctx iris.Context) {
+	origin := os.Getenv("FRONTEND_ORIGIN")
+	if origin == "" {
+		origin = ctx.GetHeader("Origin")
+	}
+
+	if origin != "" {
+		ctx.Header("Access-Control-Allow-Origin", origin)
+		ctx.Header("Access-Control-Allow-Credentials", "true")
+		ctx.Header("Access-Control-Allow-Headers", "Authorization, Content-Type")
+		ctx.Header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+		ctx.Header("Vary", "Origin")
+	}
+
+	if ctx.Method() == iris.MethodOptions {
+		ctx.StatusCode(iris.StatusNoContent)
+		return
+	}
+
+	ctx.Next()
 }
