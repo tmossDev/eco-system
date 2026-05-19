@@ -1,0 +1,174 @@
+name: Delete Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      layer:
+        description: Deployment layer to delete
+        required: true
+        default: application
+        type: choice
+        options:
+          - application
+          - foundation
+          - all
+      deployment:
+        description: Main uses the default application namespace. Feature/custom uses the namespace input.
+        required: true
+        default: main
+        type: choice
+        options:
+          - main
+          - feature
+          - custom
+      namespace:
+        description: Feature suffix or custom application namespace. Ignored for main and foundation-only deletes.
+        required: false
+        default: ""
+      delete_namespace:
+        description: Delete the application namespace after uninstalling application releases.
+        required: true
+        default: true
+        type: boolean
+      environment_file:
+        description: Environment config file under config/
+        required: true
+        default: hp-prodesk-homelab.txt
+      confirmation:
+        description: Type delete for application deletes. Type delete-foundation when layer includes foundation.
+        required: true
+        default: ""
+
+permissions:
+  contents: read
+
+env:
+  ENVIRONMENT_FILE: ${{ inputs.environment_file || 'hp-prodesk-homelab.txt' }}
+
+jobs:
+  delete:
+    name: Delete selected deployment
+    runs-on: [self-hosted, linux]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve delete context
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          CONFIG_FILE="config/${ENVIRONMENT_FILE}"
+          if [[ ! -f "$CONFIG_FILE" ]]; then
+            echo "Missing environment config: $CONFIG_FILE" >&2
+            exit 1
+          fi
+
+          set -a
+          . "$CONFIG_FILE"
+          set +a
+
+          LAYER="${{ inputs.layer }}"
+          DEPLOYMENT="${{ inputs.deployment }}"
+          REQUESTED_NAMESPACE="${{ inputs.namespace }}"
+          CONFIRMATION="${{ inputs.confirmation }}"
+
+          DELETE_FOUNDATION=false
+          DELETE_APPLICATION=false
+
+          case "$LAYER" in
+            foundation)
+              DELETE_FOUNDATION=true
+              ;;
+            application)
+              DELETE_APPLICATION=true
+              ;;
+            all)
+              DELETE_FOUNDATION=true
+              DELETE_APPLICATION=true
+              ;;
+            *)
+              echo "Unknown layer: $LAYER" >&2
+              exit 1
+              ;;
+          esac
+
+          if [[ "$DELETE_FOUNDATION" == "true" ]]; then
+            if [[ "$CONFIRMATION" != "delete-foundation" ]]; then
+              echo "Foundation deletes require confirmation: delete-foundation" >&2
+              exit 1
+            fi
+          elif [[ "$CONFIRMATION" != "delete" ]]; then
+            echo "Application deletes require confirmation: delete" >&2
+            exit 1
+          fi
+
+          case "$DEPLOYMENT" in
+            main)
+              NAMESPACE="${DEFAULT_APPLICATION_NAMESPACE:-eco-system}"
+              ;;
+            feature)
+              if [[ ! "$REQUESTED_NAMESPACE" =~ ^[a-z0-9]{10}$ ]]; then
+                echo "Feature deletes require namespace to be the 10-character feature suffix, for example abc123def4" >&2
+                exit 1
+              fi
+              NAMESPACE="$REQUESTED_NAMESPACE"
+              ;;
+            custom)
+              if [[ -z "$REQUESTED_NAMESPACE" ]]; then
+                echo "Custom deletes require a namespace input" >&2
+                exit 1
+              fi
+              NAMESPACE="$REQUESTED_NAMESPACE"
+              ;;
+            *)
+              echo "Unknown deployment: $DEPLOYMENT" >&2
+              exit 1
+              ;;
+          esac
+
+          FOUNDATION_NAMESPACE="${FOUNDATION_NAMESPACE:-eco-foundation}"
+
+          {
+            echo "DELETE_FOUNDATION=$DELETE_FOUNDATION"
+            echo "DELETE_APPLICATION=$DELETE_APPLICATION"
+            echo "NAMESPACE=$NAMESPACE"
+            echo "FOUNDATION_NAMESPACE=$FOUNDATION_NAMESPACE"
+          } >> "$GITHUB_ENV"
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Configure kubeconfig
+        shell: bash
+        run: |
+          mkdir -p "$HOME/.kube"
+          echo "${{ secrets.KUBE_CONFIG_B64 }}" | base64 --decode > "$HOME/.kube/config"
+          chmod 600 "$HOME/.kube/config"
+
+      - name: Delete application releases
+        if: env.DELETE_APPLICATION == 'true'
+        shell: bash
+        run: |
+          helm uninstall user-management --namespace "$NAMESPACE" --ignore-not-found
+          helm uninstall shared-components --namespace "$NAMESPACE" --ignore-not-found
+
+      - name: Delete application namespace
+        if: env.DELETE_APPLICATION == 'true' && inputs.delete_namespace
+        shell: bash
+        run: |
+          kubectl delete namespace "$NAMESPACE" --ignore-not-found --wait=false
+
+      - name: Delete foundation release
+        if: env.DELETE_FOUNDATION == 'true'
+        shell: bash
+        run: |
+          helm uninstall foundation --namespace "$FOUNDATION_NAMESPACE" --ignore-not-found
+
+      - name: Show remaining namespaces
+        shell: bash
+        run: |
+          kubectl get namespaces
