@@ -176,8 +176,21 @@ jobs:
         shell: bash
         run: |
           mkdir -p "$HOME/.kube"
-          echo "${{ secrets.KUBE_CONFIG_B64 }}" | base64 --decode > "$HOME/.kube/config"
+          if [[ -f /etc/rancher/k3s/k3s.yaml ]]; then
+            sudo cat /etc/rancher/k3s/k3s.yaml > "$HOME/.kube/config"
+          else
+            echo "${{ secrets.KUBE_CONFIG_B64 }}" | base64 --decode > "$HOME/.kube/config"
+          fi
           chmod 600 "$HOME/.kube/config"
+
+      - name: Check Kubernetes API
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Kubernetes server: $(kubectl config view --minify --raw -o jsonpath='{.clusters[0].cluster.server}')"
+          kubectl version --client
+          kubectl get --raw=/version
+          kubectl get --raw=/api
 
       - name: Create foundation namespace
         shell: bash
@@ -325,8 +338,21 @@ jobs:
         shell: bash
         run: |
           mkdir -p "$HOME/.kube"
-          echo "${{ secrets.KUBE_CONFIG_B64 }}" | base64 --decode > "$HOME/.kube/config"
+          if [[ -f /etc/rancher/k3s/k3s.yaml ]]; then
+            sudo cat /etc/rancher/k3s/k3s.yaml > "$HOME/.kube/config"
+          else
+            echo "${{ secrets.KUBE_CONFIG_B64 }}" | base64 --decode > "$HOME/.kube/config"
+          fi
           chmod 600 "$HOME/.kube/config"
+
+      - name: Check Kubernetes API
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Kubernetes server: $(kubectl config view --minify --raw -o jsonpath='{.clusters[0].cluster.server}')"
+          kubectl version --client
+          kubectl get --raw=/version
+          kubectl get --raw=/api
 
       - name: Create application namespace
         shell: bash
