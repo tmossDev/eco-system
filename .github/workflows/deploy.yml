@@ -162,7 +162,9 @@ jobs:
       - name: Import liquibase image into k3s
         shell: bash
         run: |
-          if command -v k3s >/dev/null 2>&1; then
+          if command -v k3d >/dev/null 2>&1; then
+            k3d image import "$IMAGE_PREFIX/liquibase:$IMAGE_TAG" -c "${K3D_CLUSTER:-eco-cluster}"
+          elif command -v k3s >/dev/null 2>&1; then
             docker save "$IMAGE_PREFIX/liquibase:$IMAGE_TAG" | sudo k3s ctr -n k8s.io images import -
           fi
 
@@ -175,18 +177,31 @@ jobs:
       - name: Configure kubeconfig
         shell: bash
         run: |
+          set -euo pipefail
           mkdir -p "$HOME/.kube"
-          if [[ -f /etc/rancher/k3s/k3s.yaml ]]; then
+          if [[ -f "$HOME/.kube/config" ]] && kubectl config current-context >/dev/null 2>&1; then
+            echo "Using existing runner kubeconfig at $HOME/.kube/config"
+          elif [[ -f "$HOME/.config/k3d/kubeconfig-${K3D_CLUSTER:-eco-cluster}.yaml" ]]; then
+            cp "$HOME/.config/k3d/kubeconfig-${K3D_CLUSTER:-eco-cluster}.yaml" "$HOME/.kube/config"
+          elif command -v k3d >/dev/null 2>&1 && k3d cluster list "${K3D_CLUSTER:-eco-cluster}" >/dev/null 2>&1; then
+            k3d kubeconfig get "${K3D_CLUSTER:-eco-cluster}" > "$HOME/.kube/config"
+          elif [[ -f /etc/rancher/k3s/k3s.yaml ]]; then
             sudo cat /etc/rancher/k3s/k3s.yaml > "$HOME/.kube/config"
+          elif [[ -n "${KUBE_CONFIG_B64:-}" ]]; then
+            echo "$KUBE_CONFIG_B64" | base64 --decode > "$HOME/.kube/config"
           else
-            echo "${{ secrets.KUBE_CONFIG_B64 }}" | base64 --decode > "$HOME/.kube/config"
+            echo "No usable kubeconfig found. Add one at $HOME/.kube/config on the runner, install k3s config at /etc/rancher/k3s/k3s.yaml, or set KUBE_CONFIG_B64." >&2
+            exit 1
           fi
           chmod 600 "$HOME/.kube/config"
+        env:
+          KUBE_CONFIG_B64: ${{ secrets.KUBE_CONFIG_B64 }}
 
       - name: Check Kubernetes API
         shell: bash
         run: |
           set -euo pipefail
+          kubectl config current-context
           echo "Kubernetes server: $(kubectl config view --minify --raw -o jsonpath='{.clusters[0].cluster.server}')"
           kubectl version --client
           kubectl get --raw=/version
@@ -319,7 +334,14 @@ jobs:
       - name: Import application images into k3s
         shell: bash
         run: |
-          if command -v k3s >/dev/null 2>&1; then
+          if command -v k3d >/dev/null 2>&1; then
+            k3d image import \
+              "$IMAGE_PREFIX/user-service:$IMAGE_TAG" \
+              "$IMAGE_PREFIX/user-gateway:$IMAGE_TAG" \
+              "$IMAGE_PREFIX/admin-web-app:$IMAGE_TAG" \
+              "$IMAGE_PREFIX/storybook:$IMAGE_TAG" \
+              -c "${K3D_CLUSTER:-eco-cluster}"
+          elif command -v k3s >/dev/null 2>&1; then
             docker save \
               "$IMAGE_PREFIX/user-service:$IMAGE_TAG" \
               "$IMAGE_PREFIX/user-gateway:$IMAGE_TAG" \
@@ -337,18 +359,31 @@ jobs:
       - name: Configure kubeconfig
         shell: bash
         run: |
+          set -euo pipefail
           mkdir -p "$HOME/.kube"
-          if [[ -f /etc/rancher/k3s/k3s.yaml ]]; then
+          if [[ -f "$HOME/.kube/config" ]] && kubectl config current-context >/dev/null 2>&1; then
+            echo "Using existing runner kubeconfig at $HOME/.kube/config"
+          elif [[ -f "$HOME/.config/k3d/kubeconfig-${K3D_CLUSTER:-eco-cluster}.yaml" ]]; then
+            cp "$HOME/.config/k3d/kubeconfig-${K3D_CLUSTER:-eco-cluster}.yaml" "$HOME/.kube/config"
+          elif command -v k3d >/dev/null 2>&1 && k3d cluster list "${K3D_CLUSTER:-eco-cluster}" >/dev/null 2>&1; then
+            k3d kubeconfig get "${K3D_CLUSTER:-eco-cluster}" > "$HOME/.kube/config"
+          elif [[ -f /etc/rancher/k3s/k3s.yaml ]]; then
             sudo cat /etc/rancher/k3s/k3s.yaml > "$HOME/.kube/config"
+          elif [[ -n "${KUBE_CONFIG_B64:-}" ]]; then
+            echo "$KUBE_CONFIG_B64" | base64 --decode > "$HOME/.kube/config"
           else
-            echo "${{ secrets.KUBE_CONFIG_B64 }}" | base64 --decode > "$HOME/.kube/config"
+            echo "No usable kubeconfig found. Add one at $HOME/.kube/config on the runner, install k3s config at /etc/rancher/k3s/k3s.yaml, or set KUBE_CONFIG_B64." >&2
+            exit 1
           fi
           chmod 600 "$HOME/.kube/config"
+        env:
+          KUBE_CONFIG_B64: ${{ secrets.KUBE_CONFIG_B64 }}
 
       - name: Check Kubernetes API
         shell: bash
         run: |
           set -euo pipefail
+          kubectl config current-context
           echo "Kubernetes server: $(kubectl config view --minify --raw -o jsonpath='{.clusters[0].cluster.server}')"
           kubectl version --client
           kubectl get --raw=/version

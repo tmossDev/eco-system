@@ -2,6 +2,7 @@
 # Feature pull requests must use feature/<10 lowercase alphanumeric chars>; that suffix becomes the namespace.
 
 ENVIRONMENT_NAME=hp-prodesk-homelab
+K3D_CLUSTER=eco-cluster
 FOUNDATION_NAMESPACE=eco-foundation
 DEFAULT_APPLICATION_NAMESPACE=eco-test
 
