@@ -181,7 +181,7 @@ jobs:
       - name: Create foundation namespace
         shell: bash
         run: |
-          kubectl create namespace "$FOUNDATION_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+          kubectl create namespace "$FOUNDATION_NAMESPACE" --dry-run=client -o yaml | kubectl apply --validate=false -f -
 
       - name: Build Helm dependencies
         shell: bash
@@ -323,7 +323,7 @@ jobs:
       - name: Create application namespace
         shell: bash
         run: |
-          kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+          kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply --validate=false -f -
 
       - name: Build Helm dependencies
         shell: bash
