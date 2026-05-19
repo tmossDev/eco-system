@@ -89,7 +89,8 @@ jobs:
             DEPLOY_APPLICATION=true
           elif [[ "$EVENT_NAME" == "push" ]]; then
             NAMESPACE="${DEFAULT_APPLICATION_NAMESPACE:-eco-system}"
-            DEPLOY_FOUNDATION=true
+            # Main deploys intentionally skip foundation. Use workflow_dispatch
+            # with layer=foundation when database/foundation changes should roll out.
             DEPLOY_APPLICATION=true
           else
             NAMESPACE="${NAMESPACE:-${DEFAULT_APPLICATION_NAMESPACE:-eco-system}}"
