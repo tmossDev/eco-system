@@ -298,8 +298,9 @@ jobs:
         shell: bash
         run: |
           mkdir -p build/bin
-          go build -o build/bin/user-service ./user-management/backend/app/user-service/cmd
-          go build -o build/bin/user-gateway ./user-management/backend/app/user-gateway/cmd
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/bin/user-service ./user-management/backend/app/user-service/cmd
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/bin/user-gateway ./user-management/backend/app/user-gateway/cmd
+          file build/bin/user-service build/bin/user-gateway
 
       - name: Build frontend applications and storybooks
         shell: bash
