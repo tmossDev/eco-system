@@ -50,7 +50,7 @@ func (repo *MySqlUserRepository) mapStatementToUser(row *sql.Row) (*model.UserRe
 	return &user, nil
 }
 
-func (repo *MySqlUserRepository) GetByEmail(email string) (*model.UserResponse, error) {
+func (repo *MySqlUserRepository) GetByEmail(requestId string, email string) (*model.UserResponse, error) {
 	stmt, err := flows.GetReaderStatement("GetByEmail", GetByEmail, repo.store)
 	if err != nil {
 		return nil, err
@@ -61,7 +61,7 @@ func (repo *MySqlUserRepository) GetByEmail(email string) (*model.UserResponse, 
 	user, err := repo.mapStatementToUser(result)
 
 	if err != nil {
-		utils.LogExecutingError("GetByEmail", err)
+		utils.LogExecutingError("GetByEmail", err, requestId)
 		return nil, types.NewInternalServerError()
 	}
 

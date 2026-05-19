@@ -1,5 +1,15 @@
 # Project Change Log
 
+## v1.8.0 - (8 Changes)
+- Added k3d-aware local image import and browser access troubleshooting to the deployment README.
+- Changed Liquibase Kubernetes execution from a long-running deployment to a Helm hook job.
+- Added Liquibase changesets for application database grants and beta user role assignments.
+- Changed Go application build instructions to produce static Linux binaries for Alpine runtime images.
+- Added gateway routes for admin web app auth, dashboard, settings and user management API calls.
+- Updated gateway login compatibility for frontend email login requests and `accessToken` responses.
+- Fixed Postgres user lookup projection and app user table permissions for seeded local users.
+- Improved backend request id propagation and database error logging across login repository calls.
+
 ## v1.7.0 - (9 Changes)
 - Split deployment automation into foundation and application layers.
 - Added `config/hp-prodesk-homelab.txt` for shell-compatible homelab deployment values.

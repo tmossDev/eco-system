@@ -35,5 +35,21 @@
             relativeToChangelogFile="false"
             stripComments="true" />
     </changeSet>
+    <changeSet author="tannar.moss" id="assign_beta_user_roles" context="beta">
+        <sqlFile dbms="postgresql"
+            encoding="UTF-8"
+            splitStatements="false"
+            path="beta/v1.0.1_assign_user_roles.sql"
+            relativeToChangelogFile="false"
+            stripComments="true" />
+    </changeSet>
+    <changeSet author="tannar.moss" id="grant_app_permissions">
+        <sqlFile dbms="postgresql"
+            encoding="UTF-8"
+            splitStatements="false"
+            path="v1.0.1_grant_app_permissions.sql"
+            relativeToChangelogFile="false"
+            stripComments="true" />
+    </changeSet>
 
 </databaseChangeLog>

@@ -24,6 +24,7 @@ import (
 	httpTypes "tmossDev.github.com/eco-system/shared-components/backend/package/transport/http/types"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/validator"
 	"tmossDev.github.com/eco-system/user-management/backend/app/user-gateway/routes"
+	userConstants "tmossDev.github.com/eco-system/user-management/backend/package/user/constants"
 	"tmossDev.github.com/eco-system/user-management/backend/package/user/repository/postgres"
 	"tmossDev.github.com/eco-system/user-management/backend/package/user/service"
 )
@@ -97,7 +98,7 @@ func setup() error {
 	axxessLogs = middleware.MakeAccessLog()
 
 	config := httpTypes.JWTConfig{
-		SecretKey:     []byte("super_duper_secret_key"), // Should be loaded from environment variables
+		SecretKey:     []byte(userConstants.PASSWORD_SECRET_HASHING_KEY),
 		TokenExpiry:   72 * time.Hour,
 		SigningMethod: jwt.SigningMethodHS256,
 		TokenPrefix:   "Bearer ",
@@ -109,7 +110,7 @@ func setup() error {
 		axxessLogs.Handler,
 		middleware.CaselessMatcherMiddleware,
 		middleware.RequestIDMiddleware,
-		jwtFunction([]string{"/login", "/logout", "/refresh", "/health"}),
+		jwtFunction([]string{"/auth/login", "/login", "/auth/logout", "/logout", "/refresh", "/health"}),
 	)
 	irisApp.Options("/{path:path}", corsMiddleware)
 

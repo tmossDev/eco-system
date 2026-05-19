@@ -5,6 +5,12 @@ component: ""
 
 replicaCount: 1
 
+job:
+  enabled: false
+  annotations: {}
+  backoffLimit: 3
+  restartPolicy: OnFailure
+
 image:
   repository: nginx
   tag: latest

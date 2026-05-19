@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"database/sql"
+	"errors"
 	"time"
 
 	"tmossDev.github.com/eco-system/shared-components/backend/package/datastore"
@@ -36,7 +37,7 @@ func (repo *PostgresUserRepository) mapStatementToUser(row *sql.Row) (*model.Use
 	var user model.UserResponse
 
 	if row.Err() != nil {
-		return nil, types.NewInternalServerError()
+		return nil, row.Err()
 	}
 
 	err := row.Scan(
@@ -66,7 +67,7 @@ func (repo *PostgresUserRepository) mapStatementToUser(row *sql.Row) (*model.Use
 	return &user, nil
 }
 
-func (repo *PostgresUserRepository) GetByEmail(email string) (*model.UserResponse, error) {
+func (repo *PostgresUserRepository) GetByEmail(requestId string, email string) (*model.UserResponse, error) {
 	stmt, err := flows.GetReaderStatement("GetByEmail", GetByEmail, repo.store)
 	if err != nil {
 		return nil, err
@@ -76,7 +77,11 @@ func (repo *PostgresUserRepository) GetByEmail(email string) (*model.UserRespons
 
 	user, err := repo.mapStatementToUser(stmt.QueryRow(email))
 	if err != nil {
-		utils.LogExecutingError("GetByEmail", err)
+		utils.LogExecutingError("GetByEmail", err, requestId)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, types.NewNoTFoundOrNoRecordError()
+		}
+
 		return nil, types.NewInternalServerError()
 	}
 
@@ -94,6 +99,10 @@ func (repo *PostgresUserRepository) GetByID(userId uint64) (*model.UserResponse,
 	user, err := repo.mapStatementToUser(stmt.QueryRow(userId))
 	if err != nil {
 		utils.LogExecutingError("GetByID", err)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, types.NewNoTFoundOrNoRecordError()
+		}
+
 		return nil, types.NewInternalServerError()
 	}
 

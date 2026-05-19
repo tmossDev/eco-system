@@ -12,5 +12,6 @@ func RequestIDMiddleware(ctx iris.Context) {
 		requestId = uuid.NewString()
 	}
 	ctx.Values().Set(constants.CTXRequestIdKey, requestId)
+	ctx.Header(constants.CTXRequestIdKey, requestId)
 	ctx.Next()
 }

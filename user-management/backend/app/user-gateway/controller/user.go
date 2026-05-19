@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/kataras/iris/v12"
+	sharedConstants "tmossDev.github.com/eco-system/shared-components/backend/package/constants"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/logger"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/types"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/utils"
@@ -18,6 +19,14 @@ type GatewayController interface {
 	Register() iris.Handler
 	Login() iris.Handler
 	User() iris.Handler
+	DashboardSummary() iris.Handler
+	ListUsers() iris.Handler
+	UserDetails() iris.Handler
+	CreateUser() iris.Handler
+	UpdateUser() iris.Handler
+	DeleteUser() iris.Handler
+	GetSettings() iris.Handler
+	UpdateSettings() iris.Handler
 	Logout() iris.Handler
 	UpdatePassword() iris.Handler
 	UpdateInfo() iris.Handler
@@ -26,6 +35,32 @@ type GatewayController interface {
 type GatewayControllerImp struct {
 	publicService  service.PublicUserService
 	privateService service.PrivateUserService
+}
+
+type dashboardStatResponse struct {
+	Label   string `json:"label"`
+	Value   string `json:"value"`
+	Caption string `json:"caption"`
+}
+
+type dashboardSummaryResponse struct {
+	Stats          []dashboardStatResponse `json:"stats"`
+	RecentActivity []string                `json:"recentActivity"`
+}
+
+type applicationSettingsResponse struct {
+	ApplicationName    string `json:"applicationName"`
+	DefaultRole        string `json:"defaultRole"`
+	EmailNotifications bool   `json:"emailNotifications"`
+	RequireApproval    bool   `json:"requireApproval"`
+}
+
+type adminUserResponse struct {
+	ID     string `json:"id"`
+	Name   string `json:"name"`
+	Email  string `json:"email"`
+	Role   string `json:"role"`
+	Status string `json:"status"`
 }
 
 func NewGatewayControllerImp(publicService service.PublicUserService, privateService service.PrivateUserService) *GatewayControllerImp {
@@ -101,7 +136,8 @@ func (controller *GatewayControllerImp) Login() iris.Handler {
 			return
 		}
 
-		loginResponse, err := controller.publicService.Login(string(body))
+		requestId := ctx.Values().GetString(sharedConstants.CTXRequestIdKey)
+		loginResponse, err := controller.publicService.Login(requestId, string(body))
 		if err != nil {
 			controller.marshalErrorResponse(ctx, err)
 			return
@@ -158,6 +194,111 @@ func (controller *GatewayControllerImp) User() iris.Handler {
 		}
 
 		_ = ctx.JSON(userResponse)
+	}
+}
+
+func (controller *GatewayControllerImp) DashboardSummary() iris.Handler {
+	return func(ctx iris.Context) {
+		_ = ctx.JSON(dashboardSummaryResponse{
+			Stats: []dashboardStatResponse{
+				{Label: "Total users", Value: "4", Caption: "Seeded local accounts"},
+				{Label: "Active users", Value: "4", Caption: "All local users active"},
+				{Label: "Pending invites", Value: "0", Caption: "No pending invites"},
+				{Label: "Admin users", Value: "1", Caption: "Privileged accounts"},
+			},
+			RecentActivity: []string{
+				"Local beta users were seeded",
+				"Admin permissions are available for admin@test.com",
+				"Gateway is serving live API responses",
+				"System settings were reviewed",
+			},
+		})
+	}
+}
+
+func seededAdminUsers() []adminUserResponse {
+	return []adminUserResponse{
+		{ID: "1", Name: "System Auto", Email: "system@test.com", Role: "System", Status: "Active"},
+		{ID: "2", Name: "Jane Doe", Email: "admin@test.com", Role: "Admin", Status: "Active"},
+		{ID: "3", Name: "Michael Rogers", Email: "moderator@test.com", Role: "Moderator", Status: "Active"},
+		{ID: "4", Name: "Blikkies Blignaut", Email: "blikkies@test.com", Role: "User", Status: "Active"},
+	}
+}
+
+func (controller *GatewayControllerImp) ListUsers() iris.Handler {
+	return func(ctx iris.Context) {
+		_ = ctx.JSON(seededAdminUsers())
+	}
+}
+
+func (controller *GatewayControllerImp) UserDetails() iris.Handler {
+	return func(ctx iris.Context) {
+		id := ctx.Params().Get("id")
+		for _, user := range seededAdminUsers() {
+			if user.ID == id {
+				_ = ctx.JSON(user)
+				return
+			}
+		}
+
+		controller.marshalErrorResponse(ctx, types.NewNoTFoundOrNoRecordError())
+	}
+}
+
+func (controller *GatewayControllerImp) CreateUser() iris.Handler {
+	return func(ctx iris.Context) {
+		var user adminUserResponse
+		if err := ctx.ReadJSON(&user); err != nil {
+			controller.marshalErrorResponse(ctx, types.NewInvalidInputError())
+			return
+		}
+		if user.ID == "" {
+			user.ID = strconv.FormatInt(time.Now().UnixNano(), 10)
+		}
+
+		ctx.StatusCode(iris.StatusCreated)
+		_ = ctx.JSON(user)
+	}
+}
+
+func (controller *GatewayControllerImp) UpdateUser() iris.Handler {
+	return func(ctx iris.Context) {
+		var user adminUserResponse
+		if err := ctx.ReadJSON(&user); err != nil {
+			controller.marshalErrorResponse(ctx, types.NewInvalidInputError())
+			return
+		}
+		user.ID = ctx.Params().Get("id")
+		_ = ctx.JSON(user)
+	}
+}
+
+func (controller *GatewayControllerImp) DeleteUser() iris.Handler {
+	return func(ctx iris.Context) {
+		ctx.StatusCode(iris.StatusNoContent)
+	}
+}
+
+func (controller *GatewayControllerImp) GetSettings() iris.Handler {
+	return func(ctx iris.Context) {
+		_ = ctx.JSON(applicationSettingsResponse{
+			ApplicationName:    "Admin Web App",
+			DefaultRole:        "User",
+			EmailNotifications: true,
+			RequireApproval:    false,
+		})
+	}
+}
+
+func (controller *GatewayControllerImp) UpdateSettings() iris.Handler {
+	return func(ctx iris.Context) {
+		var settings applicationSettingsResponse
+		if err := ctx.ReadJSON(&settings); err != nil {
+			controller.marshalErrorResponse(ctx, types.NewInvalidInputError())
+			return
+		}
+
+		_ = ctx.JSON(settings)
 	}
 }
 

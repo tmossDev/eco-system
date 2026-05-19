@@ -6,7 +6,8 @@ type ChangePasswordRequest struct {
 }
 
 type LoginRequest struct {
-	Username string `json:"username" validate:"required,gt=0,lte=225"`
+	Username string `json:"username" validate:"omitempty,gt=0,lte=225"`
+	Email    string `json:"email" validate:"omitempty,gt=0,lte=225"`
 	Password string `json:"password" validate:"required,gt=0"`
 }
 

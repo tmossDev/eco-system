@@ -1,17 +1,17 @@
-{{- $deployment := .Values.deployment | default dict -}}
+{{- if .Values.job.enabled }}
 {{- $configMapEnvFrom := ne (toString .Values.configMap.envFrom) "false" -}}
-{{- if ne (toString $deployment.enabled) "false" }}
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: batch/v1
+kind: Job
 metadata:
   name: {{ include "app.fullname" . }}
   labels:
     {{- include "app.labels" . | nindent 4 }}
+  {{- with .Values.job.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
-  replicas: {{ .Values.replicaCount }}
-  selector:
-    matchLabels:
-      {{- include "app.selectorLabels" . | nindent 6 }}
+  backoffLimit: {{ .Values.job.backoffLimit }}
   template:
     metadata:
       labels:
@@ -24,6 +24,7 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
     spec:
+      restartPolicy: {{ .Values.job.restartPolicy }}
       serviceAccountName: {{ include "app.serviceAccountName" . }}
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
@@ -49,10 +50,6 @@ spec:
           securityContext:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          {{- with .Values.ports }}
-          ports:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
           {{- if .Values.env }}
           env:
             {{- range $name, $value := .Values.env }}
@@ -73,18 +70,6 @@ spec:
             {{- with .Values.envFrom }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
-          {{- end }}
-          {{- with .Values.livenessProbe }}
-          livenessProbe:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
-          {{- with .Values.readinessProbe }}
-          readinessProbe:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
-          {{- with .Values.startupProbe }}
-          startupProbe:
-            {{- toYaml . | nindent 12 }}
           {{- end }}
           {{- with .Values.resources }}
           resources:

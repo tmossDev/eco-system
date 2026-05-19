@@ -1,6 +1,7 @@
 package service
 
 import (
+	"errors"
 	"strconv"
 
 	"tmossDev.github.com/eco-system/shared-components/backend/package/logger"
@@ -18,7 +19,7 @@ type PublicUserService interface {
 	User(jwt string) (*model.UserResponse, error)
 	Logout(jwt string) error
 	Register(body string) (*model.LoginResponse, error)
-	Login(body string) (*model.LoginResponse, error)
+	Login(requestId string, body string) (*model.LoginResponse, error)
 	Shutdown()
 }
 
@@ -49,8 +50,15 @@ func (auth *PublicUserServiceImpl) generateLoginResponseFromUser(user model.User
 	logger.Debugf("User logged in '%d' with token '%s'", strconv.FormatUint(user.ID, 10), token)
 
 	return &model.LoginResponse{
-		Jwt:      token,
-		ExpireAt: expireAt,
+		Jwt:         token,
+		AccessToken: token,
+		ExpireAt:    expireAt,
+		User: model.AuthUserResponse{
+			ID:    utils.UintToString(user.ID),
+			Name:  user.FirstName + " " + user.LastName,
+			Email: user.Email,
+			Role:  strconv.FormatUint(user.RoleID, 10),
+		},
 	}, nil
 }
 
@@ -86,20 +94,36 @@ func (auth *PublicUserServiceImpl) IsAuthorized(jwt string, page string) error {
 	return nil
 }
 
-func (auth PublicUserServiceImpl) Login(body string) (*model.LoginResponse, error) {
+func (auth PublicUserServiceImpl) Login(requestId string, body string) (*model.LoginResponse, error) {
 	var loginRequest model.LoginRequest
 	err := auth.validator.MarshalAndValidateREQ(body, &loginRequest)
 	if err != nil {
 		return nil, err
 	}
 
-	user, err := auth.userRepo.GetByEmail(loginRequest.Username)
+	username := loginRequest.Username
+	if username == "" {
+		username = loginRequest.Email
+	}
+	if username == "" {
+		logger.Infof(requestId, "Login failed: no username or email supplied")
+		return nil, types.NewUnauthorizedError()
+	}
+
+	user, err := auth.userRepo.GetByEmail(requestId, username)
 	if err != nil {
+		var socketErr *types.SocketError
+		if errors.As(err, &socketErr) {
+			logger.Infof(requestId, "Login failed for '%s': %s", username, socketErr.Error())
+			return nil, types.NewUnauthorizedError()
+		}
+
+		logger.Errorf(requestId, "Login lookup failed for '%s': %s", username, err.Error())
 		return nil, err
 	}
 
 	if !utils.ComparePassword(user.HashedPassword, loginRequest.Password) {
-		logger.Infof("Failed login attempt for '%s' with '%s'", loginRequest.Username, loginRequest.Password)
+		logger.Infof(requestId, "Failed login attempt for '%s': invalid password", username)
 		return nil, types.NewUnauthorizedError()
 	}
 

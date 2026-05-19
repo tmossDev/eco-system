@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/kataras/iris/v12"
+	sharedConstants "tmossDev.github.com/eco-system/shared-components/backend/package/constants"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/logger"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/types"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/utils"
@@ -101,7 +102,8 @@ func (controller *ServiceControllerImp) Login() iris.Handler {
 			return
 		}
 
-		loginResponse, err := controller.publicService.Login(string(body))
+		requestId := ctx.Values().GetString(sharedConstants.CTXRequestIdKey)
+		loginResponse, err := controller.publicService.Login(requestId, string(body))
 		if err != nil {
 			controller.marshalErrorResponse(ctx, err)
 			return

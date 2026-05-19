@@ -143,6 +143,8 @@ set +a
 
 export IMAGE_PREFIX=localhost/eco-system
 export IMAGE_TAG="$(git rev-parse --short HEAD)"
+export KUBE_CONTEXT="$(kubectl config current-context)"
+export K3D_CLUSTER="${K3D_CLUSTER:-${KUBE_CONTEXT#k3d-}}"
 export FOUNDATION_NAMESPACE="${FOUNDATION_NAMESPACE:-eco-foundation}"
 export NAMESPACE="${DEFAULT_APPLICATION_NAMESPACE:-eco-test}"
 export BACKEND_API_URL="http://${NAMESPACE}.user-gateway.${BASE_DOMAIN:-com}"
@@ -192,8 +194,13 @@ docker build \
   -t "$IMAGE_PREFIX/liquibase:$IMAGE_TAG" \
   foundation/liquibase
 
-if command -v k3s >/dev/null 2>&1; then
+docker image inspect "$IMAGE_PREFIX/liquibase:$IMAGE_TAG" >/dev/null
+
+if command -v k3d >/dev/null 2>&1 && [ "${KUBE_CONTEXT#k3d-}" != "$KUBE_CONTEXT" ]; then
+  k3d image import "$IMAGE_PREFIX/liquibase:$IMAGE_TAG" -c "$K3D_CLUSTER"
+elif command -v k3s >/dev/null 2>&1; then
   docker save "$IMAGE_PREFIX/liquibase:$IMAGE_TAG" | sudo k3s ctr -n k8s.io images import -
+  sudo k3s ctr -n k8s.io images list | grep "$IMAGE_PREFIX/liquibase"
 fi
 
 kubectl create namespace "$FOUNDATION_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
@@ -214,22 +221,64 @@ helm upgrade --install foundation foundation/deployment \
 kubectl get all -n "$FOUNDATION_NAMESPACE"
 ```
 
+If the Liquibase pod reports `ErrImageNeverPull`, the image exists in Docker
+but is missing from the container runtime for the node running the pod.
+For k3d, the node name starts with `k3d-`; import the exact tag into the k3d
+cluster and restart the deployment:
+
+```sh
+k3d image import "$IMAGE_PREFIX/liquibase:$IMAGE_TAG" -c "$K3D_CLUSTER"
+kubectl rollout restart deployment/liquibase -n "$FOUNDATION_NAMESPACE"
+kubectl get pods -n "$FOUNDATION_NAMESPACE" -o wide
+```
+
+For plain k3s, re-import the exact tag and restart the deployment:
+
+```sh
+docker save "$IMAGE_PREFIX/liquibase:$IMAGE_TAG" | sudo k3s ctr -n k8s.io images import -
+sudo k3s ctr -n k8s.io images list | grep "$IMAGE_PREFIX/liquibase"
+kubectl rollout restart deployment/liquibase -n "$FOUNDATION_NAMESPACE"
+kubectl get pods -n "$FOUNDATION_NAMESPACE" -o wide
+```
+
+For a multi-node k3s cluster, import the image on every node that may run the
+Liquibase pod, or push the image to a registry and use a pull policy other than
+`Never`.
+
 ### Build Application Layer
 
 Build the application artifacts first. The Dockerfiles copy these built files
 into lightweight runtime images:
 
 ```sh
+command -v go >/dev/null || {
+  echo "Go is required to build user-service and user-gateway"
+  exit 1
+}
+
 mkdir -p build/bin
-go build -o build/bin/user-service ./user-management/backend/app/user-service/cmd
-go build -o build/bin/user-gateway ./user-management/backend/app/user-gateway/cmd
-test -x build/bin/user-service
-test -x build/bin/user-gateway
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/bin/user-service ./user-management/backend/app/user-service/cmd
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/bin/user-gateway ./user-management/backend/app/user-gateway/cmd
+for binary in build/bin/user-service build/bin/user-gateway; do
+  test -x "$binary" || {
+    echo "Missing built binary: $binary"
+    exit 1
+  }
+done
 
 pnpm install --frozen-lockfile
 pnpm --filter admin-web-app build
 pnpm --filter admin-web-app build-storybook
 pnpm --filter storybook build-storybook
+for directory in \
+  user-management/frontend/app/admin-web-app/dist/admin-web-app/browser \
+  user-management/frontend/app/admin-web-app/storybook-static \
+  shared-components/frontend/app/storybook/storybook-static; do
+  test -d "$directory" || {
+    echo "Missing frontend build output: $directory"
+    exit 1
+  }
+done
 
 docker build \
   -f dockerfile \
@@ -253,7 +302,14 @@ docker build \
   -t "$IMAGE_PREFIX/storybook:$IMAGE_TAG" \
   .
 
-if command -v k3s >/dev/null 2>&1; then
+if command -v k3d >/dev/null 2>&1 && [ "${KUBE_CONTEXT#k3d-}" != "$KUBE_CONTEXT" ]; then
+  k3d image import \
+    "$IMAGE_PREFIX/user-service:$IMAGE_TAG" \
+    "$IMAGE_PREFIX/user-gateway:$IMAGE_TAG" \
+    "$IMAGE_PREFIX/admin-web-app:$IMAGE_TAG" \
+    "$IMAGE_PREFIX/storybook:$IMAGE_TAG" \
+    -c "$K3D_CLUSTER"
+elif command -v k3s >/dev/null 2>&1; then
   for image in \
     "$IMAGE_PREFIX/user-service:$IMAGE_TAG" \
     "$IMAGE_PREFIX/user-gateway:$IMAGE_TAG" \
@@ -363,12 +419,30 @@ On the hp-prodesk homelab this is usually Traefik's external IP:
 kubectl get ingress -n "$NAMESPACE"
 INGRESS_ADDRESS="$(kubectl get ingress admin-web-app -n "$NAMESPACE" -o jsonpath='{.status.loadBalancer.ingress[0].ip}')"
 echo "$INGRESS_ADDRESS $ADMIN_WEB_APP_HOST $STORYBOOK_HOST $USER_GATEWAY_HOST $USER_SERVICE_HOST" | sudo tee -a /etc/hosts
+getent hosts "$STORYBOOK_HOST"
 ```
 
-Then open the admin web app over HTTP:
+Then open the deployed apps over HTTP:
 
 ```text
 http://eco-test.admin-web-app.com
+http://eco-test.storybook.com
+```
+
+If `getent hosts "$STORYBOOK_HOST"` returns nothing, the browser cannot resolve
+the hostname; re-run the `/etc/hosts` command above. If the hostname resolves
+but the browser still cannot connect, the k3d cluster may not expose Traefik on
+the host. Use a local port-forward as a fallback:
+
+```sh
+echo "127.0.0.1 $ADMIN_WEB_APP_HOST $STORYBOOK_HOST $USER_GATEWAY_HOST $USER_SERVICE_HOST" | sudo tee -a /etc/hosts
+kubectl port-forward -n kube-system svc/traefik 8080:80
+```
+
+With the port-forward running, open:
+
+```text
+http://eco-test.storybook.com:8080
 ```
 
 If you need to remove the releases:

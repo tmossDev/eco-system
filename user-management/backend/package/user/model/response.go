@@ -1,8 +1,17 @@
 package model
 
 type LoginResponse struct {
-	Jwt      string `json:"jwt"`
-	ExpireAt int64  `json:"expire_at"`
+	Jwt         string           `json:"jwt"`
+	AccessToken string           `json:"accessToken"`
+	ExpireAt    int64            `json:"expire_at"`
+	User        AuthUserResponse `json:"user"`
+}
+
+type AuthUserResponse struct {
+	ID    string `json:"id"`
+	Name  string `json:"name"`
+	Email string `json:"email"`
+	Role  string `json:"role"`
 }
 
 type UserResponse struct {

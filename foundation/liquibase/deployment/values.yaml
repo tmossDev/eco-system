@@ -4,6 +4,15 @@ app:
   partOf: foundation
   component: migration
   replicaCount: 1
+  deployment:
+    enabled: false
+  job:
+    enabled: true
+    annotations:
+      helm.sh/hook: post-install,post-upgrade
+      helm.sh/hook-delete-policy: before-hook-creation
+    backoffLimit: 6
+    restartPolicy: OnFailure
   image:
     repository: eco-system/liquibase
     tag: latest
