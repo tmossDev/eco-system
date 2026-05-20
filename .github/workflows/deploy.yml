@@ -494,84 +494,38 @@ jobs:
       - name: Run deployed gateway functional tests
         shell: bash
         env:
+          GATEWAY_BASE_URL: http://127.0.0.1:18080
           FUNCTIONAL_TEST_EMAIL: admin@test.com
           FUNCTIONAL_TEST_PASSWORD: password
         run: |
           set -euo pipefail
-
-          BASE_URL="http://${USER_GATEWAY_HOST}"
-          RESPONSE_FILE="$(mktemp)"
-          BODY_FILE="$(mktemp)"
 
           show_gateway_logs() {
             echo "::group::Recent user-gateway logs"
             kubectl logs -n "$NAMESPACE" deployment/user-gateway --tail=120 || true
             echo "::endgroup::"
           }
-          trap show_gateway_logs EXIT
+          kubectl port-forward -n "$NAMESPACE" service/user-gateway 18080:8080 &
+          PORT_FORWARD_PID="$!"
+          trap 'kill "$PORT_FORWARD_PID" 2>/dev/null || true; show_gateway_logs' EXIT
 
-          request() {
-            local method="$1"
-            local path="$2"
-            local expected_status="$3"
-            local body="${4:-}"
-            local token="${5:-}"
-            local request_id="ci-${GITHUB_RUN_ID:-local}-${GITHUB_RUN_ATTEMPT:-1}-${method}-${path//\//-}"
-
-            echo "Functional test: ${method} ${path} expects ${expected_status}"
-
-            local curl_args=(
-              --silent
-              --show-error
-              --output "$BODY_FILE"
-              --write-out "%{http_code}"
-              --request "$method"
-              --header "Content-Type: application/json"
-              --header "request-id: ${request_id}"
-            )
-
-            if [[ -n "$token" ]]; then
-              curl_args+=(--header "Authorization: Bearer ${token}")
+          for attempt in {1..30}; do
+            if curl --silent --fail --request OPTIONS "$GATEWAY_BASE_URL/api/auth/login" >/dev/null; then
+              break
             fi
 
-            if [[ -n "$body" ]]; then
-              curl_args+=(--data "$body")
-            fi
-
-            local status
-            status="$(curl "${curl_args[@]}" "${BASE_URL}${path}")"
-            cp "$BODY_FILE" "$RESPONSE_FILE"
-
-            if [[ "$status" != "$expected_status" ]]; then
-              echo "Functional test failed: ${method} ${path} returned ${status}, expected ${expected_status}" >&2
-              cat "$RESPONSE_FILE" >&2
+            if [[ "$attempt" == "30" ]]; then
+              echo "Timed out waiting for port-forwarded user-gateway service" >&2
               exit 1
             fi
 
-            echo "Functional test passed: ${method} ${path} (${status}, request-id=${request_id})"
-          }
+            sleep 1
+          done
 
-          extract_json_field() {
-            local field="$1"
-            node -e '
-              const fs = require("fs");
-              const field = process.argv[1];
-              const payload = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
-              if (!payload[field]) process.exit(1);
-              process.stdout.write(String(payload[field]));
-            ' "$field" "$RESPONSE_FILE"
-          }
-
-          request POST /api/auth/login 200 "{\"email\":\"${FUNCTIONAL_TEST_EMAIL}\",\"password\":\"${FUNCTIONAL_TEST_PASSWORD}\"}"
-          TOKEN="$(extract_json_field accessToken)"
-
-          request GET /api/users 200 "" "$TOKEN"
-          request GET /api/users/2 200 "" "$TOKEN"
-          request POST /api/users 201 '{"name":"CI Functional User","email":"ci.functional@test.com","role":"User","status":"Active"}' "$TOKEN"
-          CREATED_USER_ID="$(extract_json_field id)"
-          request PUT "/api/users/${CREATED_USER_ID}" 200 '{"name":"CI Functional User Updated","email":"ci.functional@test.com","role":"User","status":"Active"}' "$TOKEN"
-          request DELETE "/api/users/${CREATED_USER_ID}" 204 "" "$TOKEN"
-          request POST /api/auth/logout 200 "" "$TOKEN"
+          go test ./user-management/backend/app/user-gateway/routes \
+            -tags integration \
+            -run TestDeployedGatewayFunctional \
+            -v
 
       - name: Show application rollout
         shell: bash
