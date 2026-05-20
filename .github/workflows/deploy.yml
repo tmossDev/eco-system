@@ -284,6 +284,11 @@ jobs:
         with:
           go-version-file: go.mod
 
+      - name: Run Go service functional tests
+        shell: bash
+        run: |
+          go test ./user-management/backend/app/user-gateway/routes -run 'TestGatewayFunctional'
+
       - name: Set up Node
         uses: actions/setup-node@v4
         with:

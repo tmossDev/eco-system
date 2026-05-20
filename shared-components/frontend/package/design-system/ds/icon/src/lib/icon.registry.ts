@@ -7,6 +7,7 @@ export const iconNames = [
   'arrow-left',
   'arrow-up',
   'arrow-down',
+  'log-out',
   'chevron-right',
   'chevron-left',
   'chevron-up',
@@ -58,6 +59,9 @@ export const iconRegistry: Record<IconName, IconDefinition> = {
   },
   'arrow-down': {
     path: 'M20 12l-1.41-1.41L14 15.17V4h-2v11.17l-4.59-4.58L6 12l7 8z',
+  },
+  'log-out': {
+    path: 'M10 17v-2h4v-2h-4v-2l-3 3zm-5 4h8c1.1 0 2-.9 2-2v-3h-2v3H5V5h8v3h2V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2zm11.59-5.59L18.17 14H12v-2h6.17l-1.58-1.59L18 9l4 4-4 4z',
   },
   'chevron-right': {
     path: 'M9.29 6.71a1 1 0 0 1 1.42 0L16 12l-5.29 5.29a1 1 0 1 1-1.42-1.42L13.17 12 9.29 8.12a1 1 0 0 1 0-1.41z',

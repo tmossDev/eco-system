@@ -61,6 +61,8 @@ const manyItems: NavigationItem[] = [
         subtitle="Management"
         [variant]="variant()"
         [items]="items"
+        [user]="user"
+        [profileRoute]="['/users', user.id]"
         (variantChange)="variant.set($event)"
       />
 
@@ -124,6 +126,12 @@ const manyItems: NavigationItem[] = [
 class NavigationBarStoryShell {
   protected readonly variant = signal<NavigationBarVariant>('sidebar');
   protected readonly items = defaultItems;
+  protected readonly user = {
+    id: '1',
+    name: 'Ada Lovelace',
+    email: 'ada@example.com',
+    role: 'Admin',
+  };
 }
 
 const meta: Meta<NavigationBar> = {
@@ -152,8 +160,17 @@ const meta: Meta<NavigationBar> = {
     items: {
       control: 'object',
     },
+    user: {
+      control: 'object',
+    },
+    profileRoute: {
+      control: 'object',
+    },
     variantChange: {
       action: 'variantChange',
+    },
+    logout: {
+      action: 'logout',
     },
   },
   args: {
@@ -161,6 +178,12 @@ const meta: Meta<NavigationBar> = {
     title: 'Admin',
     subtitle: 'Management',
     items: defaultItems,
+    user: {
+      name: 'Ada Lovelace',
+      email: 'ada@example.com',
+      role: 'Admin',
+    },
+    profileRoute: '/users/1',
   },
 };
 

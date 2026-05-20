@@ -40,6 +40,58 @@
       }
     </div>
 
+    @if (user) {
+      <div class="navigation-bar__user-menu" [class.navigation-bar__user-menu--open]="isUserMenuOpen">
+        <button
+          type="button"
+          class="navigation-bar__user-trigger"
+          [attr.aria-expanded]="isUserMenuOpen"
+          aria-haspopup="menu"
+          [attr.aria-label]="userMenuLabel"
+          [title]="userMenuLabel"
+          (click)="toggleUserMenu()"
+          (keydown.escape)="closeUserMenu()"
+        >
+          <span class="navigation-bar__avatar">{{ userInitials }}</span>
+          <ds-icon name="chevron-down"></ds-icon>
+        </button>
+
+        @if (isUserMenuOpen) {
+          <div class="navigation-bar__user-popover" role="menu">
+            <div class="navigation-bar__user-summary">
+              <span class="navigation-bar__avatar navigation-bar__avatar--large">{{ userInitials }}</span>
+              <span>
+                <span class="navigation-bar__user-name">{{ user.name }}</span>
+                <span class="navigation-bar__user-email">{{ user.email }}</span>
+              </span>
+            </div>
+
+            @if (profileRoute) {
+              <a
+                class="navigation-bar__user-action"
+                [routerLink]="profileRoute"
+                role="menuitem"
+                (click)="closeUserMenu()"
+              >
+                <ds-icon name="user"></ds-icon>
+                <span>View profile</span>
+              </a>
+            }
+
+            <button
+              type="button"
+              class="navigation-bar__user-action"
+              role="menuitem"
+              (click)="onLogout()"
+            >
+              <ds-icon name="log-out"></ds-icon>
+              <span>Log out</span>
+            </button>
+          </div>
+        }
+      </div>
+    }
+
     <button
       type="button"
       class="navigation-bar__toggle navigation-bar__toggle--items"

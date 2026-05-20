@@ -1,5 +1,11 @@
 # Project Change Log
 
+## v1.9.0 - (4 Changes)
+- Added an authenticated user menu to the admin web app navigation with current user details, profile navigation and logout.
+- Added logout handling in the admin web app to clear the stored session and return users to the login page.
+- Improved backend access logs to include stdout output and redacted request/response bodies for easier gateway troubleshooting.
+- Added user-gateway functional tests for login, logout, list users, get user, create user, edit user and delete user flows to the deployment pipeline.
+
 ## v1.8.0 - (8 Changes)
 - Added k3d-aware local image import and browser access troubleshooting to the deployment README.
 - Changed Liquibase Kubernetes execution from a long-running deployment to a Helm hook job.

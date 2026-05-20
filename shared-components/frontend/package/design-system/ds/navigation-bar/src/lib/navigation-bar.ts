@@ -10,6 +10,12 @@ export interface NavigationItem {
   icon: IconName;
 }
 
+export interface NavigationUser {
+  name: string;
+  email: string;
+  role?: string;
+}
+
 @Component({
   selector: 'ds-navigation-bar',
   imports: [RouterLink, RouterLinkActive, Icon],
@@ -31,10 +37,20 @@ export class NavigationBar {
   @Input()
   public items: NavigationItem[] = [];
 
+  @Input()
+  public user: NavigationUser | null = null;
+
+  @Input()
+  public profileRoute: string | any[] | null = null;
+
   @Output()
   public variantChange = new EventEmitter<NavigationBarVariant>();
 
+  @Output()
+  public logout = new EventEmitter<void>();
+
   protected transitioningTo?: NavigationBarVariant;
+  protected isUserMenuOpen = false;
 
   protected get nextVariant(): NavigationBarVariant {
     return this.variant === 'sidebar' ? 'header' : 'sidebar';
@@ -52,6 +68,25 @@ export class NavigationBar {
     return this.variant === 'sidebar' ? 'arrow-left' : 'arrow-down';
   }
 
+  protected get userInitials(): string {
+    const name = this.user?.name?.trim();
+
+    if (!name) {
+      return '?';
+    }
+
+    return name
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((namePart) => namePart[0])
+      .join('')
+      .toUpperCase();
+  }
+
+  protected get userMenuLabel(): string {
+    return this.isUserMenuOpen ? 'Close user menu' : 'Open user menu';
+  }
+
   protected toggleVariant(): void {
     if (this.isTransitioning) {
       return;
@@ -64,5 +99,18 @@ export class NavigationBar {
       this.variantChange.emit(nextVariant);
       this.transitioningTo = undefined;
     }, this.transitionDuration);
+  }
+
+  protected toggleUserMenu(): void {
+    this.isUserMenuOpen = !this.isUserMenuOpen;
+  }
+
+  protected closeUserMenu(): void {
+    this.isUserMenuOpen = false;
+  }
+
+  protected onLogout(): void {
+    this.closeUserMenu();
+    this.logout.emit();
   }
 }
