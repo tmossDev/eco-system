@@ -2,11 +2,14 @@ package middleware
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"strings"
 
+	"github.com/kataras/iris/v12/context"
 	"github.com/kataras/iris/v12/middleware/accesslog"
+	"tmossDev.github.com/eco-system/shared-components/backend/package/constants"
 )
 
 const redactedLogValue = "[redacted]"
@@ -15,24 +18,56 @@ type noCloseWriter struct {
 	io.Writer
 }
 
-type redactingJSONFormatter struct {
-	formatter accesslog.JSON
+type compactJSONFormatter struct {
+	output io.Writer
 }
 
 func (writer noCloseWriter) Close() error {
 	return nil
 }
 
-func (formatter *redactingJSONFormatter) SetOutput(dest io.Writer) {
-	formatter.formatter.SetOutput(dest)
+func (formatter *compactJSONFormatter) SetOutput(dest io.Writer) {
+	formatter.output = dest
 }
 
-func (formatter *redactingJSONFormatter) Format(log *accesslog.Log) (bool, error) {
-	redactedLog := *log
-	redactedLog.Request = redactAccessLogBody(log.Request)
-	redactedLog.Response = redactAccessLogBody(log.Response)
+func (formatter *compactJSONFormatter) Format(log *accesslog.Log) (bool, error) {
+	payload := accessLogPayload{
+		Timestamp:     log.Now.Format(log.TimeFormat),
+		Latency:       int64(log.Latency),
+		Code:          log.Code,
+		Method:        log.Method,
+		Path:          log.Path,
+		IP:            log.IP,
+		RequestID:     getAccessLogField(log, "request_id"),
+		Request:       redactAccessLogBody(log.Request),
+		Response:      redactAccessLogBody(log.Response),
+		BytesReceived: log.BytesReceived,
+		BytesSent:     log.BytesSent,
+	}
 
-	return formatter.formatter.Format(&redactedLog)
+	line, err := json.Marshal(payload)
+	if err != nil {
+		return true, err
+	}
+
+	line = append(line, '\n')
+	_, err = formatter.output.Write(line)
+
+	return true, err
+}
+
+type accessLogPayload struct {
+	Timestamp     string `json:"timestamp"`
+	Latency       int64  `json:"latency"`
+	Code          int    `json:"code"`
+	Method        string `json:"method"`
+	Path          string `json:"path"`
+	IP            string `json:"ip,omitempty"`
+	RequestID     string `json:"request_id,omitempty"`
+	Request       string `json:"request,omitempty"`
+	Response      string `json:"response,omitempty"`
+	BytesReceived int    `json:"bytes_received,omitempty"`
+	BytesSent     int    `json:"bytes_sent,omitempty"`
 }
 
 func MakeAccessLog() *accesslog.AccessLog {
@@ -54,21 +89,29 @@ func MakeAccessLog() *accesslog.AccessLog {
 	ac.ResponseBody = true
 	ac.KeepMultiLineError = true
 	ac.PanicLog = accesslog.LogHandler
+	ac.AddFields(func(ctx *context.Context, fields *accesslog.Fields) {
+		fields.Set("request_id", ctx.Values().GetString(constants.CTXRequestIdKey))
+	})
 
 	// Default line format if formatter is missing:
 	// Time|Latency|Code|Method|Path|IP|Path Params Query Fields|Bytes Received|Bytes Sent|Request|Response|
 	//
 	// Set Custom Formatter:
-	ac.SetFormatter(&redactingJSONFormatter{
-		formatter: accesslog.JSON{
-			Indent:    "  ",
-			HumanTime: true,
-		},
-	})
+	ac.SetFormatter(&compactJSONFormatter{})
 	// ac.SetFormatter(&accesslog.CSV{})
 	// ac.SetFormatter(&accesslog.Template{Text: "{{.Code}}"})
 
 	return ac
+}
+
+func getAccessLogField(log *accesslog.Log, key string) string {
+	for _, field := range log.Fields {
+		if field.Key == key {
+			return fmt.Sprint(field.ValueRaw)
+		}
+	}
+
+	return ""
 }
 
 func redactAccessLogBody(body string) string {

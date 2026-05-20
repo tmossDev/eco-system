@@ -284,7 +284,7 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: Run Go service functional tests
+      - name: Run in-process Go gateway functional tests
         shell: bash
         run: |
           go test ./user-management/backend/app/user-gateway/routes -run 'TestGatewayFunctional'
@@ -483,6 +483,95 @@ jobs:
             --set admin-web-app.app.ingress.hosts[0].host="$ADMIN_WEB_APP_HOST" \
             --set admin-web-app.app.ingress.hosts[0].paths[0].path=/ \
             --set admin-web-app.app.ingress.hosts[0].paths[0].pathType=Prefix
+
+      - name: Wait for user-management rollout
+        shell: bash
+        run: |
+          set -euo pipefail
+          kubectl rollout status deployment/user-gateway -n "$NAMESPACE" --timeout=180s
+          kubectl rollout status deployment/admin-web-app -n "$NAMESPACE" --timeout=180s
+
+      - name: Run deployed gateway functional tests
+        shell: bash
+        env:
+          FUNCTIONAL_TEST_EMAIL: admin@test.com
+          FUNCTIONAL_TEST_PASSWORD: password
+        run: |
+          set -euo pipefail
+
+          BASE_URL="http://${USER_GATEWAY_HOST}"
+          RESPONSE_FILE="$(mktemp)"
+          BODY_FILE="$(mktemp)"
+
+          show_gateway_logs() {
+            echo "::group::Recent user-gateway logs"
+            kubectl logs -n "$NAMESPACE" deployment/user-gateway --tail=120 || true
+            echo "::endgroup::"
+          }
+          trap show_gateway_logs EXIT
+
+          request() {
+            local method="$1"
+            local path="$2"
+            local expected_status="$3"
+            local body="${4:-}"
+            local token="${5:-}"
+            local request_id="ci-${GITHUB_RUN_ID:-local}-${GITHUB_RUN_ATTEMPT:-1}-${method}-${path//\//-}"
+
+            echo "Functional test: ${method} ${path} expects ${expected_status}"
+
+            local curl_args=(
+              --silent
+              --show-error
+              --output "$BODY_FILE"
+              --write-out "%{http_code}"
+              --request "$method"
+              --header "Content-Type: application/json"
+              --header "request-id: ${request_id}"
+            )
+
+            if [[ -n "$token" ]]; then
+              curl_args+=(--header "Authorization: Bearer ${token}")
+            fi
+
+            if [[ -n "$body" ]]; then
+              curl_args+=(--data "$body")
+            fi
+
+            local status
+            status="$(curl "${curl_args[@]}" "${BASE_URL}${path}")"
+            cp "$BODY_FILE" "$RESPONSE_FILE"
+
+            if [[ "$status" != "$expected_status" ]]; then
+              echo "Functional test failed: ${method} ${path} returned ${status}, expected ${expected_status}" >&2
+              cat "$RESPONSE_FILE" >&2
+              exit 1
+            fi
+
+            echo "Functional test passed: ${method} ${path} (${status}, request-id=${request_id})"
+          }
+
+          extract_json_field() {
+            local field="$1"
+            node -e '
+              const fs = require("fs");
+              const field = process.argv[1];
+              const payload = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+              if (!payload[field]) process.exit(1);
+              process.stdout.write(String(payload[field]));
+            ' "$field" "$RESPONSE_FILE"
+          }
+
+          request POST /api/auth/login 200 "{\"email\":\"${FUNCTIONAL_TEST_EMAIL}\",\"password\":\"${FUNCTIONAL_TEST_PASSWORD}\"}"
+          TOKEN="$(extract_json_field accessToken)"
+
+          request GET /api/users 200 "" "$TOKEN"
+          request GET /api/users/2 200 "" "$TOKEN"
+          request POST /api/users 201 '{"name":"CI Functional User","email":"ci.functional@test.com","role":"User","status":"Active"}' "$TOKEN"
+          CREATED_USER_ID="$(extract_json_field id)"
+          request PUT "/api/users/${CREATED_USER_ID}" 200 '{"name":"CI Functional User Updated","email":"ci.functional@test.com","role":"User","status":"Active"}' "$TOKEN"
+          request DELETE "/api/users/${CREATED_USER_ID}" 204 "" "$TOKEN"
+          request POST /api/auth/logout 200 "" "$TOKEN"
 
       - name: Show application rollout
         shell: bash
