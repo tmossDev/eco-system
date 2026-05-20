@@ -28,7 +28,9 @@ func TestDeployedGatewayFunctional(t *testing.T) {
 	})
 	token := requiredStringField(t, loginPayload, "accessToken")
 
-	deployedRequest(t, client, http.MethodGet, baseURL+"/api/users", http.StatusOK, token, nil)
+	usersPayload := deployedRequest(t, client, http.MethodGet, baseURL+"/api/users", http.StatusOK, token, nil)
+	requiredListResponse(t, usersPayload)
+
 	deployedRequest(t, client, http.MethodGet, baseURL+"/api/users/2", http.StatusOK, token, nil)
 
 	createdPayload := deployedRequest(t, client, http.MethodPost, baseURL+"/api/users", http.StatusCreated, token, map[string]any{
@@ -57,7 +59,7 @@ func deployedRequest(
 	expectedStatus int,
 	token string,
 	body any,
-) map[string]any {
+) any {
 	t.Helper()
 
 	var requestBody bytes.Buffer
@@ -87,7 +89,7 @@ func deployedRequest(
 	}
 	defer response.Body.Close()
 
-	var responsePayload map[string]any
+	var responsePayload any
 	if response.StatusCode != http.StatusNoContent {
 		if err := json.NewDecoder(response.Body).Decode(&responsePayload); err != nil {
 			t.Fatalf("decode %s %s response: %v", method, request.URL.Path, err)
@@ -103,15 +105,31 @@ func deployedRequest(
 	return responsePayload
 }
 
-func requiredStringField(t *testing.T, payload map[string]any, field string) string {
+func requiredStringField(t *testing.T, payload any, field string) string {
 	t.Helper()
 
-	value, ok := payload[field].(string)
+	objectPayload, ok := payload.(map[string]any)
+	if !ok {
+		t.Fatalf("expected object response with field %q, got %#v", field, payload)
+	}
+
+	value, ok := objectPayload[field].(string)
 	if !ok || value == "" {
 		t.Fatalf("expected response field %q, got %#v", field, payload)
 	}
 
 	return value
+}
+
+func requiredListResponse(t *testing.T, payload any) []any {
+	t.Helper()
+
+	listPayload, ok := payload.([]any)
+	if !ok || len(listPayload) == 0 {
+		t.Fatalf("expected non-empty list response, got %#v", payload)
+	}
+
+	return listPayload
 }
 
 func getEnv(key string, fallback string) string {
