@@ -1,0 +1,7 @@
+storybook:
+  app:
+    image:
+      pullPolicy: Never
+    ingress:
+      enabled: true
+      className: traefik

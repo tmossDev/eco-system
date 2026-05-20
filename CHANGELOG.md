@@ -1,5 +1,15 @@
 # Project Change Log
 
+## v1.10.0 - (8 Changes)
+- Added test deployment values files for shared-components and user-management to reduce long Helm `--set` deployment commands.
+- Added generated runtime values file instructions for image tags, hostnames, database settings and secret values.
+- Added reusable app chart support for externally managed ConfigMaps through `configMap.existingName`.
+- Added reusable app chart support for nginx `conf.d` ConfigMaps through `nginxConfig`.
+- Added a separately managed admin web app runtime config ConfigMap for test deployments.
+- Added durable admin web app ingress routing for same-origin `/api` calls to user-gateway.
+- Added shared Storybook host routing for admin web app stories at `/stories/admin-web-app`.
+- Moved shared Storybook static files to `/var/www/storybook` and added nginx routing for `/storybook/`.
+
 ## v1.9.0 - (4 Changes)
 - Added an authenticated user menu to the admin web app navigation with current user details, profile navigation and logout.
 - Added logout handling in the admin web app to clear the stored session and return users to the login page.

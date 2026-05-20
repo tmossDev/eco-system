@@ -342,66 +342,119 @@ you to run `pnpm approve-builds`, check that this file still includes
 ```sh
 kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
 
+mkdir -p build/deploy
+
+cat > build/deploy/shared-components-values-runtime.yaml <<EOF
+storybook:
+  app:
+    image:
+      repository: "$IMAGE_PREFIX/storybook"
+      tag: "$IMAGE_TAG"
+    ingress:
+      hosts:
+        - host: "$STORYBOOK_HOST"
+          paths:
+            - path: /
+              pathType: Prefix
+      tls:
+        - secretName: eco-test-ingress-tls
+          hosts:
+            - "$STORYBOOK_HOST"
+EOF
+
 helm upgrade --install shared-components shared-components/deployment \
   --namespace "$NAMESPACE" \
-  --set storybook.app.image.repository="$IMAGE_PREFIX/storybook" \
-  --set storybook.app.image.tag="$IMAGE_TAG" \
-  --set storybook.app.image.pullPolicy=Never \
-  --set storybook.app.ingress.enabled=true \
-  --set storybook.app.ingress.className="${INGRESS_CLASS_NAME:-traefik}" \
-  --set storybook.app.ingress.hosts[0].host="$STORYBOOK_HOST" \
-  --set storybook.app.ingress.hosts[0].paths[0].path=/ \
-  --set storybook.app.ingress.hosts[0].paths[0].pathType=Prefix
+  --values shared-components/deployment/values-test.yaml \
+  --values build/deploy/shared-components-values-runtime.yaml
 
-printf '{"BACKEND_API_URL":"%s","ENABLE_MOCK_API":false}\n' "$BACKEND_API_URL" > runtime-config.json
+kubectl apply -n "$NAMESPACE" \
+  -f user-management/frontend/app/admin-web-app/deployment/runtime-config.test.yaml
+
+cat > build/deploy/user-management-values-runtime.yaml <<EOF
+user-service:
+  app:
+    image:
+      repository: "$IMAGE_PREFIX/user-service"
+      tag: "$IMAGE_TAG"
+    configMap:
+      data:
+        DB_NAME: "${POSTGRES_DB:-ecoDB}"
+        DB_HOST: "$POSTGRES_HOST"
+        DB_USER: "${POSTGRES_APP_USER:-app_user}"
+    secret:
+      stringData:
+        DB_PASSWORD: "$APP_PASSWORD"
+    ingress:
+      hosts:
+        - host: "$USER_SERVICE_HOST"
+          paths:
+            - path: /
+              pathType: Prefix
+      tls:
+        - secretName: eco-test-ingress-tls
+          hosts:
+            - "$USER_SERVICE_HOST"
+
+user-gateway:
+  app:
+    image:
+      repository: "$IMAGE_PREFIX/user-gateway"
+      tag: "$IMAGE_TAG"
+    configMap:
+      data:
+        DB_NAME: "${POSTGRES_DB:-ecoDB}"
+        DB_HOST: "$POSTGRES_HOST"
+        DB_USER: "${POSTGRES_APP_USER:-app_user}"
+        FRONTEND_ORIGIN: "https://$ADMIN_WEB_APP_HOST"
+    secret:
+      stringData:
+        DB_PASSWORD: "$APP_PASSWORD"
+    ingress:
+      hosts:
+        - host: "$USER_GATEWAY_HOST"
+          paths:
+            - path: /
+              pathType: Prefix
+      tls:
+        - secretName: eco-test-ingress-tls
+          hosts:
+            - "$USER_GATEWAY_HOST"
+
+admin-web-app:
+  app:
+    image:
+      repository: "$IMAGE_PREFIX/admin-web-app"
+      tag: "$IMAGE_TAG"
+    ingress:
+      hosts:
+        - host: "$ADMIN_WEB_APP_HOST"
+          paths:
+            - path: /
+              pathType: Prefix
+      tls:
+        - secretName: eco-test-ingress-tls
+          hosts:
+            - "$ADMIN_WEB_APP_HOST"
+
+adminWebAppApiIngress:
+  host: "$ADMIN_WEB_APP_HOST"
+  tls:
+    - secretName: eco-test-ingress-tls
+      hosts:
+        - "$ADMIN_WEB_APP_HOST"
+
+adminWebAppStoriesIngress:
+  host: "$STORYBOOK_HOST"
+  tls:
+    - secretName: eco-test-ingress-tls
+      hosts:
+        - "$STORYBOOK_HOST"
+EOF
 
 helm upgrade --install user-management user-management/deployment \
   --namespace "$NAMESPACE" \
-  --set user-service.app.image.repository="$IMAGE_PREFIX/user-service" \
-  --set user-service.app.image.tag="$IMAGE_TAG" \
-  --set user-service.app.image.pullPolicy=Never \
-  --set user-service.app.configMap.enabled=true \
-  --set-string user-service.app.configMap.data.DB_DIALECT=postgresql \
-  --set-string user-service.app.configMap.data.DB_NAME="${POSTGRES_DB:-ecoDB}" \
-  --set-string user-service.app.configMap.data.DB_HOST="$POSTGRES_HOST" \
-  --set-string user-service.app.configMap.data.DB_PORT="${POSTGRES_PORT:-5432}" \
-  --set-string user-service.app.configMap.data.DB_USER="${POSTGRES_APP_USER:-app_user}" \
-  --set user-service.app.secret.enabled=true \
-  --set-string user-service.app.secret.stringData.DB_PASSWORD="$APP_PASSWORD" \
-  --set user-service.app.ingress.enabled=true \
-  --set user-service.app.ingress.className="${INGRESS_CLASS_NAME:-traefik}" \
-  --set user-service.app.ingress.hosts[0].host="$USER_SERVICE_HOST" \
-  --set user-service.app.ingress.hosts[0].paths[0].path=/ \
-  --set user-service.app.ingress.hosts[0].paths[0].pathType=Prefix \
-  --set user-gateway.app.image.repository="$IMAGE_PREFIX/user-gateway" \
-  --set user-gateway.app.image.tag="$IMAGE_TAG" \
-  --set user-gateway.app.image.pullPolicy=Never \
-  --set user-gateway.app.configMap.enabled=true \
-  --set-string user-gateway.app.configMap.data.DB_DIALECT=postgresql \
-  --set-string user-gateway.app.configMap.data.DB_NAME="${POSTGRES_DB:-ecoDB}" \
-  --set-string user-gateway.app.configMap.data.DB_HOST="$POSTGRES_HOST" \
-  --set-string user-gateway.app.configMap.data.DB_PORT="${POSTGRES_PORT:-5432}" \
-  --set-string user-gateway.app.configMap.data.DB_USER="${POSTGRES_APP_USER:-app_user}" \
-  --set-string user-gateway.app.configMap.data.USER_SERVICE_URL="${USER_SERVICE_INTERNAL_URL:-http://user-service:8080}" \
-  --set-string user-gateway.app.configMap.data.FRONTEND_ORIGIN="$FRONTEND_ORIGIN" \
-  --set user-gateway.app.secret.enabled=true \
-  --set-string user-gateway.app.secret.stringData.DB_PASSWORD="$APP_PASSWORD" \
-  --set user-gateway.app.ingress.enabled=true \
-  --set user-gateway.app.ingress.className="${INGRESS_CLASS_NAME:-traefik}" \
-  --set user-gateway.app.ingress.hosts[0].host="$USER_GATEWAY_HOST" \
-  --set user-gateway.app.ingress.hosts[0].paths[0].path=/ \
-  --set user-gateway.app.ingress.hosts[0].paths[0].pathType=Prefix \
-  --set admin-web-app.app.image.repository="$IMAGE_PREFIX/admin-web-app" \
-  --set admin-web-app.app.image.tag="$IMAGE_TAG" \
-  --set admin-web-app.app.image.pullPolicy=Never \
-  --set admin-web-app.app.configMap.enabled=true \
-  --set admin-web-app.app.configMap.envFrom=false \
-  --set-file admin-web-app.app.configMap.data.config\\.json=runtime-config.json \
-  --set admin-web-app.app.ingress.enabled=true \
-  --set admin-web-app.app.ingress.className="${INGRESS_CLASS_NAME:-traefik}" \
-  --set admin-web-app.app.ingress.hosts[0].host="$ADMIN_WEB_APP_HOST" \
-  --set admin-web-app.app.ingress.hosts[0].paths[0].path=/ \
-  --set admin-web-app.app.ingress.hosts[0].paths[0].pathType=Prefix
+  --values user-management/deployment/values-test.yaml \
+  --values build/deploy/user-management-values-runtime.yaml
 ```
 
 Check the result:

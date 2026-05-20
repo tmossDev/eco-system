@@ -1,0 +1,96 @@
+user-service:
+  app:
+    image:
+      pullPolicy: Never
+    configMap:
+      enabled: true
+      data:
+        DB_DIALECT: postgresql
+        DB_PORT: "5432"
+    secret:
+      enabled: true
+    ingress:
+      enabled: true
+      className: traefik
+
+user-gateway:
+  app:
+    image:
+      pullPolicy: Never
+    configMap:
+      enabled: true
+      data:
+        DB_DIALECT: postgresql
+        DB_PORT: "5432"
+        USER_SERVICE_URL: http://user-service:8080
+    secret:
+      enabled: true
+    ingress:
+      enabled: true
+      className: traefik
+
+admin-web-app:
+  app:
+    image:
+      pullPolicy: Never
+    nginxConfig:
+      enabled: true
+      data:
+        default.conf: |
+          server {
+            listen 80;
+            server_name _;
+            root /usr/share/nginx/html;
+            index index.html;
+
+            location /assets/ {
+              try_files $uri /storybook$uri =404;
+            }
+
+            location = /stories/admin-web-app {
+              return 302 /stories/admin-web-app/;
+            }
+
+            location ^~ /stories/admin-web-app/ {
+              rewrite ^/stories/admin-web-app/(.*)$ /storybook/$1 break;
+              try_files $uri $uri/ /storybook/index.html;
+            }
+
+            location /storybook/ {
+              try_files $uri $uri/ /storybook/index.html;
+            }
+
+            location / {
+              try_files $uri $uri/ /index.html;
+            }
+          }
+    configMap:
+      enabled: false
+      envFrom: false
+      existingName: admin-web-app-runtime-config
+    ingress:
+      enabled: true
+      className: traefik
+    volumes:
+      - name: runtime-config
+        configMap:
+          name: admin-web-app-runtime-config
+          items:
+            - key: config.json
+              path: config.json
+
+adminWebAppApiIngress:
+  enabled: true
+  className: traefik
+  path: /api
+  pathType: Prefix
+  serviceName: user-gateway
+  servicePortName: http
+
+adminWebAppStoriesIngress:
+  enabled: true
+  className: traefik
+  path: /stories/admin-web-app
+  pathType: Prefix
+  serviceName: admin-web-app
+  servicePortName: http

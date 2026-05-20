@@ -40,3 +40,11 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- default "default" .Values.serviceAccount.name }}
 {{- end -}}
 {{- end -}}
+
+{{- define "app.configMapName" -}}
+{{- default (include "app.fullname" .) .Values.configMap.existingName -}}
+{{- end -}}
+
+{{- define "app.nginxConfigName" -}}
+{{- default (printf "%s-nginx-config" (include "app.fullname" .)) .Values.nginxConfig.existingName -}}
+{{- end -}}

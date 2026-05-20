@@ -64,7 +64,7 @@ spec:
           envFrom:
             {{- if and .Values.configMap.enabled $configMapEnvFrom }}
             - configMapRef:
-                name: {{ include "app.fullname" . }}
+                name: {{ include "app.configMapName" . }}
             {{- end }}
             {{- if .Values.secret.enabled }}
             - secretRef:
@@ -90,13 +90,28 @@ spec:
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          {{- with .Values.volumeMounts }}
+          {{- if or .Values.volumeMounts .Values.nginxConfig.enabled }}
           volumeMounts:
+            {{- with .Values.volumeMounts }}
             {{- toYaml . | nindent 12 }}
+            {{- end }}
+            {{- if $.Values.nginxConfig.enabled }}
+            - name: nginx-config
+              mountPath: {{ $.Values.nginxConfig.mountPath | quote }}
+              subPath: {{ $.Values.nginxConfig.subPath | quote }}
+              readOnly: true
+            {{- end }}
           {{- end }}
-      {{- with .Values.volumes }}
+      {{- if or .Values.volumes .Values.nginxConfig.enabled }}
       volumes:
+        {{- with .Values.volumes }}
         {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- if .Values.nginxConfig.enabled }}
+        - name: nginx-config
+          configMap:
+            name: {{ include "app.nginxConfigName" . }}
+        {{- end }}
       {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:

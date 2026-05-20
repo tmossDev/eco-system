@@ -1,3 +1,25 @@
 user-service: {}
 user-gateway: {}
 admin-web-app: {}
+
+adminWebAppApiIngress:
+  enabled: false
+  className: ""
+  annotations: {}
+  host: ""
+  path: /api
+  pathType: Prefix
+  serviceName: user-gateway
+  servicePortName: http
+  tls: []
+
+adminWebAppStoriesIngress:
+  enabled: false
+  className: ""
+  annotations: {}
+  host: ""
+  path: /stories/admin-web-app
+  pathType: Prefix
+  serviceName: admin-web-app
+  servicePortName: http
+  tls: []

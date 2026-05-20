@@ -18,6 +18,29 @@ app:
         port: 80
         targetPort: http
         protocol: TCP
+  nginxConfig:
+    enabled: true
+    data:
+      default.conf: |
+        server {
+          listen 80;
+          server_name _;
+          root /var/www/storybook;
+          index index.html;
+
+          location = / {
+            return 302 /storybook/;
+          }
+
+          location ^~ /storybook/ {
+            rewrite ^/storybook/(.*)$ /$1 break;
+            try_files $uri $uri/ /index.html;
+          }
+
+          location / {
+            return 404;
+          }
+        }
   ingress:
     enabled: true
     hosts:
