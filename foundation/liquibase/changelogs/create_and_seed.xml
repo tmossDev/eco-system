@@ -67,5 +67,13 @@
             relativeToChangelogFile="false"
             stripComments="true" />
     </changeSet>
+    <changeSet author="tannar.moss" id="grant_product_permissions">
+        <sqlFile dbms="postgresql"
+            encoding="UTF-8"
+            splitStatements="false"
+            path="v1.1.2_grant_product_permissions.sql"
+            relativeToChangelogFile="false"
+            stripComments="true" />
+    </changeSet>
 
 </databaseChangeLog>
