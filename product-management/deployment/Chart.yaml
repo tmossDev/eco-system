@@ -1,0 +1,16 @@
+apiVersion: v2
+name: product-management
+description: Product management deployment chart
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+dependencies:
+  - name: product-service
+    version: 0.1.1
+    repository: file://../backend/app/product-service/deployment
+  - name: product-gateway
+    version: 0.1.1
+    repository: file://../backend/app/product-gateway/deployment
+  - name: product-admin-web-app
+    version: 0.1.0
+    repository: file://../frontend/app/product-admin-web-app/deployment

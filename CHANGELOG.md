@@ -1,5 +1,14 @@
 # Project Change Log
 
+## v1.11.0 - (7 Changes)
+- Added product-management as a new domain-driven monorepo use case for online store catalog administration.
+- Added product-management product-gateway and product-service backend applications with product CRUD routes.
+- Added product domain models, services, repository interfaces and Postgres persistence for catalog products.
+- Added Liquibase product table creation and seed scripts for default catalog data.
+- Added product-admin-web-app for authenticated admin users to view, edit and manage products.
+- Added product-management Helm deployment charts and test values for backend services and product admin web app.
+- Added reusable box icon support to the angular design system for product navigation.
+
 ## v1.10.0 - (8 Changes)
 - Added test deployment values files for shared-components and user-management to reduce long Helm `--set` deployment commands.
 - Added generated runtime values file instructions for image tags, hostnames, database settings and secret values.

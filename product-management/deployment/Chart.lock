@@ -1,0 +1,12 @@
+dependencies:
+- name: product-service
+  repository: file://../backend/app/product-service/deployment
+  version: 0.1.1
+- name: product-gateway
+  repository: file://../backend/app/product-gateway/deployment
+  version: 0.1.1
+- name: product-admin-web-app
+  repository: file://../frontend/app/product-admin-web-app/deployment
+  version: 0.1.0
+digest: sha256:52e88ab211d167a7f2ff9e494d83acd8cdb6ad63cd843c2c6b8c87ce3af63d5f
+generated: "2026-05-21T23:45:31.484537305+02:00"

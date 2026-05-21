@@ -1,0 +1,46 @@
+app:
+  nameOverride: product-admin-web-app
+  fullnameOverride: product-admin-web-app
+  partOf: product-management
+  component: frontend
+  image:
+    repository: eco-system/product-admin-web-app
+    tag: latest
+    pullPolicy: IfNotPresent
+  ports:
+    - name: http
+      containerPort: 80
+      protocol: TCP
+  service:
+    enabled: true
+    ports:
+      - name: http
+        port: 80
+        targetPort: http
+        protocol: TCP
+  configMap:
+    enabled: true
+    envFrom: false
+    data:
+      config.json: |
+        {
+          "BACKEND_API_URL": "http://product-gateway:8080",
+          "ENABLE_MOCK_API": false
+        }
+  volumeMounts:
+    - name: runtime-config
+      mountPath: /usr/share/nginx/html/assets/config.json
+      subPath: config.json
+  volumes:
+    - name: runtime-config
+      configMap:
+        name: product-admin-web-app
+        items:
+          - key: config.json
+            path: config.json
+  readinessProbe:
+    httpGet:
+      path: /
+      port: http
+    initialDelaySeconds: 10
+    periodSeconds: 10

@@ -17,6 +17,7 @@ export const iconNames = [
   'search',
   'settings',
   'user',
+  'box',
   'home',
   'trash',
   'edit',
@@ -89,6 +90,9 @@ export const iconRegistry: Record<IconName, IconDefinition> = {
   },
   user: {
     path: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-4.42 0-8 2.24-8 5v1h16v-1c0-2.76-3.58-5-8-5z',
+  },
+  box: {
+    path: 'M21 8.5 12 3 3 8.5v7L12 21l9-5.5zM12 5.34 17.15 8.5 12 11.66 6.85 8.5zM5 10.29l6 3.67v4.7l-6-3.67zm14 4.7-6 3.67v-4.7l6-3.67z',
   },
   home: {
     path: 'M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z',

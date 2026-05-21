@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: product-admin-web-app-runtime-config
+data:
+  config.json: |
+    {
+      "ENABLE_MOCK_API": false
+    }

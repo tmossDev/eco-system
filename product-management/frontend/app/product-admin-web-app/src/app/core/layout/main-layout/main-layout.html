@@ -1,0 +1,16 @@
+<div class="main-layout" [class.main-layout--header]="navigationVariant === 'header'">
+  <ds-navigation-bar
+    title="Product"
+    subtitle="Management"
+    [variant]="navigationVariant"
+    [items]="mainOptions"
+    [user]="currentUser()"
+    [profileRoute]="profileRoute()"
+    (variantChange)="navigationVariant = $event"
+    (logout)="logout()"
+  />
+
+  <section class="content-shell">
+    <router-outlet />
+  </section>
+</div>

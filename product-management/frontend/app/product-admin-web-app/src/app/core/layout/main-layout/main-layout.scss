@@ -1,0 +1,28 @@
+:host {
+  display: block;
+  min-height: 100dvh;
+}
+
+.main-layout {
+  display: grid;
+  grid-template-columns: 17rem minmax(0, 1fr);
+  min-height: 100dvh;
+  background:
+    radial-gradient(circle at top left, rgb(37 99 235 / 10%), transparent 28rem),
+    #f8fafc;
+  color: #172033;
+}
+
+.main-layout--header {
+  display: block;
+}
+
+.content-shell {
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .main-layout {
+    display: block;
+  }
+}

@@ -1,0 +1,25 @@
+product-service: {}
+product-gateway: {}
+product-admin-web-app: {}
+
+productAdminWebAppApiIngress:
+  enabled: false
+  className: ""
+  annotations: {}
+  host: ""
+  path: /api
+  pathType: Prefix
+  serviceName: product-gateway
+  servicePortName: http
+  tls: []
+
+productAdminWebAppStoriesIngress:
+  enabled: false
+  className: ""
+  annotations: {}
+  host: ""
+  path: /stories/product-admin-web-app
+  pathType: Prefix
+  serviceName: product-admin-web-app
+  servicePortName: http
+  tls: []

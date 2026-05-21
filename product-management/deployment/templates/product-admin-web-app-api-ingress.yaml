@@ -1,0 +1,38 @@
+{{- with .Values.productAdminWebAppApiIngress }}
+{{- if and .enabled .host }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: product-admin-web-app-api
+  labels:
+    app.kubernetes.io/name: product-admin-web-app-api
+    app.kubernetes.io/instance: {{ $.Release.Name }}
+    app.kubernetes.io/version: {{ $.Chart.AppVersion | quote }}
+    app.kubernetes.io/managed-by: {{ $.Release.Service }}
+    app.kubernetes.io/component: frontend
+    app.kubernetes.io/part-of: product-management
+  {{- with .annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if .className }}
+  ingressClassName: {{ .className }}
+  {{- end }}
+  {{- with .tls }}
+  tls:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  rules:
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          - path: {{ .path | default "/api" }}
+            pathType: {{ .pathType | default "Prefix" }}
+            backend:
+              service:
+                name: {{ .serviceName | default "product-gateway" }}
+                port:
+                  name: {{ .servicePortName | default "http" }}
+{{- end }}
+{{- end }}

@@ -1,0 +1,10 @@
+apiVersion: v2
+name: product-service
+description: Product service deployment
+type: application
+version: 0.1.1
+appVersion: "1.0.0"
+dependencies:
+  - name: app
+    version: 0.1.0
+    repository: file://../../../../../deployment/charts/app

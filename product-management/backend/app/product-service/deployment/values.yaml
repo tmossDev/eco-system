@@ -1,0 +1,27 @@
+app:
+  nameOverride: product-service
+  fullnameOverride: product-service
+  partOf: product-management
+  component: backend
+  image:
+    repository: eco-system/product-service
+    tag: latest
+    pullPolicy: IfNotPresent
+  ports:
+    - name: http
+      containerPort: 8080
+      protocol: TCP
+  service:
+    enabled: true
+    ports:
+      - name: http
+        port: 8080
+        targetPort: http
+        protocol: TCP
+  env:
+    PORT: "8080"
+  readinessProbe:
+    tcpSocket:
+      port: http
+    initialDelaySeconds: 10
+    periodSeconds: 10
