@@ -51,6 +51,11 @@ admin-web-app:
               return 302 /stories/admin-web-app/;
             }
 
+            location ^~ /stories/admin-web-app/stories/admin-web-app/ {
+              rewrite ^/stories/admin-web-app/stories/admin-web-app/(.*)$ /storybook/$1 break;
+              try_files $uri $uri/ /storybook/index.html;
+            }
+
             location ^~ /stories/admin-web-app/ {
               rewrite ^/stories/admin-web-app/(.*)$ /storybook/$1 break;
               try_files $uri $uri/ /storybook/index.html;

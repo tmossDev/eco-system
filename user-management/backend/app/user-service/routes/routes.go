@@ -3,7 +3,7 @@ package routes
 import (
 	"github.com/kataras/iris/v12"
 	"tmossDev.github.com/eco-system/user-management/backend/app/user-service/controller"
-	"tmossDev.github.com/eco-system/user-management/backend/package/user/service"
+	"tmossDev.github.com/eco-system/user-management/backend/domain/user/service"
 )
 
 func Setup(app *iris.Application, publicUserService service.PublicUserService, privateUserService service.PrivateUserService) {

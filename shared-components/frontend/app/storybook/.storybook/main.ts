@@ -9,6 +9,12 @@ const config: StorybookConfig = {
     "@storybook/addon-docs",
     "@storybook/addon-onboarding"
   ],
-  "framework": "@storybook/angular"
+  "framework": "@storybook/angular",
+  "refs": {
+    "admin-web-app": {
+      "title": "Admin Web App",
+      "url": "/stories/admin-web-app"
+    }
+  }
 };
 export default config;

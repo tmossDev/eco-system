@@ -6,8 +6,8 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/utils"
-	"tmossDev.github.com/eco-system/user-management/backend/package/user/constants"
-	"tmossDev.github.com/eco-system/user-management/backend/package/user/service"
+	"tmossDev.github.com/eco-system/user-management/backend/domain/user/constants"
+	"tmossDev.github.com/eco-system/user-management/backend/domain/user/service"
 )
 
 func getJwtTokenFromSession(context *fiber.Ctx) (string, error) {

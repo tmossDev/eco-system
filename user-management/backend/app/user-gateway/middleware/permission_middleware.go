@@ -2,7 +2,7 @@ package middleware
 
 import (
 	"github.com/gofiber/fiber/v2"
-	"tmossDev.github.com/eco-system/user-management/backend/package/user/service"
+	"tmossDev.github.com/eco-system/user-management/backend/domain/user/service"
 )
 
 func IsAuthorized(c *fiber.Ctx, page string, service service.PublicUserService) error {

@@ -20,8 +20,8 @@ import (
 	"tmossDev.github.com/eco-system/shared-components/backend/package/transport/http/middleware"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/validator"
 	"tmossDev.github.com/eco-system/user-management/backend/app/user-service/routes"
-	"tmossDev.github.com/eco-system/user-management/backend/package/user/repository/postgres"
-	"tmossDev.github.com/eco-system/user-management/backend/package/user/service"
+	"tmossDev.github.com/eco-system/user-management/backend/domain/user/service"
+	"tmossDev.github.com/eco-system/user-management/backend/domain/user/store/postgres"
 )
 
 var sqlStore *storePostgres.PostgresDataStore
