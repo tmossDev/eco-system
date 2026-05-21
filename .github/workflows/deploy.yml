@@ -51,6 +51,9 @@ jobs:
       admin_web_app_host: ${{ steps.context.outputs.admin_web_app_host }}
       user_gateway_host: ${{ steps.context.outputs.user_gateway_host }}
       user_service_host: ${{ steps.context.outputs.user_service_host }}
+      product_admin_web_app_host: ${{ steps.context.outputs.product_admin_web_app_host }}
+      product_gateway_host: ${{ steps.context.outputs.product_gateway_host }}
+      product_service_host: ${{ steps.context.outputs.product_service_host }}
       storybook_host: ${{ steps.context.outputs.storybook_host }}
     steps:
       - name: Checkout
@@ -124,6 +127,9 @@ jobs:
             echo "admin_web_app_host=${NAMESPACE}.admin-web-app.${BASE_DOMAIN}"
             echo "user_gateway_host=${NAMESPACE}.user-gateway.${BASE_DOMAIN}"
             echo "user_service_host=${NAMESPACE}.user-service.${BASE_DOMAIN}"
+            echo "product_admin_web_app_host=${NAMESPACE}.product-admin-web-app.${BASE_DOMAIN}"
+            echo "product_gateway_host=${NAMESPACE}.product-gateway.${BASE_DOMAIN}"
+            echo "product_service_host=${NAMESPACE}.product-service.${BASE_DOMAIN}"
             echo "storybook_host=${NAMESPACE}.storybook.${BASE_DOMAIN}"
           } >> "$GITHUB_OUTPUT"
 
@@ -271,13 +277,19 @@ jobs:
           echo "POSTGRES_PORT=${POSTGRES_PORT:-5432}" >> "$GITHUB_ENV"
           echo "POSTGRES_APP_USER=${POSTGRES_APP_USER:-app_user}" >> "$GITHUB_ENV"
           echo "USER_SERVICE_INTERNAL_URL=${USER_SERVICE_INTERNAL_URL:-http://user-service:8080}" >> "$GITHUB_ENV"
+          echo "PRODUCT_SERVICE_INTERNAL_URL=${PRODUCT_SERVICE_INTERNAL_URL:-http://product-service:8080}" >> "$GITHUB_ENV"
           echo "INGRESS_CLASS_NAME=${INGRESS_CLASS_NAME:-traefik}" >> "$GITHUB_ENV"
           echo "ADMIN_WEB_APP_HOST=${{ needs.prepare.outputs.admin_web_app_host }}" >> "$GITHUB_ENV"
           echo "USER_GATEWAY_HOST=${{ needs.prepare.outputs.user_gateway_host }}" >> "$GITHUB_ENV"
           echo "USER_SERVICE_HOST=${{ needs.prepare.outputs.user_service_host }}" >> "$GITHUB_ENV"
+          echo "PRODUCT_ADMIN_WEB_APP_HOST=${{ needs.prepare.outputs.product_admin_web_app_host }}" >> "$GITHUB_ENV"
+          echo "PRODUCT_GATEWAY_HOST=${{ needs.prepare.outputs.product_gateway_host }}" >> "$GITHUB_ENV"
+          echo "PRODUCT_SERVICE_HOST=${{ needs.prepare.outputs.product_service_host }}" >> "$GITHUB_ENV"
           echo "STORYBOOK_HOST=${{ needs.prepare.outputs.storybook_host }}" >> "$GITHUB_ENV"
           echo "BACKEND_API_URL=http://${{ needs.prepare.outputs.user_gateway_host }}" >> "$GITHUB_ENV"
+          echo "PRODUCT_BACKEND_API_URL=http://${{ needs.prepare.outputs.product_gateway_host }}" >> "$GITHUB_ENV"
           echo "FRONTEND_ORIGIN=http://${{ needs.prepare.outputs.admin_web_app_host }}" >> "$GITHUB_ENV"
+          echo "PRODUCT_FRONTEND_ORIGIN=http://${{ needs.prepare.outputs.product_admin_web_app_host }}" >> "$GITHUB_ENV"
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -288,6 +300,7 @@ jobs:
         shell: bash
         run: |
           go test ./user-management/backend/app/user-gateway/routes -run 'TestGatewayFunctional'
+          go test ./product-management/backend/app/product-gateway/routes -run 'TestProductGatewayFunctional'
 
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -305,7 +318,9 @@ jobs:
           mkdir -p build/bin
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/bin/user-service ./user-management/backend/app/user-service/cmd
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/bin/user-gateway ./user-management/backend/app/user-gateway/cmd
-          file build/bin/user-service build/bin/user-gateway
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/bin/product-service ./product-management/backend/app/product-service/cmd
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/bin/product-gateway ./product-management/backend/app/product-gateway/cmd
+          file build/bin/user-service build/bin/user-gateway build/bin/product-service build/bin/product-gateway
 
       - name: Build frontend applications and storybooks
         shell: bash
@@ -313,6 +328,8 @@ jobs:
           pnpm install --frozen-lockfile
           pnpm --filter admin-web-app build
           pnpm --filter admin-web-app build-storybook
+          pnpm --filter product-admin-web-app build
+          pnpm --filter product-admin-web-app build-storybook
           pnpm --filter storybook build-storybook
 
       - name: Build local application images
@@ -329,8 +346,22 @@ jobs:
             -t "$IMAGE_PREFIX/user-gateway:$IMAGE_TAG" \
             .
           docker build \
+            -f dockerfile \
+            --build-arg APP_NAME=product-service \
+            -t "$IMAGE_PREFIX/product-service:$IMAGE_TAG" \
+            .
+          docker build \
+            -f dockerfile \
+            --build-arg APP_NAME=product-gateway \
+            -t "$IMAGE_PREFIX/product-gateway:$IMAGE_TAG" \
+            .
+          docker build \
             -f user-management/frontend/app/admin-web-app/Dockerfile \
             -t "$IMAGE_PREFIX/admin-web-app:$IMAGE_TAG" \
+            .
+          docker build \
+            -f product-management/frontend/app/product-admin-web-app/Dockerfile \
+            -t "$IMAGE_PREFIX/product-admin-web-app:$IMAGE_TAG" \
             .
           docker build \
             -f shared-components/frontend/app/storybook/Dockerfile \
@@ -344,14 +375,20 @@ jobs:
             k3d image import \
               "$IMAGE_PREFIX/user-service:$IMAGE_TAG" \
               "$IMAGE_PREFIX/user-gateway:$IMAGE_TAG" \
+              "$IMAGE_PREFIX/product-service:$IMAGE_TAG" \
+              "$IMAGE_PREFIX/product-gateway:$IMAGE_TAG" \
               "$IMAGE_PREFIX/admin-web-app:$IMAGE_TAG" \
+              "$IMAGE_PREFIX/product-admin-web-app:$IMAGE_TAG" \
               "$IMAGE_PREFIX/storybook:$IMAGE_TAG" \
               -c "${K3D_CLUSTER:-eco-cluster}"
           elif command -v k3s >/dev/null 2>&1; then
             docker save \
               "$IMAGE_PREFIX/user-service:$IMAGE_TAG" \
               "$IMAGE_PREFIX/user-gateway:$IMAGE_TAG" \
+              "$IMAGE_PREFIX/product-service:$IMAGE_TAG" \
+              "$IMAGE_PREFIX/product-gateway:$IMAGE_TAG" \
               "$IMAGE_PREFIX/admin-web-app:$IMAGE_TAG" \
+              "$IMAGE_PREFIX/product-admin-web-app:$IMAGE_TAG" \
               "$IMAGE_PREFIX/storybook:$IMAGE_TAG" \
               | sudo k3s ctr -n k8s.io images import -
           fi
@@ -414,8 +451,12 @@ jobs:
           helm dependency build user-management/backend/app/user-service/deployment
           helm dependency build user-management/backend/app/user-gateway/deployment
           helm dependency build user-management/frontend/app/admin-web-app/deployment
+          helm dependency build product-management/backend/app/product-service/deployment
+          helm dependency build product-management/backend/app/product-gateway/deployment
+          helm dependency build product-management/frontend/app/product-admin-web-app/deployment
           helm dependency build shared-components/deployment
           helm dependency build user-management/deployment
+          helm dependency build product-management/deployment
 
       - name: Deploy shared-components storybook
         shell: bash
@@ -484,12 +525,72 @@ jobs:
             --set admin-web-app.app.ingress.hosts[0].paths[0].path=/ \
             --set admin-web-app.app.ingress.hosts[0].paths[0].pathType=Prefix
 
+      - name: Deploy product-management
+        shell: bash
+        run: |
+          printf '{"BACKEND_API_URL":"%s","ENABLE_MOCK_API":false}\n' "$PRODUCT_BACKEND_API_URL" > product-runtime-config.json
+
+          helm upgrade --install product-management product-management/deployment \
+            --namespace "$NAMESPACE" \
+            --set product-service.app.image.repository="$IMAGE_PREFIX/product-service" \
+            --set product-service.app.image.tag="$IMAGE_TAG" \
+            --set product-service.app.image.pullPolicy=Never \
+            --set product-service.app.configMap.enabled=true \
+            --set-string product-service.app.configMap.data.DB_DIALECT=postgresql \
+            --set-string product-service.app.configMap.data.DB_NAME="$POSTGRES_DB" \
+            --set-string product-service.app.configMap.data.DB_HOST="$POSTGRES_HOST" \
+            --set-string product-service.app.configMap.data.DB_PORT="$POSTGRES_PORT" \
+            --set-string product-service.app.configMap.data.DB_USER="$POSTGRES_APP_USER" \
+            --set product-service.app.secret.enabled=true \
+            --set-string product-service.app.secret.stringData.DB_PASSWORD='${{ secrets.APP_PASSWORD }}' \
+            --set product-service.app.ingress.enabled=true \
+            --set product-service.app.ingress.className="$INGRESS_CLASS_NAME" \
+            --set product-service.app.ingress.hosts[0].host="$PRODUCT_SERVICE_HOST" \
+            --set product-service.app.ingress.hosts[0].paths[0].path=/ \
+            --set product-service.app.ingress.hosts[0].paths[0].pathType=Prefix \
+            --set product-gateway.app.image.repository="$IMAGE_PREFIX/product-gateway" \
+            --set product-gateway.app.image.tag="$IMAGE_TAG" \
+            --set product-gateway.app.image.pullPolicy=Never \
+            --set product-gateway.app.configMap.enabled=true \
+            --set-string product-gateway.app.configMap.data.DB_DIALECT=postgresql \
+            --set-string product-gateway.app.configMap.data.DB_NAME="$POSTGRES_DB" \
+            --set-string product-gateway.app.configMap.data.DB_HOST="$POSTGRES_HOST" \
+            --set-string product-gateway.app.configMap.data.DB_PORT="$POSTGRES_PORT" \
+            --set-string product-gateway.app.configMap.data.DB_USER="$POSTGRES_APP_USER" \
+            --set-string product-gateway.app.configMap.data.PRODUCT_SERVICE_URL="$PRODUCT_SERVICE_INTERNAL_URL" \
+            --set-string product-gateway.app.configMap.data.FRONTEND_ORIGIN="$PRODUCT_FRONTEND_ORIGIN" \
+            --set product-gateway.app.secret.enabled=true \
+            --set-string product-gateway.app.secret.stringData.DB_PASSWORD='${{ secrets.APP_PASSWORD }}' \
+            --set product-gateway.app.ingress.enabled=true \
+            --set product-gateway.app.ingress.className="$INGRESS_CLASS_NAME" \
+            --set product-gateway.app.ingress.hosts[0].host="$PRODUCT_GATEWAY_HOST" \
+            --set product-gateway.app.ingress.hosts[0].paths[0].path=/ \
+            --set product-gateway.app.ingress.hosts[0].paths[0].pathType=Prefix \
+            --set product-admin-web-app.app.image.repository="$IMAGE_PREFIX/product-admin-web-app" \
+            --set product-admin-web-app.app.image.tag="$IMAGE_TAG" \
+            --set product-admin-web-app.app.image.pullPolicy=Never \
+            --set product-admin-web-app.app.configMap.enabled=true \
+            --set product-admin-web-app.app.configMap.envFrom=false \
+            --set-file product-admin-web-app.app.configMap.data.config\\.json=product-runtime-config.json \
+            --set product-admin-web-app.app.ingress.enabled=true \
+            --set product-admin-web-app.app.ingress.className="$INGRESS_CLASS_NAME" \
+            --set product-admin-web-app.app.ingress.hosts[0].host="$PRODUCT_ADMIN_WEB_APP_HOST" \
+            --set product-admin-web-app.app.ingress.hosts[0].paths[0].path=/ \
+            --set product-admin-web-app.app.ingress.hosts[0].paths[0].pathType=Prefix
+
       - name: Wait for user-management rollout
         shell: bash
         run: |
           set -euo pipefail
           kubectl rollout status deployment/user-gateway -n "$NAMESPACE" --timeout=180s
           kubectl rollout status deployment/admin-web-app -n "$NAMESPACE" --timeout=180s
+
+      - name: Wait for product-management rollout
+        shell: bash
+        run: |
+          set -euo pipefail
+          kubectl rollout status deployment/product-gateway -n "$NAMESPACE" --timeout=180s
+          kubectl rollout status deployment/product-admin-web-app -n "$NAMESPACE" --timeout=180s
 
       - name: Run deployed gateway functional tests
         shell: bash
@@ -527,6 +628,42 @@ jobs:
             -run TestDeployedGatewayFunctional \
             -v
 
+      - name: Run deployed product gateway functional tests
+        shell: bash
+        env:
+          PRODUCT_GATEWAY_BASE_URL: http://127.0.0.1:18081
+          PRODUCT_FUNCTIONAL_TEST_EMAIL: admin@example.com
+          PRODUCT_FUNCTIONAL_TEST_PASSWORD: password
+        run: |
+          set -euo pipefail
+
+          show_gateway_logs() {
+            echo "::group::Recent product-gateway logs"
+            kubectl logs -n "$NAMESPACE" deployment/product-gateway --tail=120 || true
+            echo "::endgroup::"
+          }
+          kubectl port-forward -n "$NAMESPACE" service/product-gateway 18081:8080 &
+          PORT_FORWARD_PID="$!"
+          trap 'kill "$PORT_FORWARD_PID" 2>/dev/null || true; show_gateway_logs' EXIT
+
+          for attempt in {1..30}; do
+            if curl --silent --fail --request OPTIONS "$PRODUCT_GATEWAY_BASE_URL/api/auth/login" >/dev/null; then
+              break
+            fi
+
+            if [[ "$attempt" == "30" ]]; then
+              echo "Timed out waiting for port-forwarded product-gateway service" >&2
+              exit 1
+            fi
+
+            sleep 1
+          done
+
+          go test ./product-management/backend/app/product-gateway/routes \
+            -tags integration \
+            -run TestDeployedProductGatewayFunctional \
+            -v
+
       - name: Show application rollout
         shell: bash
         run: |
@@ -541,9 +678,13 @@ jobs:
             const links = [
               ['Admin web app', 'http://${{ needs.prepare.outputs.admin_web_app_host }}'],
               ['Admin web app Storybook', 'http://${{ needs.prepare.outputs.admin_web_app_host }}/storybook'],
+              ['Product admin web app', 'http://${{ needs.prepare.outputs.product_admin_web_app_host }}'],
+              ['Product admin web app Storybook', 'http://${{ needs.prepare.outputs.product_admin_web_app_host }}/storybook'],
               ['Design system Storybook', 'http://${{ needs.prepare.outputs.storybook_host }}'],
               ['User gateway', 'http://${{ needs.prepare.outputs.user_gateway_host }}'],
               ['User service', 'http://${{ needs.prepare.outputs.user_service_host }}'],
+              ['Product gateway', 'http://${{ needs.prepare.outputs.product_gateway_host }}'],
+              ['Product service', 'http://${{ needs.prepare.outputs.product_service_host }}'],
             ];
 
             const body = [

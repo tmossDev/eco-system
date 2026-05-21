@@ -179,6 +179,7 @@ jobs:
         if: env.DELETE_APPLICATION == 'true'
         shell: bash
         run: |
+          helm uninstall product-management --namespace "$NAMESPACE" --ignore-not-found
           helm uninstall user-management --namespace "$NAMESPACE" --ignore-not-found
           helm uninstall shared-components --namespace "$NAMESPACE" --ignore-not-found
 
