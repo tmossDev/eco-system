@@ -15,6 +15,10 @@ node_modules
 !user-management/frontend/app/admin-web-app/dist/**
 !user-management/frontend/app/admin-web-app/storybook-static
 !user-management/frontend/app/admin-web-app/storybook-static/**
+!product-management/frontend/app/product-admin-web-app/dist
+!product-management/frontend/app/product-admin-web-app/dist/**
+!product-management/frontend/app/product-admin-web-app/storybook-static
+!product-management/frontend/app/product-admin-web-app/storybook-static/**
 !shared-components/frontend/app/storybook/storybook-static
 !shared-components/frontend/app/storybook/storybook-static/**
 

@@ -1,10 +1,11 @@
 # Project Change Log
 
-## v1.11.0 - (9 Changes)
+## v1.11.0 - (10 Changes)
 - Added product-management as a new domain-driven monorepo use case for online store catalog administration.
 - Added product-management product-gateway and product-service backend applications with product CRUD routes.
 - Added product domain models, services, repository interfaces and Postgres persistence for catalog products.
 - Added Liquibase product table creation and seed scripts for default catalog data.
+- Requires a foundation or all-layer deployment once so Liquibase can apply the product table and seed data to existing environments.
 - Added product-admin-web-app for authenticated admin users to view, edit and manage products.
 - Added product-management Helm deployment charts and test values for backend services and product admin web app.
 - Added product-management build, image import, Helm deploy, rollout and useful link wiring to the deployment pipeline.
