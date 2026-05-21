@@ -287,7 +287,7 @@ jobs:
           echo "PRODUCT_SERVICE_HOST=${{ needs.prepare.outputs.product_service_host }}" >> "$GITHUB_ENV"
           echo "STORYBOOK_HOST=${{ needs.prepare.outputs.storybook_host }}" >> "$GITHUB_ENV"
           echo "BACKEND_API_URL=http://${{ needs.prepare.outputs.user_gateway_host }}" >> "$GITHUB_ENV"
-          echo "PRODUCT_BACKEND_API_URL=http://${{ needs.prepare.outputs.product_gateway_host }}" >> "$GITHUB_ENV"
+          echo "PRODUCT_BACKEND_API_URL=" >> "$GITHUB_ENV"
           echo "FRONTEND_ORIGIN=http://${{ needs.prepare.outputs.admin_web_app_host }}" >> "$GITHUB_ENV"
           echo "PRODUCT_FRONTEND_ORIGIN=http://${{ needs.prepare.outputs.product_admin_web_app_host }}" >> "$GITHUB_ENV"
 
@@ -576,7 +576,14 @@ jobs:
             --set product-admin-web-app.app.ingress.className="$INGRESS_CLASS_NAME" \
             --set product-admin-web-app.app.ingress.hosts[0].host="$PRODUCT_ADMIN_WEB_APP_HOST" \
             --set product-admin-web-app.app.ingress.hosts[0].paths[0].path=/ \
-            --set product-admin-web-app.app.ingress.hosts[0].paths[0].pathType=Prefix
+            --set product-admin-web-app.app.ingress.hosts[0].paths[0].pathType=Prefix \
+            --set productAdminWebAppApiIngress.enabled=true \
+            --set productAdminWebAppApiIngress.className="$INGRESS_CLASS_NAME" \
+            --set productAdminWebAppApiIngress.host="$PRODUCT_ADMIN_WEB_APP_HOST" \
+            --set productAdminWebAppApiIngress.path=/api \
+            --set productAdminWebAppApiIngress.pathType=Prefix \
+            --set productAdminWebAppApiIngress.serviceName=product-gateway \
+            --set productAdminWebAppApiIngress.servicePortName=http
 
       - name: Wait for user-management rollout
         shell: bash

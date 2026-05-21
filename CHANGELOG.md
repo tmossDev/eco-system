@@ -1,6 +1,6 @@
 # Project Change Log
 
-## v1.11.0 - (10 Changes)
+## v1.11.0 - (11 Changes)
 - Added product-management as a new domain-driven monorepo use case for online store catalog administration.
 - Added product-management product-gateway and product-service backend applications with product CRUD routes.
 - Added product domain models, services, repository interfaces and Postgres persistence for catalog products.
@@ -9,6 +9,7 @@
 - Added product-admin-web-app for authenticated admin users to view, edit and manage products.
 - Added product-management Helm deployment charts and test values for backend services and product admin web app.
 - Added product-management build, image import, Helm deploy, rollout and useful link wiring to the deployment pipeline.
+- Changed product-admin-web-app deployment wiring to use same-origin `/api` ingress routing and avoid browser mixed-content blocking.
 - Added in-process and deployed product-gateway functional tests for login, list products, get product, create product, edit product and delete product flows.
 - Added reusable box icon support to the angular design system for product navigation.
 
