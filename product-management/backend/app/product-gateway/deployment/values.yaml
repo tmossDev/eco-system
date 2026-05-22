@@ -21,6 +21,7 @@ app:
   env:
     PORT: "8080"
     PRODUCT_SERVICE_URL: http://product-service:8080
+    USER_SERVICE_URL: http://user-service:8080
   readinessProbe:
     tcpSocket:
       port: http

@@ -7,10 +7,10 @@ import (
 	"time"
 
 	"github.com/kataras/iris/v12"
+	userClient "tmossDev.github.com/eco-system/product-management/backend/app/product-gateway/client"
 	"tmossDev.github.com/eco-system/product-management/backend/domain/product/service"
+	sharedConstants "tmossDev.github.com/eco-system/shared-components/backend/package/constants"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/types"
-	"tmossDev.github.com/eco-system/shared-components/backend/package/utils"
-	userConstants "tmossDev.github.com/eco-system/user-management/backend/domain/user/constants"
 )
 
 const systemUserID uint64 = 1
@@ -30,26 +30,7 @@ type GatewayController interface {
 
 type GatewayControllerImp struct {
 	productService service.ProductService
-}
-
-type loginRequest struct {
-	Email    string `json:"email"`
-	Username string `json:"username"`
-	Password string `json:"password"`
-}
-
-type loginResponse struct {
-	AccessToken string       `json:"accessToken"`
-	Jwt         string       `json:"jwt"`
-	ExpireAt    int64        `json:"expire_at"`
-	User        authUserInfo `json:"user"`
-}
-
-type authUserInfo struct {
-	ID    string `json:"id"`
-	Name  string `json:"name"`
-	Email string `json:"email"`
-	Role  string `json:"role"`
+	authClient     userClient.AuthClient
 }
 
 type dashboardStatResponse struct {
@@ -71,9 +52,10 @@ type applicationSettingsResponse struct {
 	DefaultCurrencyCode string `json:"defaultCurrencyCode"`
 }
 
-func NewGatewayControllerImp(productService service.ProductService) *GatewayControllerImp {
+func NewGatewayControllerImp(productService service.ProductService, authClient userClient.AuthClient) *GatewayControllerImp {
 	return &GatewayControllerImp{
 		productService: productService,
+		authClient:     authClient,
 	}
 }
 
@@ -99,53 +81,66 @@ func (controller *GatewayControllerImp) getActorID(ctx iris.Context) uint64 {
 	return systemUserID
 }
 
+func (controller *GatewayControllerImp) getJwtTokenFromSession(ctx iris.Context) (string, error) {
+	authHeader := ctx.GetHeader("Authorization")
+	if authHeader != "" {
+		parts := strings.Split(authHeader, " ")
+		if len(parts) == 2 && parts[0] == "Bearer" {
+			return parts[1], nil
+		}
+
+		return "", errors.New("authorization header format must be 'Bearer {token}'")
+	}
+
+	cookie := ctx.GetCookie("jwt")
+	if cookie != "" {
+		return cookie, nil
+	}
+
+	return "", errors.New("jwt token not found in headers or cookies")
+}
+
 func (controller *GatewayControllerImp) Login() iris.Handler {
 	return func(ctx iris.Context) {
-		var request loginRequest
-		if err := ctx.ReadJSON(&request); err != nil {
-			controller.marshalErrorResponse(ctx, types.NewInvalidInputError())
-			return
-		}
-
-		email := request.Email
-		if email == "" {
-			email = request.Username
-		}
-
-		if strings.ToLower(strings.TrimSpace(email)) != "admin@example.com" || request.Password != "password" {
-			controller.marshalErrorResponse(ctx, types.NewUnauthorizedError())
-			return
-		}
-
-		token, expireAt, err := utils.GenerateJwt(strconv.FormatUint(systemUserID, 10), userConstants.PASSWORD_SECRET_HASHING_KEY)
+		body, err := ctx.GetBody()
 		if err != nil {
 			controller.marshalErrorResponse(ctx, types.NewInternalServerError())
 			return
 		}
 
+		requestID := ctx.Values().GetString(sharedConstants.CTXRequestIdKey)
+		loginResponse, err := controller.authClient.Login(requestID, body)
+		if err != nil {
+			controller.marshalErrorResponse(ctx, err)
+			return
+		}
+
 		ctx.SetCookieKV(
 			"jwt",
-			token,
+			loginResponse.Jwt,
 			iris.CookieExpires(24*time.Hour),
 			iris.CookieHTTPOnly(true),
 		)
 
-		_ = ctx.JSON(loginResponse{
-			AccessToken: token,
-			Jwt:         token,
-			ExpireAt:    expireAt,
-			User: authUserInfo{
-				ID:    strconv.FormatUint(systemUserID, 10),
-				Name:  "Product Admin",
-				Email: "admin@example.com",
-				Role:  "Admin",
-			},
-		})
+		_ = ctx.JSON(loginResponse)
 	}
 }
 
 func (controller *GatewayControllerImp) Logout() iris.Handler {
 	return func(ctx iris.Context) {
+		jwt, err := controller.getJwtTokenFromSession(ctx)
+		if err != nil {
+			controller.marshalErrorResponse(ctx, types.NewUnauthorizedError())
+			return
+		}
+
+		requestID := ctx.Values().GetString(sharedConstants.CTXRequestIdKey)
+		err = controller.authClient.Logout(requestID, jwt)
+		if err != nil {
+			controller.marshalErrorResponse(ctx, err)
+			return
+		}
+
 		ctx.RemoveCookie("jwt")
 		ctx.StatusCode(iris.StatusOK)
 		_ = ctx.JSON(iris.Map{

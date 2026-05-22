@@ -12,11 +12,13 @@ import (
 	"github.com/kataras/iris/v12"
 	"tmossDev.github.com/eco-system/product-management/backend/app/product-gateway/routes"
 	"tmossDev.github.com/eco-system/product-management/backend/domain/product/model"
+	userConstants "tmossDev.github.com/eco-system/shared-components/backend/domain/user/constants"
+	userModel "tmossDev.github.com/eco-system/shared-components/backend/domain/user/model"
+	sharedConstants "tmossDev.github.com/eco-system/shared-components/backend/package/constants"
 	transportHTTP "tmossDev.github.com/eco-system/shared-components/backend/package/transport/http"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/transport/http/middleware"
 	httpTypes "tmossDev.github.com/eco-system/shared-components/backend/package/transport/http/types"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/utils"
-	userConstants "tmossDev.github.com/eco-system/user-management/backend/domain/user/constants"
 )
 
 type fakeProductService struct {
@@ -80,9 +82,30 @@ func (service *fakeProductService) DeleteProduct(uint64, uint64) error {
 
 func (service *fakeProductService) Shutdown() {}
 
+type fakeAuthClient struct {
+	loginResponse   *userModel.LoginResponse
+	loginRequestID  string
+	logoutRequestID string
+	logoutToken     string
+}
+
+func (client *fakeAuthClient) Login(requestID string, _ []byte) (*userModel.LoginResponse, error) {
+	client.loginRequestID = requestID
+	return client.loginResponse, nil
+}
+
+func (client *fakeAuthClient) Logout(requestID string, jwt string) error {
+	client.logoutRequestID = requestID
+	client.logoutToken = jwt
+	return nil
+}
+
+func (client *fakeAuthClient) Shutdown() {}
+
 type productGatewayTestServer struct {
-	app   *iris.Application
-	token string
+	app        *iris.Application
+	authClient *fakeAuthClient
+	token      string
 }
 
 func newProductGatewayTestServer(t *testing.T) *productGatewayTestServer {
@@ -105,19 +128,37 @@ func newProductGatewayTestServer(t *testing.T) *productGatewayTestServer {
 		middleware.RequestIDMiddleware,
 		jwtMiddleware([]string{"/auth/login", "/login", "/auth/logout", "/logout", "/refresh", "/health"}),
 	)
-	routes.Setup(app, newFakeProductService())
+	authClient := &fakeAuthClient{
+		loginResponse: &userModel.LoginResponse{
+			Jwt:         token,
+			AccessToken: token,
+			ExpireAt:    time.Now().Add(24 * time.Hour).Unix(),
+			User: userModel.AuthUserResponse{
+				ID:    "1",
+				Name:  "Product Admin",
+				Email: "admin@example.com",
+				Role:  "Admin",
+			},
+		},
+	}
+	routes.Setup(app, newFakeProductService(), authClient)
 
 	if err := app.Build(); err != nil {
 		t.Fatalf("build iris app: %v", err)
 	}
 
 	return &productGatewayTestServer{
-		app:   app,
-		token: token,
+		app:        app,
+		authClient: authClient,
+		token:      token,
 	}
 }
 
 func (server *productGatewayTestServer) doJSON(method string, path string, token string, body any) *httptest.ResponseRecorder {
+	return server.doJSONWithRequestID(method, path, token, body, "test-request-id")
+}
+
+func (server *productGatewayTestServer) doJSONWithRequestID(method string, path string, token string, body any, requestID string) *httptest.ResponseRecorder {
 	var requestBody bytes.Buffer
 	if body != nil {
 		_ = json.NewEncoder(&requestBody).Encode(body)
@@ -125,6 +166,7 @@ func (server *productGatewayTestServer) doJSON(method string, path string, token
 
 	request := httptest.NewRequest(method, path, &requestBody)
 	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set(sharedConstants.CTXRequestIdKey, requestID)
 	if token != "" {
 		request.Header.Set("Authorization", "Bearer "+token)
 	}
@@ -148,11 +190,12 @@ func decodeJSONResponse(t *testing.T, response *httptest.ResponseRecorder) map[s
 
 func TestProductGatewayFunctionalLogin(t *testing.T) {
 	server := newProductGatewayTestServer(t)
+	const requestID = "login-request-id"
 
-	response := server.doJSON(http.MethodPost, "/api/auth/login", "", map[string]any{
+	response := server.doJSONWithRequestID(http.MethodPost, "/api/auth/login", "", map[string]any{
 		"email":    "admin@example.com",
 		"password": "password",
-	})
+	}, requestID)
 
 	if response.Code != http.StatusOK {
 		t.Fatalf("expected status %d, got %d: %s", http.StatusOK, response.Code, response.Body.String())
@@ -161,6 +204,26 @@ func TestProductGatewayFunctionalLogin(t *testing.T) {
 	payload := decodeJSONResponse(t, response)
 	if payload["accessToken"] == "" {
 		t.Fatalf("expected login response to include accessToken, got %#v", payload)
+	}
+	if server.authClient.loginRequestID != requestID {
+		t.Fatalf("expected login request id %q to be passed to user service, got %q", requestID, server.authClient.loginRequestID)
+	}
+}
+
+func TestProductGatewayFunctionalLogout(t *testing.T) {
+	server := newProductGatewayTestServer(t)
+	const requestID = "logout-request-id"
+
+	response := server.doJSONWithRequestID(http.MethodPost, "/api/auth/logout", server.token, nil, requestID)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d: %s", http.StatusOK, response.Code, response.Body.String())
+	}
+	if server.authClient.logoutToken != server.token {
+		t.Fatalf("expected logout token to be passed to user service")
+	}
+	if server.authClient.logoutRequestID != requestID {
+		t.Fatalf("expected logout request id %q to be passed to user service, got %q", requestID, server.authClient.logoutRequestID)
 	}
 }
 

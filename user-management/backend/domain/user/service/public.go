@@ -4,12 +4,12 @@ import (
 	"errors"
 	"strconv"
 
+	"tmossDev.github.com/eco-system/shared-components/backend/domain/user/constants"
+	"tmossDev.github.com/eco-system/shared-components/backend/domain/user/model"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/logger"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/types"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/utils"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/validator"
-	"tmossDev.github.com/eco-system/user-management/backend/domain/user/constants"
-	"tmossDev.github.com/eco-system/user-management/backend/domain/user/model"
 	"tmossDev.github.com/eco-system/user-management/backend/domain/user/repository"
 )
 

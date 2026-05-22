@@ -11,6 +11,7 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/kataras/iris/v12"
 	"github.com/kataras/iris/v12/middleware/accesslog"
+	userConstants "tmossDev.github.com/eco-system/shared-components/backend/domain/user/constants"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/config/aws"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/config/local"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/config/types"
@@ -24,7 +25,6 @@ import (
 	httpTypes "tmossDev.github.com/eco-system/shared-components/backend/package/transport/http/types"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/validator"
 	"tmossDev.github.com/eco-system/user-management/backend/app/user-gateway/routes"
-	userConstants "tmossDev.github.com/eco-system/user-management/backend/domain/user/constants"
 	"tmossDev.github.com/eco-system/user-management/backend/domain/user/service"
 	"tmossDev.github.com/eco-system/user-management/backend/domain/user/store/postgres"
 )

@@ -11,9 +11,11 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/kataras/iris/v12"
 	"github.com/kataras/iris/v12/middleware/accesslog"
+	userClient "tmossDev.github.com/eco-system/product-management/backend/app/product-gateway/client"
 	"tmossDev.github.com/eco-system/product-management/backend/app/product-gateway/routes"
 	"tmossDev.github.com/eco-system/product-management/backend/domain/product/service"
 	"tmossDev.github.com/eco-system/product-management/backend/domain/product/store/postgres"
+	userConstants "tmossDev.github.com/eco-system/shared-components/backend/domain/user/constants"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/config/aws"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/config/local"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/config/types"
@@ -26,7 +28,6 @@ import (
 	"tmossDev.github.com/eco-system/shared-components/backend/package/transport/http/middleware"
 	httpTypes "tmossDev.github.com/eco-system/shared-components/backend/package/transport/http/types"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/validator"
-	userConstants "tmossDev.github.com/eco-system/user-management/backend/domain/user/constants"
 )
 
 var sqlStore *storePostgres.PostgresDataStore
@@ -123,9 +124,10 @@ func setup() error {
 	logger.Info(constants.CTXRequestIdKey, "Set up repositories...")
 
 	productService := service.NewProductService(validater, productRepo)
+	authClient := userClient.NewHTTPAuthClient(env.Getenv("USER_SERVICE_URL", "http://user-service:8080"))
 	logger.Info(constants.CTXRequestIdKey, "Set up services...")
 
-	routes.Setup(irisApp, productService)
+	routes.Setup(irisApp, productService, authClient)
 	logger.Info(constants.CTXRequestIdKey, "Set up routes...")
 
 	return nil

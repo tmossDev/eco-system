@@ -7,11 +7,11 @@ import (
 	"time"
 
 	"github.com/kataras/iris/v12"
+	"tmossDev.github.com/eco-system/shared-components/backend/domain/user/constants"
 	sharedConstants "tmossDev.github.com/eco-system/shared-components/backend/package/constants"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/logger"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/types"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/utils"
-	"tmossDev.github.com/eco-system/user-management/backend/domain/user/constants"
 	"tmossDev.github.com/eco-system/user-management/backend/domain/user/service"
 )
 

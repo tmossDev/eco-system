@@ -2,13 +2,14 @@ package routes
 
 import (
 	"github.com/kataras/iris/v12"
+	userClient "tmossDev.github.com/eco-system/product-management/backend/app/product-gateway/client"
 	"tmossDev.github.com/eco-system/product-management/backend/app/product-gateway/controller"
 	"tmossDev.github.com/eco-system/product-management/backend/domain/product/service"
 )
 
-func Setup(app *iris.Application, productService service.ProductService) {
+func Setup(app *iris.Application, productService service.ProductService, authClient userClient.AuthClient) {
 
-	gatewayController := controller.NewGatewayControllerImp(productService)
+	gatewayController := controller.NewGatewayControllerImp(productService, authClient)
 	// auth routes
 	app.Post("/api/auth/login", gatewayController.Login())
 	app.Post("/api/login", gatewayController.Login())

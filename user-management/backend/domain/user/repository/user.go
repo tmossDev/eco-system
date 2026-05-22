@@ -1,7 +1,7 @@
 package repository
 
 import (
-	"tmossDev.github.com/eco-system/user-management/backend/domain/user/model"
+	"tmossDev.github.com/eco-system/shared-components/backend/domain/user/model"
 )
 
 type UserRepository interface {

@@ -1,9 +1,9 @@
 package service
 
 import (
+	"tmossDev.github.com/eco-system/shared-components/backend/domain/user/model"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/types"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/validator"
-	"tmossDev.github.com/eco-system/user-management/backend/domain/user/model"
 	"tmossDev.github.com/eco-system/user-management/backend/domain/user/repository"
 )
 

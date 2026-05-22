@@ -10,13 +10,13 @@ import (
 
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/kataras/iris/v12"
+	userConstants "tmossDev.github.com/eco-system/shared-components/backend/domain/user/constants"
+	"tmossDev.github.com/eco-system/shared-components/backend/domain/user/model"
 	transportHTTP "tmossDev.github.com/eco-system/shared-components/backend/package/transport/http"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/transport/http/middleware"
 	httpTypes "tmossDev.github.com/eco-system/shared-components/backend/package/transport/http/types"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/utils"
 	"tmossDev.github.com/eco-system/user-management/backend/app/user-gateway/routes"
-	userConstants "tmossDev.github.com/eco-system/user-management/backend/domain/user/constants"
-	"tmossDev.github.com/eco-system/user-management/backend/domain/user/model"
 )
 
 type fakePublicUserService struct {
