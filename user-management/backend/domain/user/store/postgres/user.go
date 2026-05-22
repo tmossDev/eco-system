@@ -5,11 +5,11 @@ import (
 	"errors"
 	"time"
 
-	"tmossDev.github.com/eco-system/shared-components/backend/domain/user/model"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/datastore"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/datastore/flows"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/logger"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/types"
+	"tmossDev.github.com/eco-system/shared-components/backend/package/user/model"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/utils"
 	"tmossDev.github.com/eco-system/user-management/backend/domain/user/repository"
 )

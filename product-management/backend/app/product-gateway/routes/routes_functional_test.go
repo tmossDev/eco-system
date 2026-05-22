@@ -12,12 +12,12 @@ import (
 	"github.com/kataras/iris/v12"
 	"tmossDev.github.com/eco-system/product-management/backend/app/product-gateway/routes"
 	"tmossDev.github.com/eco-system/product-management/backend/domain/product/model"
-	userConstants "tmossDev.github.com/eco-system/shared-components/backend/domain/user/constants"
-	userModel "tmossDev.github.com/eco-system/shared-components/backend/domain/user/model"
 	sharedConstants "tmossDev.github.com/eco-system/shared-components/backend/package/constants"
 	transportHTTP "tmossDev.github.com/eco-system/shared-components/backend/package/transport/http"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/transport/http/middleware"
 	httpTypes "tmossDev.github.com/eco-system/shared-components/backend/package/transport/http/types"
+	userConstants "tmossDev.github.com/eco-system/shared-components/backend/package/user/constants"
+	userModel "tmossDev.github.com/eco-system/shared-components/backend/package/user/model"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/utils"
 )
 
@@ -136,7 +136,7 @@ func newProductGatewayTestServer(t *testing.T) *productGatewayTestServer {
 			User: userModel.AuthUserResponse{
 				ID:    "1",
 				Name:  "Product Admin",
-				Email: "admin@example.com",
+				Email: "admin@test.com",
 				Role:  "Admin",
 			},
 		},
@@ -193,7 +193,7 @@ func TestProductGatewayFunctionalLogin(t *testing.T) {
 	const requestID = "login-request-id"
 
 	response := server.doJSONWithRequestID(http.MethodPost, "/api/auth/login", "", map[string]any{
-		"email":    "admin@example.com",
+		"email":    "admin@test.com",
 		"password": "password",
 	}, requestID)
 

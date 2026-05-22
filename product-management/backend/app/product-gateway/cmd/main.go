@@ -15,7 +15,6 @@ import (
 	"tmossDev.github.com/eco-system/product-management/backend/app/product-gateway/routes"
 	"tmossDev.github.com/eco-system/product-management/backend/domain/product/service"
 	"tmossDev.github.com/eco-system/product-management/backend/domain/product/store/postgres"
-	userConstants "tmossDev.github.com/eco-system/shared-components/backend/domain/user/constants"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/config/aws"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/config/local"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/config/types"
@@ -27,6 +26,7 @@ import (
 	"tmossDev.github.com/eco-system/shared-components/backend/package/transport/http"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/transport/http/middleware"
 	httpTypes "tmossDev.github.com/eco-system/shared-components/backend/package/transport/http/types"
+	userConstants "tmossDev.github.com/eco-system/shared-components/backend/package/user/constants"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/validator"
 )
 

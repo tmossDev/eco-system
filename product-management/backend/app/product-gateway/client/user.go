@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	userModel "tmossDev.github.com/eco-system/shared-components/backend/domain/user/model"
 	sharedConstants "tmossDev.github.com/eco-system/shared-components/backend/package/constants"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/types"
+	userModel "tmossDev.github.com/eco-system/shared-components/backend/package/user/model"
 )
 
 const defaultUserServiceURL = "http://user-service:8080"

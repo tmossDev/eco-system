@@ -558,6 +558,7 @@ jobs:
             --set-string product-gateway.app.configMap.data.DB_PORT="$POSTGRES_PORT" \
             --set-string product-gateway.app.configMap.data.DB_USER="$POSTGRES_APP_USER" \
             --set-string product-gateway.app.configMap.data.PRODUCT_SERVICE_URL="$PRODUCT_SERVICE_INTERNAL_URL" \
+            --set-string product-gateway.app.configMap.data.USER_SERVICE_URL="$USER_SERVICE_INTERNAL_URL" \
             --set-string product-gateway.app.configMap.data.FRONTEND_ORIGIN="$PRODUCT_FRONTEND_ORIGIN" \
             --set product-gateway.app.secret.enabled=true \
             --set-string product-gateway.app.secret.stringData.DB_PASSWORD='${{ secrets.APP_PASSWORD }}' \
@@ -639,7 +640,7 @@ jobs:
         shell: bash
         env:
           PRODUCT_GATEWAY_BASE_URL: http://127.0.0.1:18081
-          PRODUCT_FUNCTIONAL_TEST_EMAIL: admin@example.com
+          PRODUCT_FUNCTIONAL_TEST_EMAIL: admin@test.com
           PRODUCT_FUNCTIONAL_TEST_PASSWORD: password
         run: |
           set -euo pipefail

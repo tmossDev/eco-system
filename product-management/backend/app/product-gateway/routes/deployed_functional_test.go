@@ -19,7 +19,7 @@ func TestDeployedProductGatewayFunctional(t *testing.T) {
 	}
 
 	client := &http.Client{Timeout: 15 * time.Second}
-	email := getEnv("PRODUCT_FUNCTIONAL_TEST_EMAIL", "admin@example.com")
+	email := getEnv("PRODUCT_FUNCTIONAL_TEST_EMAIL", "admin@test.com")
 	password := getEnv("PRODUCT_FUNCTIONAL_TEST_PASSWORD", "password")
 
 	loginPayload := deployedRequest(t, client, http.MethodPost, baseURL+"/api/auth/login", http.StatusOK, "", map[string]any{

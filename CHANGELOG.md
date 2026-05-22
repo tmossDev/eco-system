@@ -1,12 +1,13 @@
 # Project Change Log
 
-## v1.11.1 - (6 Changes)
-- Moved shared user request, response and auth constants from user-management into shared-components backend domain packages.
-- Refactored user-management services, repositories, controllers and tests to consume the shared user domain contracts.
+## v1.11.1 - (7 Changes)
+- Moved shared user request, response and auth constants from user-management into shared-components backend user packages.
+- Refactored user-management services, repositories, controllers and tests to consume the shared user package contracts.
 - Changed product-gateway login and logout to call user-service through an internal auth client instead of handling auth locally.
 - Added user-service auth routes for internal login and logout calls from other backend services.
 - Added product-gateway `USER_SERVICE_URL` deployment configuration for service-to-service auth calls.
 - Improved product-gateway auth request-id propagation so login and logout internal user-service calls keep the original request id.
+- Aligned product-management login mocks and functional tests with the seeded `admin@test.com` user-management account.
 
 ## v1.11.0 - (11 Changes)
 - Added product-management as a new domain-driven monorepo use case for online store catalog administration.

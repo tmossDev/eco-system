@@ -3,7 +3,7 @@ import { AuthUser, LoginResponse } from './auth.models';
 export const MOCK_AUTH_USER: AuthUser = {
   id: '1',
   name: 'Product Admin',
-  email: 'admin@example.com',
+  email: 'admin@test.com',
   role: 'Admin',
 };
 
@@ -15,7 +15,7 @@ export const MOCK_LOGIN_RESPONSE: LoginResponse = {
 };
 
 export const MOCK_AUTH_CREDENTIALS = {
-  email: 'admin@example.com',
+  email: 'admin@test.com',
   password: 'password',
 };
 

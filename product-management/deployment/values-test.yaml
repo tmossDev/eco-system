@@ -23,6 +23,7 @@ product-gateway:
         DB_DIALECT: postgresql
         DB_PORT: "5432"
         PRODUCT_SERVICE_URL: http://product-service:8080
+        USER_SERVICE_URL: http://user-service:8080
     secret:
       enabled: true
     ingress:
