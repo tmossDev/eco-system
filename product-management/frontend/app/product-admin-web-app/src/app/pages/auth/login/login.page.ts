@@ -12,6 +12,7 @@ import { AuthService } from '../../../core/services/auth/auth.service';
     <ds-login-form
       [isSubmitting]="isSubmitting()"
       [errorMessage]="errorMessage()"
+      emailPlaceholder="admin@test.com"
       forgotPasswordHref="/auth/forgot-password"
       (loginSubmit)="login($event)"
     />
