@@ -6,6 +6,7 @@
 - Fixed workflow ordering so foundation deploy finishes before application deploy when both are triggered.
 - Aligned Liquibase and Postgres passwords during foundation deploy to prevent `liquibase` authentication failures.
 - Updated pull request decorator with styled HTML formatting displaying useful links and namespace information at the top of the PR overview section.
+- Added `scripts/local-deploy.sh` to automate local k3d/k3s image builds, imports, namespace creation, and Helm deploys for foundation/application.
 - added discount functionality to product-management 
 
 ## v1.12.0 - (5 Changes)

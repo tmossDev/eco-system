@@ -280,6 +280,15 @@ jobs:
       - name: Deploy postgres and liquibase
         shell: bash
         run: |
+          POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-${{ secrets.POSTGRES_PASSWORD }}}"
+          LIQUIBASE_PASSWORD="${LIQUIBASE_PASSWORD:-${{ secrets.LIQUIBASE_PASSWORD }}}"
+          APP_PASSWORD="${APP_PASSWORD:-${{ secrets.APP_PASSWORD }}}"
+
+          if [[ -z "$POSTGRES_PASSWORD" || -z "$LIQUIBASE_PASSWORD" || -z "$APP_PASSWORD" ]]; then
+            echo "Missing required credentials for foundation deploy. Set POSTGRES_PASSWORD, LIQUIBASE_PASSWORD, APP_PASSWORD in environment or GitHub secrets." >&2
+            exit 1
+          fi
+
           helm upgrade --install foundation foundation/deployment \
             --namespace "$FOUNDATION_NAMESPACE" \
             --wait --wait-for-jobs \
@@ -289,11 +298,11 @@ jobs:
             --set liquibase.app.image.pullPolicy=Never \
             --set-string liquibase.app.env.LIQUIBASE_COMMAND_URL="$LIQUIBASE_JDBC_URL" \
             --set-string liquibase.app.env.LIQUIBASE_COMMAND_USERNAME="$POSTGRES_LIQUIBASE_USER" \
-            --set-string postgres.app.secret.stringData.POSTGRES_PASSWORD='${{ secrets.POSTGRES_PASSWORD }}' \
-            --set-string postgres.app.secret.stringData.LIQUIBASE_PASSWORD='${{ secrets.LIQUIBASE_PASSWORD }}' \
-            --set-string postgres.app.secret.stringData.APP_PASSWORD='${{ secrets.APP_PASSWORD }}' \
-            --set-string liquibase.app.secret.stringData.LIQUIBASE_COMMAND_PASSWORD='${{ secrets.LIQUIBASE_PASSWORD }}' \
-            --set-string liquibase.app.secret.stringData.LIQUIBASE_PASSWORD='${{ secrets.LIQUIBASE_PASSWORD }}'
+            --set-string postgres.app.secret.stringData.POSTGRES_PASSWORD="$POSTGRES_PASSWORD" \
+            --set-string postgres.app.secret.stringData.LIQUIBASE_PASSWORD="$LIQUIBASE_PASSWORD" \
+            --set-string postgres.app.secret.stringData.APP_PASSWORD="$APP_PASSWORD" \
+            --set-string liquibase.app.secret.stringData.LIQUIBASE_COMMAND_PASSWORD="$LIQUIBASE_PASSWORD" \
+            --set-string liquibase.app.secret.stringData.LIQUIBASE_PASSWORD="$LIQUIBASE_PASSWORD"
 
       - name: Show foundation rollout
         shell: bash
@@ -319,12 +328,19 @@ jobs:
           . "config/${ENVIRONMENT_FILE}"
           set +a
 
+          APP_PASSWORD="${APP_PASSWORD:-${{ secrets.APP_PASSWORD }}}"
+          if [[ -z "$APP_PASSWORD" ]]; then
+            echo "Missing APP_PASSWORD for application deploy. Set APP_PASSWORD in environment or GitHub secrets." >&2
+            exit 1
+          fi
+
           echo "NAMESPACE=${{ needs.prepare.outputs.namespace }}" >> "$GITHUB_ENV"
           echo "FOUNDATION_NAMESPACE=${{ needs.prepare.outputs.foundation_namespace }}" >> "$GITHUB_ENV"
           echo "POSTGRES_DB=${POSTGRES_DB:-ecoDB}" >> "$GITHUB_ENV"
           echo "POSTGRES_HOST=${POSTGRES_HOST:-postgres.${{ needs.prepare.outputs.foundation_namespace }}.svc.cluster.local}" >> "$GITHUB_ENV"
           echo "POSTGRES_PORT=${POSTGRES_PORT:-5432}" >> "$GITHUB_ENV"
           echo "POSTGRES_APP_USER=${POSTGRES_APP_USER:-app_user}" >> "$GITHUB_ENV"
+          echo "APP_PASSWORD=$APP_PASSWORD" >> "$GITHUB_ENV"
           echo "USER_SERVICE_INTERNAL_URL=${USER_SERVICE_INTERNAL_URL:-http://user-service:8080}" >> "$GITHUB_ENV"
           echo "PRODUCT_SERVICE_INTERNAL_URL=${PRODUCT_SERVICE_INTERNAL_URL:-http://product-service:8080}" >> "$GITHUB_ENV"
           echo "INGRESS_CLASS_NAME=${INGRESS_CLASS_NAME:-traefik}" >> "$GITHUB_ENV"
@@ -538,7 +554,7 @@ jobs:
             --set-string user-service.app.configMap.data.DB_PORT="$POSTGRES_PORT" \
             --set-string user-service.app.configMap.data.DB_USER="$POSTGRES_APP_USER" \
             --set user-service.app.secret.enabled=true \
-            --set-string user-service.app.secret.stringData.DB_PASSWORD='${{ secrets.APP_PASSWORD }}' \
+            --set-string user-service.app.secret.stringData.DB_PASSWORD="$APP_PASSWORD" \
             --set user-service.app.ingress.enabled=true \
             --set user-service.app.ingress.className="$INGRESS_CLASS_NAME" \
             --set user-service.app.ingress.hosts[0].host="$USER_SERVICE_HOST" \
@@ -556,7 +572,7 @@ jobs:
             --set-string user-gateway.app.configMap.data.USER_SERVICE_URL="$USER_SERVICE_INTERNAL_URL" \
             --set-string user-gateway.app.configMap.data.FRONTEND_ORIGIN="$FRONTEND_ORIGIN" \
             --set user-gateway.app.secret.enabled=true \
-            --set-string user-gateway.app.secret.stringData.DB_PASSWORD='${{ secrets.APP_PASSWORD }}' \
+            --set-string user-gateway.app.secret.stringData.DB_PASSWORD="$APP_PASSWORD" \
             --set user-gateway.app.ingress.enabled=true \
             --set user-gateway.app.ingress.className="$INGRESS_CLASS_NAME" \
             --set user-gateway.app.ingress.hosts[0].host="$USER_GATEWAY_HOST" \
@@ -591,7 +607,7 @@ jobs:
             --set-string product-service.app.configMap.data.DB_PORT="$POSTGRES_PORT" \
             --set-string product-service.app.configMap.data.DB_USER="$POSTGRES_APP_USER" \
             --set product-service.app.secret.enabled=true \
-            --set-string product-service.app.secret.stringData.DB_PASSWORD='${{ secrets.APP_PASSWORD }}' \
+            --set-string product-service.app.secret.stringData.DB_PASSWORD="$APP_PASSWORD" \
             --set product-service.app.ingress.enabled=true \
             --set product-service.app.ingress.className="$INGRESS_CLASS_NAME" \
             --set product-service.app.ingress.hosts[0].host="$PRODUCT_SERVICE_HOST" \
@@ -610,7 +626,7 @@ jobs:
             --set-string product-gateway.app.configMap.data.USER_SERVICE_URL="$USER_SERVICE_INTERNAL_URL" \
             --set-string product-gateway.app.configMap.data.FRONTEND_ORIGIN="$PRODUCT_FRONTEND_ORIGIN" \
             --set product-gateway.app.secret.enabled=true \
-            --set-string product-gateway.app.secret.stringData.DB_PASSWORD='${{ secrets.APP_PASSWORD }}' \
+            --set-string product-gateway.app.secret.stringData.DB_PASSWORD="$APP_PASSWORD" \
             --set product-gateway.app.ingress.enabled=true \
             --set product-gateway.app.ingress.className="$INGRESS_CLASS_NAME" \
             --set product-gateway.app.ingress.hosts[0].host="$PRODUCT_GATEWAY_HOST" \

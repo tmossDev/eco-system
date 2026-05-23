@@ -221,6 +221,16 @@ helm upgrade --install foundation foundation/deployment \
 kubectl get all -n "$FOUNDATION_NAMESPACE"
 ```
 
+### Local deploy helper
+
+A new helper script is available at `scripts/local-deploy.sh` to automate the most common local deploy steps for k3d/k3s. It builds and imports the local images, creates namespaces, and runs the same Helm upgrade commands as the GitHub Actions workflow.
+
+```sh
+POSTGRES_PASSWORD=... LIQUIBASE_PASSWORD=... APP_PASSWORD=... \
+  ./scripts/local-deploy.sh --layer all --namespace eco-system \
+  --environment-file hp-prodesk-homelab.txt
+```
+
 If the Liquibase pod reports `ErrImageNeverPull`, the image exists in Docker
 but is missing from the container runtime for the node running the pod.
 For k3d, the node name starts with `k3d-`; import the exact tag into the k3d
