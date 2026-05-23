@@ -1,8 +1,10 @@
 # Project Change Log
 
-## v1.12.1 - (4 Changes)
+## v1.12.1 - (5 Changes)
 - Enhanced deployment pipeline to automatically detect and deploy foundation layer changes on push to main and feature branches.
 - Feature branches with foundation changes now deploy both foundation and application layers to the same namespace for better isolation.
+- Fixed workflow ordering so foundation deploy finishes before application deploy when both are triggered.
+- Aligned Liquibase and Postgres passwords during foundation deploy to prevent `liquibase` authentication failures.
 - Updated pull request decorator with styled HTML formatting displaying useful links and namespace information at the top of the PR overview section.
 - added discount functionality to product-management 
 

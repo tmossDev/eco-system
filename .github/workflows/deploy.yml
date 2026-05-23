@@ -58,6 +58,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Detect foundation changes
         id: detect_foundation
@@ -69,16 +71,23 @@ jobs:
 
           if [[ "$EVENT_NAME" == "push" ]]; then
             # Check if foundation layer files changed since previous commit
-            if git diff --quiet HEAD~1 HEAD -- foundation/ >/dev/null 2>&1 || \
-               ! git rev-parse HEAD~1 >/dev/null 2>&1; then
-              FOUNDATION_CHANGED=true
+            if git rev-parse --verify HEAD~1 >/dev/null 2>&1; then
+              if ! git diff --quiet HEAD~1 HEAD -- foundation/ >/dev/null 2>&1; then
+                FOUNDATION_CHANGED=true
+              fi
+            else
+              # On initial commit, treat foundation files as changed if any exist
+              if git ls-tree -r --name-only HEAD | grep -q '^foundation/'; then
+                FOUNDATION_CHANGED=true
+              fi
             fi
           elif [[ "$EVENT_NAME" == "pull_request" ]]; then
             # Check if foundation layer files changed in the PR
             BASE_REF="${{ github.base_ref }}"
-            if git diff --quiet origin/"$BASE_REF" HEAD -- foundation/ >/dev/null 2>&1; then
-              FOUNDATION_CHANGED=false
-            else
+            if ! git show-ref --quiet "refs/remotes/origin/$BASE_REF"; then
+              git fetch origin "$BASE_REF":"refs/remotes/origin/$BASE_REF"
+            fi
+            if ! git diff --quiet origin/"$BASE_REF" HEAD -- foundation/ >/dev/null 2>&1; then
               FOUNDATION_CHANGED=true
             fi
           fi
@@ -273,6 +282,7 @@ jobs:
         run: |
           helm upgrade --install foundation foundation/deployment \
             --namespace "$FOUNDATION_NAMESPACE" \
+            --wait --wait-for-jobs \
             --set postgres.app.env.POSTGRES_DB="$POSTGRES_DB" \
             --set liquibase.app.image.repository="$IMAGE_PREFIX/liquibase" \
             --set liquibase.app.image.tag="$IMAGE_TAG" \
@@ -282,7 +292,8 @@ jobs:
             --set-string postgres.app.secret.stringData.POSTGRES_PASSWORD='${{ secrets.POSTGRES_PASSWORD }}' \
             --set-string postgres.app.secret.stringData.LIQUIBASE_PASSWORD='${{ secrets.LIQUIBASE_PASSWORD }}' \
             --set-string postgres.app.secret.stringData.APP_PASSWORD='${{ secrets.APP_PASSWORD }}' \
-            --set-string liquibase.app.secret.stringData.LIQUIBASE_COMMAND_PASSWORD='${{ secrets.LIQUIBASE_PASSWORD }}'
+            --set-string liquibase.app.secret.stringData.LIQUIBASE_COMMAND_PASSWORD='${{ secrets.LIQUIBASE_PASSWORD }}' \
+            --set-string liquibase.app.secret.stringData.LIQUIBASE_PASSWORD='${{ secrets.LIQUIBASE_PASSWORD }}'
 
       - name: Show foundation rollout
         shell: bash
@@ -291,8 +302,10 @@ jobs:
 
   application:
     name: Build and deploy application
-    needs: prepare
-    if: needs.prepare.outputs.deploy_application == 'true'
+    needs:
+      - prepare
+      - foundation
+    if: needs.prepare.outputs.deploy_application == 'true' && (needs.foundation.result == 'success' || needs.foundation.result == 'skipped')
     runs-on: [self-hosted, linux]
     steps:
       - name: Checkout
