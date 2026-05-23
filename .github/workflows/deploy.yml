@@ -315,7 +315,7 @@ jobs:
     needs:
       - prepare
       - foundation
-    if: needs.prepare.outputs.deploy_application == 'true' && (needs.foundation.result == 'success' || needs.foundation.result == 'skipped')
+    if: always() && needs.prepare.outputs.deploy_application == 'true' && (needs.foundation.result == 'success' || needs.foundation.result == 'skipped')
     runs-on: [self-hosted, linux]
     steps:
       - name: Checkout
