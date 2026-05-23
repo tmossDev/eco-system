@@ -2,6 +2,7 @@ package controller
 
 import (
 	"errors"
+	"io"
 	"strconv"
 	"strings"
 	"time"
@@ -24,6 +25,8 @@ type GatewayController interface {
 	CreateProduct() iris.Handler
 	UpdateProduct() iris.Handler
 	DeleteProduct() iris.Handler
+	UploadProductPhoto() iris.Handler
+	GetProductMedia() iris.Handler
 	GetSettings() iris.Handler
 	UpdateSettings() iris.Handler
 }
@@ -269,6 +272,59 @@ func (controller *GatewayControllerImp) DeleteProduct() iris.Handler {
 		}
 
 		ctx.StatusCode(iris.StatusNoContent)
+	}
+}
+
+func (controller *GatewayControllerImp) UploadProductPhoto() iris.Handler {
+	return func(ctx iris.Context) {
+		productID, err := ctx.Params().GetUint64("id")
+		if err != nil {
+			controller.marshalErrorResponse(ctx, types.NewInvalidInputError())
+			return
+		}
+
+		file, fileHeader, err := ctx.FormFile("file")
+		if err != nil {
+			controller.marshalErrorResponse(ctx, types.NewInvalidInputError())
+			return
+		}
+		defer file.Close()
+
+		product, err := controller.productService.UploadProductPhoto(
+			productID,
+			fileHeader.Filename,
+			file,
+			controller.getActorID(ctx),
+		)
+		if err != nil {
+			controller.marshalErrorResponse(ctx, err)
+			return
+		}
+
+		ctx.StatusCode(iris.StatusCreated)
+		_ = ctx.JSON(product)
+	}
+}
+
+func (controller *GatewayControllerImp) GetProductMedia() iris.Handler {
+	return func(ctx iris.Context) {
+		objectKey := ctx.Params().Get("objectKey")
+		mediaObject, err := controller.productService.GetProductMedia(objectKey)
+		if err != nil {
+			controller.marshalErrorResponse(ctx, err)
+			return
+		}
+		defer mediaObject.Body.Close()
+
+		ctx.Header("Content-Type", mediaObject.ContentType)
+		ctx.Header("Cache-Control", "public, max-age=31536000, immutable")
+		if mediaObject.ContentLength > 0 {
+			ctx.Header("Content-Length", strconv.FormatInt(mediaObject.ContentLength, 10))
+		}
+		if _, err := io.Copy(ctx.ResponseWriter(), mediaObject.Body); err != nil {
+			controller.marshalErrorResponse(ctx, types.NewInternalServerError())
+			return
+		}
 	}
 }
 

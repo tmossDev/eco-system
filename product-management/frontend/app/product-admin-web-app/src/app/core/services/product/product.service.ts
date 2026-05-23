@@ -34,6 +34,16 @@ export class ProductService {
     return this.http.put<ProductDetails>(`${this.baseUrl}/${id}`, request);
   }
 
+  public uploadProductPhoto(id: string, file: File): Observable<ProductDetails> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    return this.http.post<ProductDetails>(
+      `${this.baseUrl}/${id}/photos`,
+      formData,
+    );
+  }
+
   public deleteProduct(id: string): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/${id}`);
   }

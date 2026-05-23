@@ -20,7 +20,7 @@ func NewJWTMiddleware(config types.JWTConfig) func([]string) iris.Handler {
 			currentPath := strings.Replace(ctx.Path(), constants.ApiPrefix, "", 1)
 
 			for _, route := range escapedRoutes {
-				if strings.EqualFold(currentPath, route) {
+				if isEscapedRoute(currentPath, route) {
 					ctx.Next()
 					return
 				}
@@ -49,6 +49,16 @@ func NewJWTMiddleware(config types.JWTConfig) func([]string) iris.Handler {
 			ctx.Next()
 		}
 	}
+}
+
+func isEscapedRoute(currentPath string, route string) bool {
+	if strings.HasSuffix(route, "/*") {
+		prefix := strings.TrimSuffix(route, "*")
+
+		return strings.HasPrefix(strings.ToLower(currentPath), strings.ToLower(prefix))
+	}
+
+	return strings.EqualFold(currentPath, route)
 }
 
 // Helper functions

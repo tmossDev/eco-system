@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"database/sql"
+	"encoding/json"
 	"errors"
 
 	"tmossDev.github.com/eco-system/product-management/backend/domain/product/model"
@@ -30,6 +31,7 @@ func (repo *ProductRepository) Shutdown() {
 
 func mapRowToProduct(row *sql.Row) (*model.ProductResponse, error) {
 	var product model.ProductResponse
+	var photosJSON []byte
 
 	if row.Err() != nil {
 		return nil, row.Err()
@@ -39,12 +41,14 @@ func mapRowToProduct(row *sql.Row) (*model.ProductResponse, error) {
 		&product.ID,
 		&product.SKU,
 		&product.Name,
+		&product.ShortDescription,
 		&product.Description,
 		&product.Category,
 		&product.PriceCents,
 		&product.Currency,
 		&product.InventoryCount,
 		&product.Status,
+		&photosJSON,
 		&product.CreatedUser,
 		&product.CreatedAt,
 		&product.UpdatedUser,
@@ -59,6 +63,8 @@ func mapRowToProduct(row *sql.Row) (*model.ProductResponse, error) {
 		return nil, types.NewInternalServerError()
 	}
 
+	product.Photos = decodeProductPhotos(photosJSON)
+
 	return &product, nil
 }
 
@@ -66,16 +72,19 @@ func scanProductRows(rows *sql.Rows) ([]model.ProductResponse, error) {
 	products := make([]model.ProductResponse, 0)
 	for rows.Next() {
 		var product model.ProductResponse
+		var photosJSON []byte
 		if err := rows.Scan(
 			&product.ID,
 			&product.SKU,
 			&product.Name,
+			&product.ShortDescription,
 			&product.Description,
 			&product.Category,
 			&product.PriceCents,
 			&product.Currency,
 			&product.InventoryCount,
 			&product.Status,
+			&photosJSON,
 			&product.CreatedUser,
 			&product.CreatedAt,
 			&product.UpdatedUser,
@@ -85,6 +94,7 @@ func scanProductRows(rows *sql.Rows) ([]model.ProductResponse, error) {
 			return nil, types.NewInternalServerError()
 		}
 
+		product.Photos = decodeProductPhotos(photosJSON)
 		products = append(products, product)
 	}
 
@@ -129,12 +139,14 @@ func (repo *ProductRepository) Create(product model.ProductRequest, creatingUser
 		CreateProduct,
 		product.SKU,
 		product.Name,
+		product.ShortDescription,
 		product.Description,
 		product.Category,
 		product.PriceCents,
 		product.Currency,
 		product.InventoryCount,
 		product.Status,
+		encodeProductPhotos(product.Photos),
 		creatingUserID,
 	).Scan(&insertedID)
 	if err != nil {
@@ -150,12 +162,14 @@ func (repo *ProductRepository) Update(productID uint64, product model.ProductUpd
 		UpdateProduct,
 		product.SKU,
 		product.Name,
+		product.ShortDescription,
 		product.Description,
 		product.Category,
 		product.PriceCents,
 		product.Currency,
 		product.InventoryCount,
 		product.Status,
+		encodeProductPhotos(product.Photos),
 		updatingUserID,
 		productID,
 	)
@@ -185,4 +199,32 @@ func (repo *ProductRepository) Delete(productID uint64, deletingUserID uint64) e
 	}
 
 	return nil
+}
+
+func encodeProductPhotos(photos []model.ProductPhotoRequest) string {
+	if photos == nil {
+		return "[]"
+	}
+
+	encoded, err := json.Marshal(photos)
+	if err != nil {
+		logger.Errorf("Unable to encode product photos: %s", err.Error())
+		return "[]"
+	}
+
+	return string(encoded)
+}
+
+func decodeProductPhotos(photosJSON []byte) []model.ProductPhoto {
+	if len(photosJSON) == 0 {
+		return []model.ProductPhoto{}
+	}
+
+	var photos []model.ProductPhoto
+	if err := json.Unmarshal(photosJSON, &photos); err != nil {
+		logger.Errorf("Unable to decode product photos: %s", err.Error())
+		return []model.ProductPhoto{}
+	}
+
+	return photos
 }

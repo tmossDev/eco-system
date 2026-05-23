@@ -22,6 +22,11 @@ app:
     PORT: "8080"
     PRODUCT_SERVICE_URL: http://product-service:8080
     USER_SERVICE_URL: http://user-service:8080
+    S3_ENDPOINT: http://minio.eco-foundation.svc.cluster.local:9000
+    S3_REGION: us-east-1
+    S3_FORCE_PATH_STYLE: "true"
+    PRODUCT_MEDIA_BUCKET: product-media
+    PRODUCT_MEDIA_PUBLIC_BASE_URL: /api/product-media
   readinessProbe:
     tcpSocket:
       port: http

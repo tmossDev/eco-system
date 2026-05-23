@@ -3,6 +3,8 @@ package routes_test
 import (
 	"bytes"
 	"encoding/json"
+	"io"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -12,6 +14,7 @@ import (
 	"github.com/kataras/iris/v12"
 	"tmossDev.github.com/eco-system/product-management/backend/app/product-gateway/routes"
 	"tmossDev.github.com/eco-system/product-management/backend/domain/product/model"
+	productService "tmossDev.github.com/eco-system/product-management/backend/domain/product/service"
 	sharedConstants "tmossDev.github.com/eco-system/shared-components/backend/package/constants"
 	transportHTTP "tmossDev.github.com/eco-system/shared-components/backend/package/transport/http"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/transport/http/middleware"
@@ -29,17 +32,26 @@ func newFakeProductService() *fakeProductService {
 	return &fakeProductService{
 		products: []model.ProductResponse{
 			{
-				ID:             1,
-				SKU:            "GEN-MUG-001",
-				Name:           "Everyday Ceramic Mug",
-				Description:    "A durable mug for daily coffee.",
-				Category:       "Home",
-				PriceCents:     1299,
-				Currency:       "USD",
-				InventoryCount: 48,
-				Status:         "Active",
-				CreatedUser:    1,
-				CreatedAt:      time.Now().Format(time.RFC3339),
+				ID:               1,
+				SKU:              "GEN-MUG-001",
+				Name:             "Everyday Ceramic Mug",
+				ShortDescription: "Durable mug for daily coffee.",
+				Description:      "A durable mug for daily coffee.",
+				Category:         "Home",
+				PriceCents:       1299,
+				Currency:         "USD",
+				InventoryCount:   48,
+				Status:           "Active",
+				Photos: []model.ProductPhoto{
+					{
+						URL:          "https://example.com/mug.jpg",
+						ThumbnailURL: "https://example.com/mug-thumb.jpg",
+						AltText:      "Ceramic mug",
+						IsPrimary:    true,
+					},
+				},
+				CreatedUser: 1,
+				CreatedAt:   time.Now().Format(time.RFC3339),
 			},
 		},
 	}
@@ -78,6 +90,22 @@ func (service *fakeProductService) UpdateProduct(productID uint64, _ string, _ u
 
 func (service *fakeProductService) DeleteProduct(uint64, uint64) error {
 	return nil
+}
+
+func (service *fakeProductService) UploadProductPhoto(uint64, string, io.Reader, uint64) (*model.ProductResponse, error) {
+	product := service.products[0]
+	product.Photos = append(product.Photos, model.ProductPhoto{
+		URL:          "/api/product-media/products/1/test-detail.jpg",
+		ThumbnailURL: "/api/product-media/products/1/test-thumb.jpg",
+		AltText:      product.Name,
+		IsPrimary:    len(product.Photos) == 0,
+	})
+
+	return &product, nil
+}
+
+func (service *fakeProductService) GetProductMedia(string) (*productService.ProductMediaObject, error) {
+	return nil, nil
 }
 
 func (service *fakeProductService) Shutdown() {}
@@ -290,6 +318,33 @@ func TestProductGatewayFunctionalEditProduct(t *testing.T) {
 	}
 }
 
+func TestProductGatewayFunctionalUploadProductPhoto(t *testing.T) {
+	server := newProductGatewayTestServer(t)
+
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	fileWriter, err := writer.CreateFormFile("file", "test.jpg")
+	if err != nil {
+		t.Fatalf("create multipart file: %v", err)
+	}
+	_, _ = fileWriter.Write([]byte("fake image bytes"))
+	if err := writer.Close(); err != nil {
+		t.Fatalf("close multipart writer: %v", err)
+	}
+
+	request := httptest.NewRequest(http.MethodPost, "/api/products/1/photos", &body)
+	request.Header.Set("Content-Type", writer.FormDataContentType())
+	request.Header.Set(sharedConstants.CTXRequestIdKey, "test-request-id")
+	request.Header.Set("Authorization", "Bearer "+server.token)
+
+	response := httptest.NewRecorder()
+	server.app.ServeHTTP(response, request)
+
+	if response.Code != http.StatusCreated {
+		t.Fatalf("expected status %d, got %d: %s", http.StatusCreated, response.Code, response.Body.String())
+	}
+}
+
 func TestProductGatewayFunctionalDeleteProduct(t *testing.T) {
 	server := newProductGatewayTestServer(t)
 
@@ -302,13 +357,22 @@ func TestProductGatewayFunctionalDeleteProduct(t *testing.T) {
 
 func productPayload(sku string) map[string]any {
 	return map[string]any{
-		"sku":             sku,
-		"name":            "Functional Test Product",
-		"description":     "Created by a functional test.",
-		"category":        "Testing",
-		"price_cents":     1499,
-		"currency":        "USD",
-		"inventory_count": 12,
-		"status":          "Active",
+		"sku":               sku,
+		"name":              "Functional Test Product",
+		"short_description": "Short functional test product.",
+		"description":       "Created by a functional test.",
+		"category":          "Testing",
+		"price_cents":       1499,
+		"currency":          "USD",
+		"inventory_count":   12,
+		"status":            "Active",
+		"photos": []map[string]any{
+			{
+				"url":           "https://example.com/product.jpg",
+				"thumbnail_url": "https://example.com/product-thumb.jpg",
+				"alt_text":      "Functional test product",
+				"is_primary":    true,
+			},
+		},
 	}
 }

@@ -24,8 +24,16 @@ product-gateway:
         DB_PORT: "5432"
         PRODUCT_SERVICE_URL: http://product-service:8080
         USER_SERVICE_URL: http://user-service:8080
+        S3_ENDPOINT: http://minio.eco-foundation.svc.cluster.local:9000
+        S3_REGION: us-east-1
+        S3_FORCE_PATH_STYLE: "true"
+        PRODUCT_MEDIA_BUCKET: product-media
+        PRODUCT_MEDIA_PUBLIC_BASE_URL: /api/product-media
     secret:
       enabled: true
+      stringData:
+        S3_ACCESS_KEY_ID: minioadmin
+        S3_SECRET_ACCESS_KEY: minioadmin
     ingress:
       enabled: true
       className: traefik

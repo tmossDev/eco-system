@@ -1,5 +1,12 @@
 # Project Change Log
 
+## v1.12.0 - (5 Changes)
+- Added product short descriptions and product photo support.
+- Added MinIO-based S3-compatible object storage in the foundation layer.
+- Added product photo upload flow with generated thumbnail and detail image variants.
+- Added product media serving through the product gateway with cache headers.
+- Updated product list, detail, and edit screens to show uploaded product images efficiently.
+
 ## v1.11.1 - (7 Changes)
 - Moved shared user request, response and auth constants from user-management into shared-components backend user packages.
 - Refactored user-management services, repositories, controllers and tests to consume the shared user package contracts.

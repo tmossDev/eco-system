@@ -1,13 +1,12 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, CUSTOM_ELEMENTS_SCHEMA, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { LoginForm, LoginFormSubmitEvent } from '@ds/login-form';
 import { finalize } from 'rxjs';
 
 import { AuthService } from '../../../core/services/auth/auth.service';
 
 @Component({
   selector: 'app-login-page',
-  imports: [LoginForm],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   template: `
     <ds-login-form
       [isSubmitting]="isSubmitting()"
@@ -25,7 +24,7 @@ export class LoginPage {
   protected readonly isSubmitting = signal(false);
   protected readonly errorMessage = signal('');
 
-  protected login(event: LoginFormSubmitEvent): void {
+  protected login(event: any): void {
     if (this.isSubmitting()) {
       return;
     }

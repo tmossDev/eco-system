@@ -1,0 +1,53 @@
+app:
+  nameOverride: minio
+  fullnameOverride: minio
+  partOf: foundation
+  component: object-storage
+  image:
+    repository: minio/minio
+    tag: RELEASE.2025-09-07T16-13-09Z
+    pullPolicy: IfNotPresent
+  args:
+    - server
+    - /data
+    - --console-address
+    - ":9001"
+  ports:
+    - name: api
+      containerPort: 9000
+      protocol: TCP
+    - name: console
+      containerPort: 9001
+      protocol: TCP
+  service:
+    enabled: true
+    ports:
+      - name: api
+        port: 9000
+        targetPort: api
+        protocol: TCP
+      - name: console
+        port: 9001
+        targetPort: console
+        protocol: TCP
+  secret:
+    enabled: true
+    stringData:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+  persistence:
+    enabled: true
+    size: 10Gi
+  volumeMounts:
+    - name: data
+      mountPath: /data
+  volumes:
+    - name: data
+      persistentVolumeClaim:
+        claimName: minio
+  readinessProbe:
+    httpGet:
+      path: /minio/health/ready
+      port: api
+    initialDelaySeconds: 10
+    periodSeconds: 10

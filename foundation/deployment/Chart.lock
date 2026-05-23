@@ -5,5 +5,8 @@ dependencies:
 - name: liquibase
   repository: file://../liquibase/deployment
   version: 0.1.1
-digest: sha256:ca8f934651b3ca6e166df192151d19cdff938227195768a460cf91a9408bb457
-generated: "2026-05-14T16:49:12.400712+02:00"
+- name: minio
+  repository: file://../minio/deployment
+  version: 0.1.0
+digest: sha256:b88d39060275c7db329ddd4f3fd2cc82db847304a0141b3aaf283c396e50a61d
+generated: "2026-05-23T09:16:54.555298487+02:00"

@@ -149,13 +149,22 @@ func getEnv(key string, fallback string) string {
 
 func deployedProductPayload(sku string) map[string]any {
 	return map[string]any{
-		"sku":             sku,
-		"name":            "CI Functional Product",
-		"description":     "Created by deployed product gateway functional tests.",
-		"category":        "Testing",
-		"price_cents":     1599,
-		"currency":        "USD",
-		"inventory_count": 10,
-		"status":          "Active",
+		"sku":               sku,
+		"name":              "CI Functional Product",
+		"short_description": "Created by deployed product gateway functional tests.",
+		"description":       "Created by deployed product gateway functional tests.",
+		"category":          "Testing",
+		"price_cents":       1599,
+		"currency":          "USD",
+		"inventory_count":   10,
+		"status":            "Active",
+		"photos": []map[string]any{
+			{
+				"url":           "https://example.com/ci-product.jpg",
+				"thumbnail_url": "https://example.com/ci-product-thumb.jpg",
+				"alt_text":      "CI product",
+				"is_primary":    true,
+			},
+		},
 	}
 }

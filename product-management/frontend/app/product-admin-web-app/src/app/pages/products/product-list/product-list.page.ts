@@ -2,7 +2,10 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
-import { ProductSummary } from '../../../core/services/product/product.model';
+import {
+  ProductPhoto,
+  ProductSummary,
+} from '../../../core/services/product/product.model';
 import { ProductService } from '../../../core/services/product/product.service';
 
 @Component({
@@ -57,7 +60,27 @@ import { ProductService } from '../../../core/services/product/product.service';
               @for (product of products(); track product.id) {
                 <tr>
                   <td>
-                    <strong>{{ product.name }}</strong>
+                    <div class="product-cell">
+                      @if (primaryPhoto(product)) {
+                        <img
+                          [src]="photoPreviewUrl(primaryPhoto(product)!)"
+                          [alt]="primaryPhoto(product)!.alt_text || product.name"
+                          loading="lazy"
+                          decoding="async"
+                          width="44"
+                          height="44"
+                        />
+                      } @else {
+                        <span class="photo-fallback">
+                          {{ product.sku.slice(0, 2) }}
+                        </span>
+                      }
+
+                      <span>
+                        <strong>{{ product.name }}</strong>
+                        <small>{{ product.short_description }}</small>
+                      </span>
+                    </div>
                   </td>
                   <td>{{ product.sku }}</td>
                   <td>{{ product.category }}</td>
@@ -184,7 +207,7 @@ import { ProductService } from '../../../core/services/product/product.service';
     table {
       width: 100%;
       border-collapse: collapse;
-      min-width: 860px;
+      min-width: 920px;
     }
 
     th,
@@ -203,6 +226,51 @@ import { ProductService } from '../../../core/services/product/product.service';
 
     tbody tr:last-child td {
       border-bottom: 0;
+    }
+
+    .product-cell {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      min-width: 18rem;
+    }
+
+    .product-cell img,
+    .photo-fallback {
+      flex: 0 0 auto;
+      width: 2.75rem;
+      height: 2.75rem;
+      border-radius: 0.5rem;
+    }
+
+    .product-cell img {
+      object-fit: cover;
+      background: #eef2f7;
+    }
+
+    .photo-fallback {
+      display: grid;
+      place-items: center;
+      background: #dbeafe;
+      color: #1d4ed8;
+      font-size: 0.8rem;
+      font-weight: 800;
+    }
+
+    .product-cell span:last-child {
+      display: grid;
+      gap: 0.2rem;
+      min-width: 0;
+    }
+
+    .product-cell small {
+      max-width: 24rem;
+      overflow: hidden;
+      color: #56657f;
+      font-size: 0.85rem;
+      font-weight: 500;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     .status {
@@ -284,5 +352,17 @@ export class ProductListPage implements OnInit {
       style: 'currency',
       currency,
     }).format(priceCents / 100);
+  }
+
+  protected primaryPhoto(product: ProductSummary): ProductPhoto | null {
+    const photos = product.photos ?? [];
+
+    return (
+      photos.find((photo) => photo.is_primary) ?? photos[0] ?? null
+    );
+  }
+
+  protected photoPreviewUrl(photo: ProductPhoto): string {
+    return photo.thumbnail_url || photo.url;
   }
 }

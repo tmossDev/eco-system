@@ -111,7 +111,7 @@ func setup() error {
 		axxessLogs.Handler,
 		middleware.CaselessMatcherMiddleware,
 		middleware.RequestIDMiddleware,
-		jwtFunction([]string{"/auth/login", "/login", "/auth/logout", "/logout", "/refresh", "/health"}),
+		jwtFunction([]string{"/auth/login", "/login", "/auth/logout", "/logout", "/refresh", "/health", "/product-media/*"}),
 	)
 	irisApp.Options("/{path:path}", corsMiddleware)
 

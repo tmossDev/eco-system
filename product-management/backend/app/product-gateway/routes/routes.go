@@ -26,4 +26,6 @@ func Setup(app *iris.Application, productService service.ProductService, authCli
 	app.Get("/api/products/{id:uint64}", gatewayController.ProductDetails())
 	app.Put("/api/products/{id:uint64}", gatewayController.UpdateProduct())
 	app.Delete("/api/products/{id:uint64}", gatewayController.DeleteProduct())
+	app.Post("/api/products/{id:uint64}/photos", gatewayController.UploadProductPhoto())
+	app.Get("/api/product-media/{objectKey:path}", gatewayController.GetProductMedia())
 }

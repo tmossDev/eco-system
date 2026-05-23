@@ -2,7 +2,10 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
-import { ProductDetails } from '../../../core/services/product/product.model';
+import {
+  ProductDetails,
+  ProductPhoto,
+} from '../../../core/services/product/product.model';
 import { ProductService } from '../../../core/services/product/product.service';
 
 @Component({
@@ -22,11 +25,38 @@ import { ProductService } from '../../../core/services/product/product.service';
 
       @if (product()) {
         <div class="profile-card">
-          <div class="avatar">{{ product()!.sku.slice(0, 2) }}</div>
+          <div class="media-panel">
+            @if (primaryPhoto(product()!)) {
+              <img
+                class="hero-photo"
+                [src]="primaryPhoto(product()!)!.url"
+                [alt]="primaryPhoto(product()!)!.alt_text || product()!.name"
+                fetchpriority="high"
+              />
+            } @else {
+              <div class="avatar">{{ product()!.sku.slice(0, 2) }}</div>
+            }
+
+            @if (productPhotos(product()!).length > 1) {
+              <div class="photo-strip">
+                @for (photo of productPhotos(product()!); track photo.url) {
+                  <img
+                    [src]="photo.thumbnail_url || photo.url"
+                    [alt]="photo.alt_text || product()!.name"
+                    loading="lazy"
+                    decoding="async"
+                    width="56"
+                    height="56"
+                  />
+                }
+              </div>
+            }
+          </div>
 
           <div class="profile-content">
             <p class="eyebrow">Product details</p>
             <h1>{{ product()!.name }}</h1>
+            <p class="short-description">{{ product()!.short_description }}</p>
             <p class="description">{{ product()!.description }}</p>
 
             <dl>
@@ -103,7 +133,7 @@ import { ProductService } from '../../../core/services/product/product.service';
 
     .profile-card {
       display: grid;
-      grid-template-columns: auto 1fr;
+      grid-template-columns: minmax(15rem, 22rem) 1fr;
       gap: 1.5rem;
       border: 1px solid #dbe3ef;
       border-radius: 1rem;
@@ -112,16 +142,46 @@ import { ProductService } from '../../../core/services/product/product.service';
       box-shadow: 0 10px 30px rgb(15 23 42 / 6%);
     }
 
+    .media-panel {
+      display: grid;
+      align-content: start;
+      gap: 0.75rem;
+    }
+
+    .hero-photo,
+    .avatar {
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      border-radius: 0.75rem;
+    }
+
+    .hero-photo {
+      object-fit: cover;
+      background: #eef2f7;
+    }
+
     .avatar {
       display: grid;
       place-items: center;
-      width: 5rem;
-      height: 5rem;
-      border-radius: 50%;
       background: #dbeafe;
       color: #1d4ed8;
-      font-size: 1.5rem;
+      font-size: 2rem;
       font-weight: 800;
+    }
+
+    .photo-strip {
+      display: flex;
+      gap: 0.5rem;
+      overflow-x: auto;
+      padding-bottom: 0.2rem;
+    }
+
+    .photo-strip img {
+      width: 3.5rem;
+      height: 3.5rem;
+      flex: 0 0 auto;
+      border-radius: 0.5rem;
+      object-fit: cover;
     }
 
     .eyebrow {
@@ -139,11 +199,20 @@ import { ProductService } from '../../../core/services/product/product.service';
       letter-spacing: -0.04em;
     }
 
+    .short-description,
     .description {
       max-width: 48rem;
-      margin: 0.5rem 0 1.5rem;
       color: #56657f;
       line-height: 1.6;
+    }
+
+    .short-description {
+      margin: 0.5rem 0 0;
+      font-weight: 700;
+    }
+
+    .description {
+      margin: 0.5rem 0 1.5rem;
     }
 
     dl {
@@ -224,5 +293,15 @@ export class ProductDetailPage implements OnInit {
       style: 'currency',
       currency,
     }).format(priceCents / 100);
+  }
+
+  protected primaryPhoto(product: ProductDetails): ProductPhoto | null {
+    const photos = this.productPhotos(product);
+
+    return photos.find((photo) => photo.is_primary) ?? photos[0] ?? null;
+  }
+
+  protected productPhotos(product: ProductDetails): ProductPhoto[] {
+    return product.photos ?? [];
   }
 }

@@ -6,12 +6,14 @@ SELECT
 	id,
 	sku,
 	name,
+	short_description,
 	description,
 	category,
 	price_cents,
 	currency,
 	inventory_count,
 	status,
+	photos,
 	created_user,
 	created_at::text,
 	COALESCE(updated_user, 0),
@@ -24,30 +26,34 @@ FROM products
 INSERT INTO products (
 	sku,
 	name,
+	short_description,
 	description,
 	category,
 	price_cents,
 	currency,
 	inventory_count,
 	status,
+	photos,
 	created_user,
 	created_at,
 	updated_at
-) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, now(), now())
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11, now(), now())
 RETURNING id`
 	UpdateProduct = `
 UPDATE products
 SET sku = $1,
 	name = $2,
-	description = $3,
-	category = $4,
-	price_cents = $5,
-	currency = $6,
-	inventory_count = $7,
-	status = $8,
-	updated_user = $9,
+	short_description = $3,
+	description = $4,
+	category = $5,
+	price_cents = $6,
+	currency = $7,
+	inventory_count = $8,
+	status = $9,
+	photos = $10::jsonb,
+	updated_user = $11,
 	updated_at = now()
-WHERE id = $10 AND deleted_at IS NULL`
+WHERE id = $12 AND deleted_at IS NULL`
 	DeleteProduct = `
 UPDATE products
 SET deleted_user = $1,

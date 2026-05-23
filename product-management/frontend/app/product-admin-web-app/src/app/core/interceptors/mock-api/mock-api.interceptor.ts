@@ -22,6 +22,7 @@ import {
   getMockProductById,
   getMockProducts,
   updateMockProduct,
+  uploadMockProductPhoto,
 } from '../../services/product/product.mocks';
 import {
   CreateProductRequest,
@@ -78,6 +79,12 @@ export const mockApiInterceptor: HttpInterceptorFn = (request, next) => {
 
   const productId = getProductIdFromUrl(url);
 
+  if (productId && method === 'POST' && url.endsWith('/photos')) {
+    const file = (request.body as FormData).get('file') as File | null;
+
+    return mockResponse(uploadMockProductPhoto(productId, file?.name ?? ''), 201);
+  }
+
   if (productId && method === 'GET') {
     const product = getMockProductById(productId);
 
@@ -133,7 +140,7 @@ function normaliseApiUrl(url: string): string {
 }
 
 function getProductIdFromUrl(url: string): string | null {
-  const match = url.match(/^\/api\/products\/([^/]+)$/);
+  const match = url.match(/^\/api\/products\/([^/]+)(?:\/photos)?$/);
 
   return match?.[1] ?? null;
 }
