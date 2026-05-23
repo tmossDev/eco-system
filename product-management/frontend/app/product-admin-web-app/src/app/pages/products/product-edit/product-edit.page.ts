@@ -4,15 +4,9 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
 import {
-  CreateDiscountRequest,
-  Discount,
   ProductPhoto,
   UpdateProductRequest,
 } from '../../../core/services/product/product.model';
-import {
-  calculateDiscountedPrice,
-  formatDiscountValue,
-} from '../../../core/services/product/product-pricing';
 import { ProductService } from '../../../core/services/product/product.service';
 
 @Component({
@@ -171,6 +165,17 @@ import { ProductService } from '../../../core/services/product/product.service';
           />
         </label>
 
+        <label>
+          <span>Labels</span>
+          <input
+            type="text"
+            name="labels"
+            [ngModel]="labelsText()"
+            (ngModelChange)="updateLabels($event)"
+            placeholder="giftable, clearance, summer"
+          />
+        </label>
+
         <div class="field-grid">
           <label>
             <span>Price cents</span>
@@ -205,103 +210,6 @@ import { ProductService } from '../../../core/services/product/product.service';
             />
           </label>
         </div>
-
-        <section class="discount-editor" aria-label="Product discounts">
-          <div class="section-header">
-            <div>
-              <h2>Discounts</h2>
-              <p class="section-note">
-                Final price:
-                <strong>{{ formatMoney(discountedPrice().finalCents, form().currency) }}</strong>
-                @if (discountedPrice().hasDiscount) {
-                  <span>{{ formatMoney(form().price_cents, form().currency) }}</span>
-                }
-              </p>
-            </div>
-          </div>
-
-          @if (discounts().length === 0) {
-            <p class="empty-state">No discounts are attached to this product.</p>
-          }
-
-          <div class="discount-list">
-            @for (discount of discounts(); track discount.id) {
-              <div class="discount-row">
-                <div>
-                  <strong>{{ discount.name }}</strong>
-                  <span>{{ formatDiscount(discount) }} · {{ discount.status }}</span>
-                </div>
-                <button
-                  type="button"
-                  class="text-button"
-                  [disabled]="isSavingDiscount()"
-                  (click)="toggleDiscountStatus(discount)"
-                >
-                  {{ discount.status === 'Active' ? 'Archive' : 'Activate' }}
-                </button>
-              </div>
-            }
-          </div>
-
-          <div class="discount-form">
-            <label>
-              <span>Name</span>
-              <input
-                type="text"
-                name="discount_name"
-                [ngModel]="discountForm().name"
-                (ngModelChange)="updateDiscountForm('name', $event)"
-              />
-            </label>
-
-            <div class="field-grid discount-grid">
-              <label>
-                <span>Type</span>
-                <select
-                  name="discount_type"
-                  [ngModel]="discountForm().discount_type"
-                  (ngModelChange)="setDiscountType($event)"
-                >
-                  <option>Percentage</option>
-                  <option>Amount</option>
-                </select>
-              </label>
-
-              <label>
-                <span>{{ discountForm().discount_type === 'Percentage' ? 'Percent' : 'Amount cents' }}</span>
-                <input
-                  type="number"
-                  min="1"
-                  name="discount_value"
-                  [ngModel]="discountValue()"
-                  (ngModelChange)="updateDiscountValue($event)"
-                />
-              </label>
-
-              <label>
-                <span>Status</span>
-                <select
-                  name="discount_status"
-                  [ngModel]="discountForm().status"
-                  (ngModelChange)="updateDiscountForm('status', $event)"
-                >
-                  <option>Active</option>
-                  <option>Draft</option>
-                  <option>Archived</option>
-                </select>
-              </label>
-            </div>
-
-            <button
-              type="button"
-              class="secondary-button"
-              [disabled]="isSavingDiscount()"
-              (click)="createProductDiscount()"
-            >
-              {{ isSavingDiscount() ? 'Saving discount...' : 'Add product discount' }}
-            </button>
-          </div>
-        </section>
 
         <label>
           <span>Status</span>
@@ -436,50 +344,6 @@ import { ProductService } from '../../../core/services/product/product.service';
       padding: 1rem 0;
     }
 
-    .discount-editor {
-      display: grid;
-      gap: 1rem;
-      border-top: 1px solid #eef2f7;
-      border-bottom: 1px solid #eef2f7;
-      padding: 1rem 0;
-    }
-
-    .section-note {
-      margin: 0.35rem 0 0;
-      color: #56657f;
-    }
-
-    .section-note span {
-      margin-left: 0.45rem;
-      color: #64748b;
-      text-decoration: line-through;
-    }
-
-    .discount-list,
-    .discount-form {
-      display: grid;
-      gap: 0.7rem;
-    }
-
-    .discount-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 1rem;
-      border: 1px solid #dbe3ef;
-      border-radius: 0.75rem;
-      padding: 0.75rem;
-    }
-
-    .discount-row div {
-      display: grid;
-      gap: 0.2rem;
-    }
-
-    .discount-row span {
-      color: #56657f;
-    }
-
     .section-header {
       display: flex;
       align-items: flex-start;
@@ -574,7 +438,6 @@ import { ProductService } from '../../../core/services/product/product.service';
 
     .primary-action,
     .secondary-action,
-    .secondary-button,
     .upload-button,
     .text-button {
       border-radius: 999px;
@@ -598,14 +461,6 @@ import { ProductService } from '../../../core/services/product/product.service';
     .secondary-action {
       color: #2563eb;
       text-decoration: none;
-    }
-
-    .secondary-button {
-      width: fit-content;
-      border: 1px solid #cbd5e1;
-      background: #ffffff;
-      color: #2563eb;
-      cursor: pointer;
     }
 
     .upload-button,
@@ -655,11 +510,6 @@ import { ProductService } from '../../../core/services/product/product.service';
         grid-template-columns: 1fr;
       }
 
-      .discount-row {
-        align-items: flex-start;
-        flex-direction: column;
-      }
-
       .section-header,
       .photo-row {
         grid-template-columns: 1fr;
@@ -689,10 +539,8 @@ export class ProductEditPage implements OnInit {
   protected readonly isLoading = signal(true);
   protected readonly isSaving = signal(false);
   protected readonly isUploading = signal(false);
-  protected readonly isSavingDiscount = signal(false);
   protected readonly message = signal('');
   protected readonly errorMessage = signal('');
-  protected readonly discounts = signal<Discount[]>([]);
 
   protected readonly productId = computed(
     () => this.route.snapshot.paramMap.get('id') ?? '1',
@@ -709,25 +557,11 @@ export class ProductEditPage implements OnInit {
     inventory_count: 0,
     status: 'Draft',
     photos: [],
+    labels: [],
   });
 
-  protected readonly discountForm = signal<CreateDiscountRequest>({
-    name: 'Product discount',
-    description: '',
-    discount_type: 'Percentage',
-    scope: 'ProductSet',
-    percentage_basis_points: 1000,
-    amount_cents: null,
-    currency: 'USD',
-    min_product_count: 1,
-    starts_at: '',
-    ends_at: '',
-    status: 'Active',
-    product_ids: [],
-  });
-
-  protected readonly discountedPrice = computed(() =>
-    calculateDiscountedPrice(this.form().price_cents, this.discounts()),
+  protected readonly labelsText = computed(() =>
+    this.form().labels.join(', '),
   );
 
   public ngOnInit(): void {
@@ -751,13 +585,8 @@ export class ProductEditPage implements OnInit {
             inventory_count: product.inventory_count,
             status: product.status,
             photos: product.photos ?? [],
+            labels: product.labels ?? [],
           });
-          this.discounts.set(product.discounts ?? []);
-          this.discountForm.update((form) => ({
-            ...form,
-            currency: product.currency,
-            product_ids: [this.normalizedProductId()],
-          }));
         },
         error: () => {
           this.errorMessage.set('Unable to load product.');
@@ -775,56 +604,13 @@ export class ProductEditPage implements OnInit {
     }));
   }
 
-  protected updateDiscountForm<Key extends keyof CreateDiscountRequest>(
-    key: Key,
-    value: CreateDiscountRequest[Key],
-  ): void {
-    this.discountForm.update((form) => ({
-      ...form,
-      [key]: value,
-    }));
-  }
+  protected updateLabels(value: string): void {
+    const labels = value
+      .split(',')
+      .map((label) => label.trim().toLowerCase())
+      .filter(Boolean);
 
-  protected discountValue(): number {
-    const form = this.discountForm();
-
-    return form.discount_type === 'Percentage'
-      ? (form.percentage_basis_points ?? 0) / 100
-      : form.amount_cents ?? 0;
-  }
-
-  protected updateDiscountValue(value: number | string): void {
-    const numericValue = Number(value) || 0;
-
-    this.discountForm.update((form) => ({
-      ...form,
-      percentage_basis_points:
-        form.discount_type === 'Percentage' ? Math.round(numericValue * 100) : null,
-      amount_cents: form.discount_type === 'Amount' ? Math.round(numericValue) : null,
-      currency: form.discount_type === 'Amount' ? this.form().currency : '',
-    }));
-  }
-
-  protected setDiscountType(discountType: CreateDiscountRequest['discount_type']): void {
-    this.discountForm.update((form) => ({
-      ...form,
-      discount_type: discountType,
-      percentage_basis_points:
-        discountType === 'Percentage' ? form.percentage_basis_points ?? 1000 : null,
-      amount_cents: discountType === 'Amount' ? form.amount_cents ?? 500 : null,
-      currency: discountType === 'Amount' ? this.form().currency : '',
-    }));
-  }
-
-  protected formatMoney(priceCents: number, currency: string): string {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency,
-    }).format(priceCents / 100);
-  }
-
-  protected formatDiscount(discount: Discount): string {
-    return formatDiscountValue(discount, this.formatMoney.bind(this));
+    this.updateForm('labels', [...new Set(labels)]);
   }
 
   protected updatePhoto<Key extends keyof ProductPhoto>(
@@ -886,80 +672,12 @@ export class ProductEditPage implements OnInit {
           this.form.update((form) => ({
             ...form,
             photos: product.photos ?? [],
+            labels: product.labels ?? form.labels,
           }));
           this.message.set('Photo uploaded successfully.');
         },
         error: () => {
           this.errorMessage.set('Unable to upload photo.');
-        },
-      });
-  }
-
-  protected createProductDiscount(): void {
-    if (this.isSavingDiscount()) {
-      return;
-    }
-
-    this.isSavingDiscount.set(true);
-    this.message.set('');
-    this.errorMessage.set('');
-
-    const request: CreateDiscountRequest = {
-      ...this.discountForm(),
-      currency:
-        this.discountForm().discount_type === 'Amount' ? this.form().currency : '',
-      product_ids: [this.normalizedProductId()],
-    };
-
-    this.productService
-      .createDiscount(request)
-      .pipe(
-        finalize(() => {
-          this.isSavingDiscount.set(false);
-        }),
-      )
-      .subscribe({
-        next: (discount) => {
-          this.discounts.update((discounts) => [discount, ...discounts]);
-          this.message.set('Discount added successfully.');
-        },
-        error: () => {
-          this.errorMessage.set('Unable to add discount.');
-        },
-      });
-  }
-
-  protected toggleDiscountStatus(discount: Discount): void {
-    if (this.isSavingDiscount()) {
-      return;
-    }
-
-    this.isSavingDiscount.set(true);
-    this.message.set('');
-    this.errorMessage.set('');
-
-    this.productService
-      .updateDiscount(discount.id, {
-        ...discount,
-        status: discount.status === 'Active' ? 'Archived' : 'Active',
-        product_ids: discount.product_ids,
-      })
-      .pipe(
-        finalize(() => {
-          this.isSavingDiscount.set(false);
-        }),
-      )
-      .subscribe({
-        next: (updatedDiscount) => {
-          this.discounts.update((discounts) =>
-            discounts.map((candidate) =>
-              candidate.id === updatedDiscount.id ? updatedDiscount : candidate,
-            ),
-          );
-          this.message.set('Discount updated successfully.');
-        },
-        error: () => {
-          this.errorMessage.set('Unable to update discount.');
         },
       });
   }
@@ -1001,9 +719,4 @@ export class ProductEditPage implements OnInit {
       });
   }
 
-  private normalizedProductId(): number | string {
-    const numericId = Number(this.productId());
-
-    return Number.isFinite(numericId) ? numericId : this.productId();
-  }
 }

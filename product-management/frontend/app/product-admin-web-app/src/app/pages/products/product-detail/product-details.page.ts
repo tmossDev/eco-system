@@ -80,6 +80,17 @@ import { ProductService } from '../../../core/services/product/product.service';
               </div>
 
               <div>
+                <dt>Labels</dt>
+                <dd>
+                  <span class="label-list">
+                    @for (label of product()!.labels; track label) {
+                      <span>{{ label }}</span>
+                    }
+                  </span>
+                </dd>
+              </div>
+
+              <div>
                 <dt>Price</dt>
                 <dd>
                   <span class="price-stack">
@@ -271,6 +282,20 @@ import { ProductService } from '../../../core/services/product/product.service';
       color: #64748b;
       font-size: 0.9rem;
       text-decoration: line-through;
+    }
+
+    .label-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+    }
+
+    .label-list span {
+      border-radius: 999px;
+      background: #eef2f7;
+      color: #334155;
+      padding: 0.2rem 0.5rem;
+      font-size: 0.8rem;
     }
 
     .primary-action {

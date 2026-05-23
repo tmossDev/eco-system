@@ -39,6 +39,11 @@ export class MainLayout {
       icon: 'box',
     },
     {
+      text: 'Promotions',
+      route: '/promotions',
+      icon: 'calendar',
+    },
+    {
       text: 'Settings',
       route: '/settings',
       icon: 'settings',

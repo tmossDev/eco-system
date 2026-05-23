@@ -54,6 +54,7 @@ export const MOCK_PRODUCTS: ProductSummary[] = [
     inventory_count: 48,
     status: 'Active',
     discounts: [],
+    labels: ['coffee', 'home', 'giftable'],
     photos: [
       {
         url: 'https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?auto=format&fit=crop&w=1200&q=80',
@@ -76,6 +77,7 @@ export const MOCK_PRODUCTS: ProductSummary[] = [
     inventory_count: 82,
     status: 'Active',
     discounts: [],
+    labels: ['apparel', 'organic'],
     photos: [
       {
         url: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=1200&q=80',
@@ -98,6 +100,7 @@ export const MOCK_PRODUCTS: ProductSummary[] = [
     inventory_count: 999,
     status: 'Draft',
     discounts: [],
+    labels: ['digital', 'guide'],
     photos: [],
   },
   {
@@ -112,6 +115,7 @@ export const MOCK_PRODUCTS: ProductSummary[] = [
     inventory_count: 16,
     status: 'Archived',
     discounts: [],
+    labels: ['bundle', 'giftable'],
     photos: [
       {
         url: 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=1200&q=80',
@@ -141,6 +145,7 @@ export function createMockProduct(request: CreateProductRequest): ProductDetails
   const product: ProductDetails = {
     id: createMockProductId(),
     ...request,
+    labels: request.labels ?? [],
     discounts: [],
   };
 
@@ -156,6 +161,7 @@ export function updateMockProduct(
   const updatedProduct: ProductDetails = {
     id,
     ...request,
+    labels: request.labels ?? [],
     discounts: [],
   };
 
@@ -248,7 +254,8 @@ function withApplicableDiscounts<Product extends ProductSummary>(
 ): Product {
   const discounts = mockDiscounts.filter(
     (discount) =>
-      discount.scope === 'Global' || discount.product_ids.includes(product.id),
+      discount.scope === 'Global' ||
+      discount.product_ids.some((productID) => String(productID) === String(product.id)),
   );
 
   return {

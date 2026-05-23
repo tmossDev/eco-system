@@ -2,6 +2,7 @@ export type ProductStatus = 'Draft' | 'Active' | 'Archived';
 export type DiscountStatus = 'Draft' | 'Active' | 'Archived';
 export type DiscountType = 'Percentage' | 'Amount';
 export type DiscountScope = 'Global' | 'ProductSet';
+export type PromotionTargetScope = 'All' | 'Category' | 'Label' | 'Selected';
 
 export interface ProductSummary {
   id: string;
@@ -15,6 +16,7 @@ export interface ProductSummary {
   inventory_count: number;
   status: ProductStatus;
   photos: ProductPhoto[];
+  labels: string[];
   discounts: Discount[];
 }
 
@@ -31,6 +33,7 @@ export interface CreateProductRequest {
   inventory_count: number;
   status: ProductStatus;
   photos: ProductPhoto[];
+  labels: string[];
 }
 
 export interface UpdateProductRequest extends CreateProductRequest {}
@@ -56,6 +59,9 @@ export interface Discount {
   ends_at: string;
   status: DiscountStatus;
   product_ids: ProductID[];
+  target_scope?: PromotionTargetScope;
+  target_label?: string;
+  target_category?: string;
 }
 
 export type ProductID = string | number;
@@ -73,6 +79,9 @@ export interface CreateDiscountRequest {
   ends_at: string;
   status: DiscountStatus;
   product_ids: ProductID[];
+  target_scope?: PromotionTargetScope;
+  target_label?: string;
+  target_category?: string;
 }
 
 export interface UpdateDiscountRequest extends CreateDiscountRequest {}

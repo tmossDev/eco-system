@@ -1,5 +1,13 @@
 # Project Change Log
 
+## v1.13.0 - (6 Changes)
+- Added product labels across the product API, Postgres persistence, Liquibase migration, mocks, and product admin UI.
+- Added a Promotions page for creating, scheduling, viewing, activating, and archiving product promotions.
+- Moved discount configuration out of product list/edit screens so products stay focused on catalog data.
+- Added promotion targeting for all products, categories, product labels, and selected products.
+- Updated product list and detail screens to show labels plus discounted final price beside the original price.
+- Updated discount price calculations to respect active status plus promotion start and end dates.
+
 ## v1.12.1 - (5 Changes)
 - Enhanced deployment pipeline to automatically detect and deploy foundation layer changes on push to main and feature branches.
 - Feature branches with foundation changes now deploy both foundation and application layers to the same namespace for better isolation.

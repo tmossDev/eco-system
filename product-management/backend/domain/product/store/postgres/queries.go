@@ -14,6 +14,7 @@ SELECT
 	inventory_count,
 	status,
 	photos,
+	labels,
 	COALESCE((
 		SELECT jsonb_agg(
 			jsonb_build_object(
@@ -74,10 +75,11 @@ INSERT INTO products (
 	inventory_count,
 	status,
 	photos,
+	labels,
 	created_user,
 	created_at,
 	updated_at
-) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11, now(), now())
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11::jsonb, $12, now(), now())
 RETURNING id`
 	UpdateProduct = `
 UPDATE products
@@ -91,9 +93,10 @@ SET sku = $1,
 	inventory_count = $8,
 	status = $9,
 	photos = $10::jsonb,
-	updated_user = $11,
+	labels = $11::jsonb,
+	updated_user = $12,
 	updated_at = now()
-WHERE id = $12 AND deleted_at IS NULL`
+WHERE id = $13 AND deleted_at IS NULL`
 	DeleteProduct = `
 UPDATE products
 SET deleted_user = $1,

@@ -54,6 +54,13 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'promotions',
+        loadComponent: () =>
+          import('./pages/promotions/promotions-page/promotions-page').then(
+            (m) => m.PromotionsPage,
+          ),
+      },
+      {
         path: 'settings',
         loadComponent: () =>
           import('./pages/settings/settings.page').then((m) => m.SettingsPage),

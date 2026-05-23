@@ -12,6 +12,7 @@ type ProductResponse struct {
 	InventoryCount   int64          `json:"inventory_count"`
 	Status           string         `json:"status"`
 	Photos           []ProductPhoto `json:"photos"`
+	Labels           []string       `json:"labels"`
 	Discounts        []Discount     `json:"discounts"`
 	CreatedUser      uint64         `json:"created_user"`
 	CreatedAt        string         `json:"created_at"`

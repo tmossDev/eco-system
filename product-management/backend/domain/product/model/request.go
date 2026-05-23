@@ -11,6 +11,7 @@ type ProductRequest struct {
 	InventoryCount   int64                 `json:"inventory_count" validate:"gte=0"`
 	Status           string                `json:"status" validate:"required,oneof=Draft Active Archived"`
 	Photos           []ProductPhotoRequest `json:"photos" validate:"omitempty,dive"`
+	Labels           []string              `json:"labels" validate:"omitempty,dive,gt=0,lte=40"`
 }
 
 type ProductPhotoRequest struct {

@@ -32,6 +32,7 @@ func (repo *ProductRepository) Shutdown() {
 func mapRowToProduct(row *sql.Row) (*model.ProductResponse, error) {
 	var product model.ProductResponse
 	var photosJSON []byte
+	var labelsJSON []byte
 	var discountsJSON []byte
 
 	if row.Err() != nil {
@@ -50,6 +51,7 @@ func mapRowToProduct(row *sql.Row) (*model.ProductResponse, error) {
 		&product.InventoryCount,
 		&product.Status,
 		&photosJSON,
+		&labelsJSON,
 		&discountsJSON,
 		&product.CreatedUser,
 		&product.CreatedAt,
@@ -66,6 +68,7 @@ func mapRowToProduct(row *sql.Row) (*model.ProductResponse, error) {
 	}
 
 	product.Photos = decodeProductPhotos(photosJSON)
+	product.Labels = decodeProductLabels(labelsJSON)
 	product.Discounts = decodeDiscounts(discountsJSON)
 
 	return &product, nil
@@ -76,6 +79,7 @@ func scanProductRows(rows *sql.Rows) ([]model.ProductResponse, error) {
 	for rows.Next() {
 		var product model.ProductResponse
 		var photosJSON []byte
+		var labelsJSON []byte
 		var discountsJSON []byte
 		if err := rows.Scan(
 			&product.ID,
@@ -89,6 +93,7 @@ func scanProductRows(rows *sql.Rows) ([]model.ProductResponse, error) {
 			&product.InventoryCount,
 			&product.Status,
 			&photosJSON,
+			&labelsJSON,
 			&discountsJSON,
 			&product.CreatedUser,
 			&product.CreatedAt,
@@ -100,6 +105,7 @@ func scanProductRows(rows *sql.Rows) ([]model.ProductResponse, error) {
 		}
 
 		product.Photos = decodeProductPhotos(photosJSON)
+		product.Labels = decodeProductLabels(labelsJSON)
 		product.Discounts = decodeDiscounts(discountsJSON)
 		products = append(products, product)
 	}
@@ -153,6 +159,7 @@ func (repo *ProductRepository) Create(product model.ProductRequest, creatingUser
 		product.InventoryCount,
 		product.Status,
 		encodeProductPhotos(product.Photos),
+		encodeProductLabels(product.Labels),
 		creatingUserID,
 	).Scan(&insertedID)
 	if err != nil {
@@ -176,6 +183,7 @@ func (repo *ProductRepository) Update(productID uint64, product model.ProductUpd
 		product.InventoryCount,
 		product.Status,
 		encodeProductPhotos(product.Photos),
+		encodeProductLabels(product.Labels),
 		updatingUserID,
 		productID,
 	)
@@ -475,6 +483,34 @@ func decodeProductPhotos(photosJSON []byte) []model.ProductPhoto {
 	}
 
 	return photos
+}
+
+func encodeProductLabels(labels []string) string {
+	if labels == nil {
+		return "[]"
+	}
+
+	encoded, err := json.Marshal(labels)
+	if err != nil {
+		logger.Errorf("Unable to encode product labels: %s", err.Error())
+		return "[]"
+	}
+
+	return string(encoded)
+}
+
+func decodeProductLabels(labelsJSON []byte) []string {
+	if len(labelsJSON) == 0 {
+		return []string{}
+	}
+
+	var labels []string
+	if err := json.Unmarshal(labelsJSON, &labels); err != nil {
+		logger.Errorf("Unable to decode product labels: %s", err.Error())
+		return []string{}
+	}
+
+	return labels
 }
 
 func decodeDiscounts(discountsJSON []byte) []model.Discount {

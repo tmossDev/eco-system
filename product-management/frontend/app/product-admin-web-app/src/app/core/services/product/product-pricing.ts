@@ -8,7 +8,18 @@ export interface DiscountedPrice {
 }
 
 export function activeDiscounts(discounts: Discount[] | null | undefined): Discount[] {
-  return (discounts ?? []).filter((discount) => discount.status === 'Active');
+  const now = Date.now();
+
+  return (discounts ?? []).filter((discount) => {
+    const startsAt = Date.parse(discount.starts_at);
+    const endsAt = Date.parse(discount.ends_at);
+
+    return (
+      discount.status === 'Active' &&
+      (Number.isNaN(startsAt) || startsAt <= now) &&
+      (Number.isNaN(endsAt) || endsAt >= now)
+    );
+  });
 }
 
 export function calculateDiscountedPrice(
