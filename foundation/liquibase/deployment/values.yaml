@@ -14,7 +14,7 @@ app:
     backoffLimit: 6
     restartPolicy: OnFailure
   image:
-    repository: eco-system/liquibase
+    repository: eco-test/liquibase
     tag: latest
     pullPolicy: IfNotPresent
   ports: []

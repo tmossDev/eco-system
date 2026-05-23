@@ -105,7 +105,7 @@ jobs:
 
           case "$DEPLOYMENT" in
             main)
-              NAMESPACE="${DEFAULT_APPLICATION_NAMESPACE:-eco-system}"
+              NAMESPACE="${DEFAULT_APPLICATION_NAMESPACE:-eco-test}"
               ;;
             feature)
               if [[ ! "$REQUESTED_NAMESPACE" =~ ^[a-z0-9]{10}$ ]]; then

@@ -15,7 +15,7 @@ on:
       namespace:
         description: Application namespace. Feature PRs ignore this and use feature/<10 lowercase chars>.
         required: false
-        default: eco-system
+        default: eco-test
       environment_file:
         description: Environment config file under config/
         required: true
@@ -35,7 +35,7 @@ permissions:
   issues: write
 
 env:
-  IMAGE_PREFIX: localhost/eco-system
+  IMAGE_PREFIX: localhost/eco-test
   IMAGE_TAG: ${{ github.sha }}
   ENVIRONMENT_FILE: ${{ inputs.environment_file || 'hp-prodesk-homelab.txt' }}
 
@@ -130,13 +130,13 @@ jobs:
               DEPLOY_FOUNDATION=true
             fi
           elif [[ "$EVENT_NAME" == "push" ]]; then
-            NAMESPACE="${DEFAULT_APPLICATION_NAMESPACE:-eco-system}"
+            NAMESPACE="${DEFAULT_APPLICATION_NAMESPACE:-eco-test}"
             DEPLOY_APPLICATION=true
             if [[ "${{ steps.detect_foundation.outputs.foundation_changed }}" == "true" ]]; then
               DEPLOY_FOUNDATION=true
             fi
           else
-            NAMESPACE="${NAMESPACE:-${DEFAULT_APPLICATION_NAMESPACE:-eco-system}}"
+            NAMESPACE="${NAMESPACE:-${DEFAULT_APPLICATION_NAMESPACE:-eco-test}}"
             case "$REQUESTED_LAYER" in
               foundation)
                 DEPLOY_FOUNDATION=true
@@ -275,9 +275,10 @@ jobs:
         run: |
           helm dependency build foundation/postgres/deployment
           helm dependency build foundation/liquibase/deployment
+          helm dependency build foundation/minio/deployment
           helm dependency build foundation/deployment
 
-      - name: Deploy postgres and liquibase
+      - name: Deploy foundation services
         shell: bash
         run: |
           POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-${{ secrets.POSTGRES_PASSWORD }}}"
@@ -747,7 +748,7 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const marker = '<!-- eco-system-useful-links -->';
+            const marker = '<!-- deployment-useful-links -->';
             const links = [
               ['Admin web app', 'http://${{ needs.prepare.outputs.admin_web_app_host }}'],
               ['Admin web app Storybook', 'http://${{ needs.prepare.outputs.admin_web_app_host }}/storybook'],
