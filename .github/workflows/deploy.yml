@@ -59,6 +59,32 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Detect foundation changes
+        id: detect_foundation
+        shell: bash
+        run: |
+          set -euo pipefail
+          EVENT_NAME="${{ github.event_name }}"
+          FOUNDATION_CHANGED=false
+
+          if [[ "$EVENT_NAME" == "push" ]]; then
+            # Check if foundation layer files changed since previous commit
+            if git diff --quiet HEAD~1 HEAD -- foundation/ >/dev/null 2>&1 || \
+               ! git rev-parse HEAD~1 >/dev/null 2>&1; then
+              FOUNDATION_CHANGED=true
+            fi
+          elif [[ "$EVENT_NAME" == "pull_request" ]]; then
+            # Check if foundation layer files changed in the PR
+            BASE_REF="${{ github.base_ref }}"
+            if git diff --quiet origin/"$BASE_REF" HEAD -- foundation/ >/dev/null 2>&1; then
+              FOUNDATION_CHANGED=false
+            else
+              FOUNDATION_CHANGED=true
+            fi
+          fi
+
+          echo "foundation_changed=$FOUNDATION_CHANGED" >> "$GITHUB_OUTPUT"
+
       - name: Resolve namespaces and hosts
         id: context
         shell: bash
@@ -91,11 +117,15 @@ jobs:
 
             NAMESPACE="${HEAD_REF#feature/}"
             DEPLOY_APPLICATION=true
+            if [[ "${{ steps.detect_foundation.outputs.foundation_changed }}" == "true" ]]; then
+              DEPLOY_FOUNDATION=true
+            fi
           elif [[ "$EVENT_NAME" == "push" ]]; then
             NAMESPACE="${DEFAULT_APPLICATION_NAMESPACE:-eco-system}"
-            # Main deploys intentionally skip foundation. Use workflow_dispatch
-            # with layer=foundation when database/foundation changes should roll out.
             DEPLOY_APPLICATION=true
+            if [[ "${{ steps.detect_foundation.outputs.foundation_changed }}" == "true" ]]; then
+              DEPLOY_FOUNDATION=true
+            fi
           else
             NAMESPACE="${NAMESPACE:-${DEFAULT_APPLICATION_NAMESPACE:-eco-system}}"
             case "$REQUESTED_LAYER" in
@@ -116,7 +146,13 @@ jobs:
             esac
           fi
 
-          FOUNDATION_NAMESPACE="${FOUNDATION_NAMESPACE:-eco-foundation}"
+          # For feature branches with foundation changes, deploy foundation to feature namespace
+          # For main and manual deploys, use dedicated foundation namespace
+          if [[ "$EVENT_NAME" == "pull_request" ]] && [[ "$DEPLOY_FOUNDATION" == "true" ]]; then
+            FOUNDATION_NAMESPACE="$NAMESPACE"
+          else
+            FOUNDATION_NAMESPACE="${FOUNDATION_NAMESPACE:-eco-foundation}"
+          fi
           BASE_DOMAIN="${BASE_DOMAIN:-com}"
 
           {
@@ -695,13 +731,23 @@ jobs:
               ['Product service', 'http://${{ needs.prepare.outputs.product_service_host }}'],
             ];
 
+            const decoratorBox = `
+            <table>
+              <tr>
+                <td width="100%" style="background-color: #f6f8fa; padding: 12px 16px; border-radius: 6px; border: 1px solid #d1d9e0;">
+                  <div style="font-weight: bold; margin-bottom: 8px;">🚀 Useful Links</div>
+                  <ul style="margin: 0; padding-left: 20px;">
+                    ${links.map(([label, url]) => `<li><a href="${url}">${label}</a></li>`).join('')}
+                  </ul>
+                  <div style="margin-top: 8px; font-size: 12px; color: #656d76;">Namespace: <code style="background-color: #eaeef2; padding: 2px 6px; border-radius: 3px;">${{ needs.prepare.outputs.namespace }}</code></div>
+                </td>
+              </tr>
+            </table>
+            `;
+
             const body = [
               marker,
-              '## Useful Links',
-              '',
-              `Namespace: \`${{ needs.prepare.outputs.namespace }}\``,
-              '',
-              ...links.map(([label, url]) => `- [${label}](${url})`),
+              decoratorBox,
             ].join('\n');
 
             const { owner, repo } = context.repo;

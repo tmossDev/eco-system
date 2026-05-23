@@ -1,5 +1,10 @@
 # Project Change Log
 
+## v1.12.1 - (3 Changes)
+- Enhanced deployment pipeline to automatically detect and deploy foundation layer changes on push to main and feature branches.
+- Feature branches with foundation changes now deploy both foundation and application layers to the same namespace for better isolation.
+- Updated pull request decorator with styled HTML formatting displaying useful links and namespace information at the top of the PR overview section.
+
 ## v1.12.0 - (5 Changes)
 - Added product short descriptions and product photo support.
 - Added MinIO-based S3-compatible object storage in the foundation layer.

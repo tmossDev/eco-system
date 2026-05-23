@@ -25,6 +25,11 @@ type GatewayController interface {
 	CreateProduct() iris.Handler
 	UpdateProduct() iris.Handler
 	DeleteProduct() iris.Handler
+	ListDiscounts() iris.Handler
+	DiscountDetails() iris.Handler
+	CreateDiscount() iris.Handler
+	UpdateDiscount() iris.Handler
+	DeleteDiscount() iris.Handler
 	UploadProductPhoto() iris.Handler
 	GetProductMedia() iris.Handler
 	GetSettings() iris.Handler
@@ -267,6 +272,96 @@ func (controller *GatewayControllerImp) DeleteProduct() iris.Handler {
 		}
 
 		if err := controller.productService.DeleteProduct(productID, controller.getActorID(ctx)); err != nil {
+			controller.marshalErrorResponse(ctx, err)
+			return
+		}
+
+		ctx.StatusCode(iris.StatusNoContent)
+	}
+}
+
+func (controller *GatewayControllerImp) ListDiscounts() iris.Handler {
+	return func(ctx iris.Context) {
+		discounts, err := controller.productService.ListDiscounts()
+		if err != nil {
+			controller.marshalErrorResponse(ctx, err)
+			return
+		}
+
+		_ = ctx.JSON(discounts)
+	}
+}
+
+func (controller *GatewayControllerImp) DiscountDetails() iris.Handler {
+	return func(ctx iris.Context) {
+		discountID, err := ctx.Params().GetUint64("id")
+		if err != nil {
+			controller.marshalErrorResponse(ctx, types.NewInvalidInputError())
+			return
+		}
+
+		discount, err := controller.productService.GetDiscount(discountID)
+		if err != nil {
+			controller.marshalErrorResponse(ctx, err)
+			return
+		}
+
+		_ = ctx.JSON(discount)
+	}
+}
+
+func (controller *GatewayControllerImp) CreateDiscount() iris.Handler {
+	return func(ctx iris.Context) {
+		body, err := ctx.GetBody()
+		if err != nil {
+			controller.marshalErrorResponse(ctx, types.NewInternalServerError())
+			return
+		}
+
+		discount, err := controller.productService.CreateDiscount(string(body), controller.getActorID(ctx))
+		if err != nil {
+			controller.marshalErrorResponse(ctx, err)
+			return
+		}
+
+		ctx.StatusCode(iris.StatusCreated)
+		_ = ctx.JSON(discount)
+	}
+}
+
+func (controller *GatewayControllerImp) UpdateDiscount() iris.Handler {
+	return func(ctx iris.Context) {
+		discountID, err := ctx.Params().GetUint64("id")
+		if err != nil {
+			controller.marshalErrorResponse(ctx, types.NewInvalidInputError())
+			return
+		}
+
+		body, err := ctx.GetBody()
+		if err != nil {
+			controller.marshalErrorResponse(ctx, types.NewInternalServerError())
+			return
+		}
+
+		discount, err := controller.productService.UpdateDiscount(discountID, string(body), controller.getActorID(ctx))
+		if err != nil {
+			controller.marshalErrorResponse(ctx, err)
+			return
+		}
+
+		_ = ctx.JSON(discount)
+	}
+}
+
+func (controller *GatewayControllerImp) DeleteDiscount() iris.Handler {
+	return func(ctx iris.Context) {
+		discountID, err := ctx.Params().GetUint64("id")
+		if err != nil {
+			controller.marshalErrorResponse(ctx, types.NewInvalidInputError())
+			return
+		}
+
+		if err := controller.productService.DeleteDiscount(discountID, controller.getActorID(ctx)); err != nil {
 			controller.marshalErrorResponse(ctx, err)
 			return
 		}

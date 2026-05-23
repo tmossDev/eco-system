@@ -14,4 +14,9 @@ func Setup(app *iris.Application, productService service.ProductService) {
 	app.Get("/api/products/{id:uint64}", productController.ProductDetails())
 	app.Put("/api/products/{id:uint64}", productController.UpdateProduct())
 	app.Delete("/api/products/{id:uint64}", productController.DeleteProduct())
+	app.Get("/api/discounts", productController.ListDiscounts())
+	app.Post("/api/discounts", productController.CreateDiscount())
+	app.Get("/api/discounts/{id:uint64}", productController.DiscountDetails())
+	app.Put("/api/discounts/{id:uint64}", productController.UpdateDiscount())
+	app.Delete("/api/discounts/{id:uint64}", productController.DeleteDiscount())
 }

@@ -1,9 +1,45 @@
 import {
+  CreateDiscountRequest,
   CreateProductRequest,
+  Discount,
   ProductDetails,
   ProductSummary,
+  UpdateDiscountRequest,
   UpdateProductRequest,
 } from './product.model';
+
+export const MOCK_DISCOUNTS: Discount[] = [
+  {
+    id: '1',
+    name: 'Store-wide launch offer',
+    description: 'Applies to every active product in the catalog.',
+    discount_type: 'Percentage',
+    scope: 'Global',
+    percentage_basis_points: 1000,
+    amount_cents: null,
+    currency: '',
+    min_product_count: 1,
+    starts_at: '',
+    ends_at: '',
+    status: 'Active',
+    product_ids: [],
+  },
+  {
+    id: '2',
+    name: 'Starter bundle savings',
+    description: 'Qualifies when the selected kit products are purchased together.',
+    discount_type: 'Amount',
+    scope: 'ProductSet',
+    percentage_basis_points: null,
+    amount_cents: 500,
+    currency: 'USD',
+    min_product_count: 2,
+    starts_at: '',
+    ends_at: '',
+    status: 'Draft',
+    product_ids: ['1', '4'],
+  },
+];
 
 export const MOCK_PRODUCTS: ProductSummary[] = [
   {
@@ -17,6 +53,7 @@ export const MOCK_PRODUCTS: ProductSummary[] = [
     currency: 'USD',
     inventory_count: 48,
     status: 'Active',
+    discounts: [],
     photos: [
       {
         url: 'https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?auto=format&fit=crop&w=1200&q=80',
@@ -38,6 +75,7 @@ export const MOCK_PRODUCTS: ProductSummary[] = [
     currency: 'USD',
     inventory_count: 82,
     status: 'Active',
+    discounts: [],
     photos: [
       {
         url: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=1200&q=80',
@@ -59,6 +97,7 @@ export const MOCK_PRODUCTS: ProductSummary[] = [
     currency: 'USD',
     inventory_count: 999,
     status: 'Draft',
+    discounts: [],
     photos: [],
   },
   {
@@ -72,6 +111,7 @@ export const MOCK_PRODUCTS: ProductSummary[] = [
     currency: 'USD',
     inventory_count: 16,
     status: 'Archived',
+    discounts: [],
     photos: [
       {
         url: 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=1200&q=80',
@@ -85,19 +125,23 @@ export const MOCK_PRODUCTS: ProductSummary[] = [
 ];
 
 let mockProducts = [...MOCK_PRODUCTS];
+let mockDiscounts = [...MOCK_DISCOUNTS];
 
 export function getMockProducts(): ProductSummary[] {
-  return [...mockProducts];
+  return mockProducts.map(withApplicableDiscounts);
 }
 
 export function getMockProductById(id: string): ProductDetails | undefined {
-  return mockProducts.find((product) => product.id === id);
+  const product = mockProducts.find((product) => product.id === id);
+
+  return product ? withApplicableDiscounts(product) : undefined;
 }
 
 export function createMockProduct(request: CreateProductRequest): ProductDetails {
   const product: ProductDetails = {
     id: createMockProductId(),
     ...request,
+    discounts: [],
   };
 
   mockProducts = [product, ...mockProducts];
@@ -112,6 +156,7 @@ export function updateMockProduct(
   const updatedProduct: ProductDetails = {
     id,
     ...request,
+    discounts: [],
   };
 
   mockProducts = mockProducts.map((product) =>
@@ -151,10 +196,63 @@ export function deleteMockProduct(id: string): void {
   mockProducts = mockProducts.filter((product) => product.id !== id);
 }
 
+export function getMockDiscounts(): Discount[] {
+  return [...mockDiscounts];
+}
+
+export function getMockDiscountById(id: string): Discount | undefined {
+  return mockDiscounts.find((discount) => discount.id === id);
+}
+
+export function createMockDiscount(request: CreateDiscountRequest): Discount {
+  const discount: Discount = {
+    id: createMockProductId(),
+    ...request,
+  };
+
+  mockDiscounts = [discount, ...mockDiscounts];
+
+  return discount;
+}
+
+export function updateMockDiscount(
+  id: string,
+  request: UpdateDiscountRequest,
+): Discount {
+  const updatedDiscount: Discount = {
+    id,
+    ...request,
+  };
+
+  mockDiscounts = mockDiscounts.map((discount) =>
+    discount.id === id ? updatedDiscount : discount,
+  );
+
+  return updatedDiscount;
+}
+
+export function deleteMockDiscount(id: string): void {
+  mockDiscounts = mockDiscounts.filter((discount) => discount.id !== id);
+}
+
 export function createMockProductId(): string {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
     return crypto.randomUUID();
   }
 
   return String(Date.now());
+}
+
+function withApplicableDiscounts<Product extends ProductSummary>(
+  product: Product,
+): Product {
+  const discounts = mockDiscounts.filter(
+    (discount) =>
+      discount.scope === 'Global' || discount.product_ids.includes(product.id),
+  );
+
+  return {
+    ...product,
+    discounts,
+  };
 }

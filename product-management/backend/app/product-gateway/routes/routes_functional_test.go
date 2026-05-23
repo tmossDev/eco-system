@@ -25,11 +25,25 @@ import (
 )
 
 type fakeProductService struct {
-	products []model.ProductResponse
+	products  []model.ProductResponse
+	discounts []model.Discount
 }
 
 func newFakeProductService() *fakeProductService {
 	return &fakeProductService{
+		discounts: []model.Discount{
+			{
+				ID:                    1,
+				Name:                  "Store-wide launch offer",
+				DiscountType:          "Percentage",
+				Scope:                 "Global",
+				PercentageBasisPoints: int64Ptr(1000),
+				MinProductCount:       1,
+				Status:                "Active",
+				CreatedUser:           1,
+				CreatedAt:             time.Now().Format(time.RFC3339),
+			},
+		},
 		products: []model.ProductResponse{
 			{
 				ID:               1,
@@ -55,6 +69,10 @@ func newFakeProductService() *fakeProductService {
 			},
 		},
 	}
+}
+
+func int64Ptr(value int64) *int64 {
+	return &value
 }
 
 func (service *fakeProductService) ListProducts() ([]model.ProductResponse, error) {
@@ -89,6 +107,40 @@ func (service *fakeProductService) UpdateProduct(productID uint64, _ string, _ u
 }
 
 func (service *fakeProductService) DeleteProduct(uint64, uint64) error {
+	return nil
+}
+
+func (service *fakeProductService) ListDiscounts() ([]model.Discount, error) {
+	return service.discounts, nil
+}
+
+func (service *fakeProductService) GetDiscount(discountID uint64) (*model.Discount, error) {
+	for _, discount := range service.discounts {
+		if discount.ID == discountID {
+			return &discount, nil
+		}
+	}
+
+	return &service.discounts[0], nil
+}
+
+func (service *fakeProductService) CreateDiscount(string, uint64) (*model.Discount, error) {
+	discount := service.discounts[0]
+	discount.ID = 2
+	service.discounts = append([]model.Discount{discount}, service.discounts...)
+
+	return &discount, nil
+}
+
+func (service *fakeProductService) UpdateDiscount(discountID uint64, _ string, _ uint64) (*model.Discount, error) {
+	discount := service.discounts[0]
+	discount.ID = discountID
+	discount.Name = "Updated Discount"
+
+	return &discount, nil
+}
+
+func (service *fakeProductService) DeleteDiscount(uint64, uint64) error {
 	return nil
 }
 

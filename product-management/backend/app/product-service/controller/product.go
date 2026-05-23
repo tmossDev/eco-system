@@ -16,6 +16,11 @@ type ServiceController interface {
 	CreateProduct() iris.Handler
 	UpdateProduct() iris.Handler
 	DeleteProduct() iris.Handler
+	ListDiscounts() iris.Handler
+	DiscountDetails() iris.Handler
+	CreateDiscount() iris.Handler
+	UpdateDiscount() iris.Handler
+	DeleteDiscount() iris.Handler
 }
 
 type ServiceControllerImp struct {
@@ -128,6 +133,96 @@ func (controller *ServiceControllerImp) DeleteProduct() iris.Handler {
 		}
 
 		if err := controller.productService.DeleteProduct(productID, systemUserID); err != nil {
+			controller.marshalErrorResponse(ctx, err)
+			return
+		}
+
+		ctx.StatusCode(iris.StatusNoContent)
+	}
+}
+
+func (controller *ServiceControllerImp) ListDiscounts() iris.Handler {
+	return func(ctx iris.Context) {
+		discounts, err := controller.productService.ListDiscounts()
+		if err != nil {
+			controller.marshalErrorResponse(ctx, err)
+			return
+		}
+
+		_ = ctx.JSON(discounts)
+	}
+}
+
+func (controller *ServiceControllerImp) DiscountDetails() iris.Handler {
+	return func(ctx iris.Context) {
+		discountID, err := ctx.Params().GetUint64("id")
+		if err != nil {
+			controller.marshalErrorResponse(ctx, types.NewInvalidInputError())
+			return
+		}
+
+		discount, err := controller.productService.GetDiscount(discountID)
+		if err != nil {
+			controller.marshalErrorResponse(ctx, err)
+			return
+		}
+
+		_ = ctx.JSON(discount)
+	}
+}
+
+func (controller *ServiceControllerImp) CreateDiscount() iris.Handler {
+	return func(ctx iris.Context) {
+		body, err := ctx.GetBody()
+		if err != nil {
+			controller.marshalErrorResponse(ctx, types.NewInternalServerError())
+			return
+		}
+
+		discount, err := controller.productService.CreateDiscount(string(body), systemUserID)
+		if err != nil {
+			controller.marshalErrorResponse(ctx, err)
+			return
+		}
+
+		ctx.StatusCode(iris.StatusCreated)
+		_ = ctx.JSON(discount)
+	}
+}
+
+func (controller *ServiceControllerImp) UpdateDiscount() iris.Handler {
+	return func(ctx iris.Context) {
+		discountID, err := ctx.Params().GetUint64("id")
+		if err != nil {
+			controller.marshalErrorResponse(ctx, types.NewInvalidInputError())
+			return
+		}
+
+		body, err := ctx.GetBody()
+		if err != nil {
+			controller.marshalErrorResponse(ctx, types.NewInternalServerError())
+			return
+		}
+
+		discount, err := controller.productService.UpdateDiscount(discountID, string(body), systemUserID)
+		if err != nil {
+			controller.marshalErrorResponse(ctx, err)
+			return
+		}
+
+		_ = ctx.JSON(discount)
+	}
+}
+
+func (controller *ServiceControllerImp) DeleteDiscount() iris.Handler {
+	return func(ctx iris.Context) {
+		discountID, err := ctx.Params().GetUint64("id")
+		if err != nil {
+			controller.marshalErrorResponse(ctx, types.NewInvalidInputError())
+			return
+		}
+
+		if err := controller.productService.DeleteDiscount(discountID, systemUserID); err != nil {
 			controller.marshalErrorResponse(ctx, err)
 			return
 		}

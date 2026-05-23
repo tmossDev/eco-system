@@ -50,6 +50,7 @@ import { ProductService } from '../../../core/services/product/product.service';
               <th>SKU</th>
               <th>Category</th>
               <th>Price</th>
+              <th>Discounts</th>
               <th>Inventory</th>
               <th>Status</th>
               <th class="actions-column">Actions</th>
@@ -85,6 +86,7 @@ import { ProductService } from '../../../core/services/product/product.service';
                   <td>{{ product.sku }}</td>
                   <td>{{ product.category }}</td>
                   <td>{{ formatMoney(product.price_cents, product.currency) }}</td>
+                  <td>{{ discountSummary(product) }}</td>
                   <td>{{ product.inventory_count }}</td>
                   <td>
                     <span class="status" [class]="product.status.toLowerCase()">
@@ -207,7 +209,7 @@ import { ProductService } from '../../../core/services/product/product.service';
     table {
       width: 100%;
       border-collapse: collapse;
-      min-width: 920px;
+      min-width: 1040px;
     }
 
     th,
@@ -352,6 +354,23 @@ export class ProductListPage implements OnInit {
       style: 'currency',
       currency,
     }).format(priceCents / 100);
+  }
+
+  protected discountSummary(product: ProductSummary): string {
+    const discounts = product.discounts ?? [];
+    if (discounts.length === 0) {
+      return 'None';
+    }
+
+    return discounts
+      .map((discount) => {
+        if (discount.discount_type === 'Percentage') {
+          return `${(discount.percentage_basis_points ?? 0) / 100}%`;
+        }
+
+        return this.formatMoney(discount.amount_cents ?? 0, discount.currency);
+      })
+      .join(', ');
   }
 
   protected primaryPhoto(product: ProductSummary): ProductPhoto | null {

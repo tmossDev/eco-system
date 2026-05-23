@@ -2,9 +2,12 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import {
+  CreateDiscountRequest,
   CreateProductRequest,
+  Discount,
   ProductDetails,
   ProductSummary,
+  UpdateDiscountRequest,
   UpdateProductRequest,
 } from './product.model';
 
@@ -46,5 +49,28 @@ export class ProductService {
 
   public deleteProduct(id: string): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/${id}`);
+  }
+
+  public getDiscounts(): Observable<Discount[]> {
+    return this.http.get<Discount[]>('/api/discounts');
+  }
+
+  public getDiscountById(id: string): Observable<Discount> {
+    return this.http.get<Discount>(`/api/discounts/${id}`);
+  }
+
+  public createDiscount(request: CreateDiscountRequest): Observable<Discount> {
+    return this.http.post<Discount>('/api/discounts', request);
+  }
+
+  public updateDiscount(
+    id: string,
+    request: UpdateDiscountRequest,
+  ): Observable<Discount> {
+    return this.http.put<Discount>(`/api/discounts/${id}`, request);
+  }
+
+  public deleteDiscount(id: string): Observable<void> {
+    return this.http.delete<void>(`/api/discounts/${id}`);
   }
 }

@@ -17,15 +17,22 @@ import { MOCK_DASHBOARD_SUMMARY } from '../../services/dashboard/dashboard.mocks
 import { MOCK_SETTINGS } from '../../services/settings/settings.mocks';
 import { ApplicationSettings } from '../../services/settings/settings.models';
 import {
+  createMockDiscount,
   createMockProduct,
+  deleteMockDiscount,
   deleteMockProduct,
+  getMockDiscountById,
+  getMockDiscounts,
   getMockProductById,
   getMockProducts,
+  updateMockDiscount,
   updateMockProduct,
   uploadMockProductPhoto,
 } from '../../services/product/product.mocks';
 import {
+  CreateDiscountRequest,
   CreateProductRequest,
+  UpdateDiscountRequest,
   UpdateProductRequest,
 } from '../../services/product/product.model';
 
@@ -75,6 +82,41 @@ export const mockApiInterceptor: HttpInterceptorFn = (request, next) => {
       createMockProduct(request.body as CreateProductRequest),
       201,
     );
+  }
+
+  if (method === 'GET' && url === '/api/discounts') {
+    return mockResponse(getMockDiscounts());
+  }
+
+  if (method === 'POST' && url === '/api/discounts') {
+    return mockResponse(
+      createMockDiscount(request.body as CreateDiscountRequest),
+      201,
+    );
+  }
+
+  const discountId = getDiscountIdFromUrl(url);
+
+  if (discountId && method === 'GET') {
+    const discount = getMockDiscountById(discountId);
+
+    if (!discount) {
+      return mockError(404, `Discount with id "${discountId}" was not found`);
+    }
+
+    return mockResponse(discount);
+  }
+
+  if (discountId && method === 'PUT') {
+    return mockResponse(
+      updateMockDiscount(discountId, request.body as UpdateDiscountRequest),
+    );
+  }
+
+  if (discountId && method === 'DELETE') {
+    deleteMockDiscount(discountId);
+
+    return mockResponse(undefined);
   }
 
   const productId = getProductIdFromUrl(url);
@@ -141,6 +183,12 @@ function normaliseApiUrl(url: string): string {
 
 function getProductIdFromUrl(url: string): string | null {
   const match = url.match(/^\/api\/products\/([^/]+)(?:\/photos)?$/);
+
+  return match?.[1] ?? null;
+}
+
+function getDiscountIdFromUrl(url: string): string | null {
+  const match = url.match(/^\/api\/discounts\/([^/]+)$/);
 
   return match?.[1] ?? null;
 }

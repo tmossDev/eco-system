@@ -81,6 +81,11 @@ import { ProductService } from '../../../core/services/product/product.service';
               </div>
 
               <div>
+                <dt>Discounts</dt>
+                <dd>{{ discountSummary(product()!) }}</dd>
+              </div>
+
+              <div>
                 <dt>Inventory</dt>
                 <dd>{{ product()!.inventory_count }}</dd>
               </div>
@@ -293,6 +298,24 @@ export class ProductDetailPage implements OnInit {
       style: 'currency',
       currency,
     }).format(priceCents / 100);
+  }
+
+  protected discountSummary(product: ProductDetails): string {
+    const discounts = product.discounts ?? [];
+    if (discounts.length === 0) {
+      return 'None';
+    }
+
+    return discounts
+      .map((discount) => {
+        const value =
+          discount.discount_type === 'Percentage'
+            ? `${(discount.percentage_basis_points ?? 0) / 100}%`
+            : this.formatMoney(discount.amount_cents ?? 0, discount.currency);
+
+        return `${discount.name} (${value})`;
+      })
+      .join(', ');
   }
 
   protected primaryPhoto(product: ProductDetails): ProductPhoto | null {
