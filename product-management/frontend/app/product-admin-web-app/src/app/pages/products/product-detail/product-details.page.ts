@@ -6,6 +6,10 @@ import {
   ProductDetails,
   ProductPhoto,
 } from '../../../core/services/product/product.model';
+import {
+  calculateDiscountedPrice,
+  formatDiscountValue,
+} from '../../../core/services/product/product-pricing';
 import { ProductService } from '../../../core/services/product/product.service';
 
 @Component({
@@ -77,7 +81,22 @@ import { ProductService } from '../../../core/services/product/product.service';
 
               <div>
                 <dt>Price</dt>
-                <dd>{{ formatMoney(product()!.price_cents, product()!.currency) }}</dd>
+                <dd>
+                  <span class="price-stack">
+                    @if (discountedPrice(product()!).hasDiscount) {
+                      <strong>
+                        {{ formatMoney(discountedPrice(product()!).finalCents, product()!.currency) }}
+                      </strong>
+                      <span>
+                        {{ formatMoney(product()!.price_cents, product()!.currency) }}
+                      </span>
+                    } @else {
+                      <strong>
+                        {{ formatMoney(product()!.price_cents, product()!.currency) }}
+                      </strong>
+                    }
+                  </span>
+                </dd>
               </div>
 
               <div>
@@ -243,6 +262,17 @@ import { ProductService } from '../../../core/services/product/product.service';
       font-weight: 700;
     }
 
+    .price-stack {
+      display: inline-grid;
+      gap: 0.15rem;
+    }
+
+    .price-stack span {
+      color: #64748b;
+      font-size: 0.9rem;
+      text-decoration: line-through;
+    }
+
     .primary-action {
       display: inline-flex;
       width: fit-content;
@@ -308,14 +338,13 @@ export class ProductDetailPage implements OnInit {
 
     return discounts
       .map((discount) => {
-        const value =
-          discount.discount_type === 'Percentage'
-            ? `${(discount.percentage_basis_points ?? 0) / 100}%`
-            : this.formatMoney(discount.amount_cents ?? 0, discount.currency);
-
-        return `${discount.name} (${value})`;
+        return `${discount.name} (${formatDiscountValue(discount, this.formatMoney.bind(this))})`;
       })
       .join(', ');
+  }
+
+  protected discountedPrice(product: ProductDetails) {
+    return calculateDiscountedPrice(product.price_cents, product.discounts);
   }
 
   protected primaryPhoto(product: ProductDetails): ProductPhoto | null {

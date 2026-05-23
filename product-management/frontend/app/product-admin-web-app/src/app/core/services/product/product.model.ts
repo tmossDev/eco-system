@@ -55,8 +55,10 @@ export interface Discount {
   starts_at: string;
   ends_at: string;
   status: DiscountStatus;
-  product_ids: string[];
+  product_ids: ProductID[];
 }
+
+export type ProductID = string | number;
 
 export interface CreateDiscountRequest {
   name: string;
@@ -70,7 +72,7 @@ export interface CreateDiscountRequest {
   starts_at: string;
   ends_at: string;
   status: DiscountStatus;
-  product_ids: string[];
+  product_ids: ProductID[];
 }
 
 export interface UpdateDiscountRequest extends CreateDiscountRequest {}
