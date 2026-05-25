@@ -3,7 +3,6 @@ package postgres
 import (
 	"database/sql"
 	"errors"
-	"time"
 
 	"tmossDev.github.com/eco-system/shared-components/backend/package/datastore"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/datastore/flows"
@@ -17,8 +16,6 @@ import (
 type PostgresUserRepository struct {
 	store datastore.DataStore
 }
-
-const MySystemAutoID = 1
 
 func NewPostgresUserRepository(store datastore.DataStore) repository.UserRepository {
 	return &PostgresUserRepository{
@@ -109,131 +106,109 @@ func (repo *PostgresUserRepository) GetByID(userId uint64) (*model.UserResponse,
 	return user, nil
 }
 
-func (repo *PostgresUserRepository) RegisterUser(firstName string, lastName string, email string, password string, roleId uint64) (*model.UserResponse, error) {
-	hashedPassword, err := utils.HashPassword(password)
-	if err != nil {
-		logger.Errorf("Error creating hashPassword: %s", err.Error())
-		return nil, types.NewInternalServerError()
-	}
-
-	insertedAt := utils.GetCurrentDateFormatedForInsertingIntoDB(time.Now())
-
+func (repo *PostgresUserRepository) RegisterUser(user *model.UserResponse) error {
 	logger.Debugf(
 		"Running query '%s' with parameter '%s', '%s', '%s', '%v', '%d', '%d' and '%s'",
 		RegisterUser,
-		firstName,
-		lastName,
-		email,
-		hashedPassword,
-		roleId,
-		MySystemAutoID,
-		insertedAt,
+		user.FirstName,
+		user.LastName,
+		user.Email,
+		user.HashedPassword,
+		user.RoleID,
+		user.CreatedUser,
+		user.CreatedAt,
 	)
 
 	insertedID, err := flows.PerformEdit(
 		"RegisterUser",
 		RegisterUser,
 		repo.store,
-		firstName,
-		lastName,
-		email,
-		hashedPassword,
-		roleId,
-		MySystemAutoID,
-		insertedAt,
+		user.FirstName,
+		user.LastName,
+		user.Email,
+		user.HashedPassword,
+		user.RoleID,
+		user.CreatedUser,
+		user.CreatedAt,
 	)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return &model.UserResponse{
-		ID:          uint64(insertedID),
-		FirstName:   firstName,
-		LastName:    lastName,
-		Email:       email,
-		RoleID:      roleId,
-		CreatedUser: MySystemAutoID,
-		CreatedAt:   insertedAt,
-	}, nil
+	user.ID = uint64(insertedID)
+	return nil
 }
 
-func (repo *PostgresUserRepository) Update(userId uint64, firstName string, lastName string, updatingUserId uint64) (*model.UserResponse, error) {
-
+func (repo *PostgresUserRepository) Update(user model.UserResponse) error {
 	logger.Debugf(
 		"Running query '%s' with parameter '%s', '%s', '%d' and '%d'",
 		UpdateUser,
-		firstName,
-		lastName,
-		updatingUserId,
-		userId,
+		user.FirstName,
+		user.LastName,
+		user.UpdatedUser,
+		user.ID,
 	)
 
 	_, err := flows.PerformEdit(
 		"UpdateUser",
 		UpdateUser,
 		repo.store,
-		firstName,
-		lastName,
-		updatingUserId,
-		userId,
+		user.FirstName,
+		user.LastName,
+		user.UpdatedUser,
+		user.ID,
 	)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return repo.GetByID(userId)
+	return nil
 }
 
-func (repo *PostgresUserRepository) ResetPassword(userId uint64, newPassword string, updatingUserId uint64) (*model.UserResponse, error) {
-	hashedPassword, err := utils.HashPassword(newPassword)
-	if err != nil {
-		logger.Errorf("Error hashing password: %s", err.Error())
-		return nil, types.NewInternalServerError()
-	}
-
+func (repo *PostgresUserRepository) ResetPassword(user model.UserResponse) error {
 	logger.Debugf(
 		"Running query '%s' with parameter '%v', '%d' and '%d'",
 		ResetPassword,
-		hashedPassword,
-		updatingUserId,
-		userId,
+		user.HashedPassword,
+		user.UpdatedUser,
+		user.ID,
 	)
 
-	_, err = flows.PerformEdit(
+	_, err := flows.PerformEdit(
 		"ResetPassword",
 		ResetPassword,
 		repo.store,
-		hashedPassword,
-		updatingUserId,
-		userId,
+		user.HashedPassword,
+		user.UpdatedUser,
+		user.ID,
 	)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return repo.GetByID(userId)
+	return nil
 }
 
-func (repo *PostgresUserRepository) ResetEmail(userId uint64, newEmail string, updatingUserId uint64) (*model.UserResponse, error) {
+func (repo *PostgresUserRepository) ResetEmail(user model.UserResponse) error {
 	logger.Debugf(
 		"Running query '%s' with parameter '%s', '%d' and '%d'",
 		ResetEmail,
-		newEmail,
-		updatingUserId,
-		userId,
+		user.Email,
+		user.UpdatedUser,
+		user.ID,
 	)
 
 	_, err := flows.PerformEdit(
 		"ResetEmail",
 		ResetEmail,
 		repo.store,
-		newEmail,
-		updatingUserId,
-		userId,
+		user.Email,
+		user.UpdatedUser,
+		user.ID,
 	)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return repo.GetByID(userId)
+	return nil
 }

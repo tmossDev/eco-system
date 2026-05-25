@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"strconv"
+	"time"
 
 	"tmossDev.github.com/eco-system/shared-components/backend/package/logger"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/types"
@@ -13,34 +14,35 @@ import (
 	"tmossDev.github.com/eco-system/user-management/backend/domain/user/repository"
 )
 
-type PublicUserService interface {
+type UserService interface {
 	IsAuthenticated(jwt string) error
 	IsAuthorized(jwt string, page string) error
 	User(jwt string) (*model.UserResponse, error)
 	Logout(jwt string) error
 	Register(body string) (*model.LoginResponse, error)
 	Login(requestId string, body string) (*model.LoginResponse, error)
+	UpdateUserInfo(userId uint64, body string, updatingUserId uint64) (*model.UserResponse, error)
+	UpdateUserPassword(userId uint64, body string, updatingUserId uint64) (*model.UserResponse, error)
 	Shutdown()
 }
 
-type PublicUserServiceImpl struct {
+type UserServiceImpl struct {
 	validator validator.Validator
 	userRepo  repository.UserRepository
 }
 
-func (auth *PublicUserServiceImpl) Shutdown() {
-	auth.userRepo.Shutdown()
-	auth = nil
+func (service *UserServiceImpl) Shutdown() {
+	service.userRepo.Shutdown()
 }
 
-func NewPublicService(validator validator.Validator, userReo repository.UserRepository) PublicUserService {
-	return &PublicUserServiceImpl{
+func NewUserService(validator validator.Validator, userRepo repository.UserRepository) UserService {
+	return &UserServiceImpl{
 		validator: validator,
-		userRepo:  userReo,
+		userRepo:  userRepo,
 	}
 }
 
-func (auth *PublicUserServiceImpl) generateLoginResponseFromUser(user model.UserResponse) (*model.LoginResponse, error) {
+func (service *UserServiceImpl) generateLoginResponseFromUser(user model.UserResponse) (*model.LoginResponse, error) {
 
 	token, expireAt, err := utils.GenerateJwt(utils.UintToString(user.ID), constants.PASSWORD_SECRET_HASHING_KEY)
 	if err != nil {
@@ -62,7 +64,7 @@ func (auth *PublicUserServiceImpl) generateLoginResponseFromUser(user model.User
 	}, nil
 }
 
-func (auth *PublicUserServiceImpl) checkJwt(jwt string) (string, error) {
+func (service *UserServiceImpl) checkJwt(jwt string) (string, error) {
 	Id, err := utils.ParseJwt(jwt, constants.PASSWORD_SECRET_HASHING_KEY)
 
 	if err != nil {
@@ -75,16 +77,16 @@ func (auth *PublicUserServiceImpl) checkJwt(jwt string) (string, error) {
 	return Id, nil
 }
 
-func (auth *PublicUserServiceImpl) IsAuthenticated(jwt string) error {
-	if _, err := auth.checkJwt(jwt); err != nil {
+func (service *UserServiceImpl) IsAuthenticated(jwt string) error {
+	if _, err := service.checkJwt(jwt); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (auth *PublicUserServiceImpl) IsAuthorized(jwt string, page string) error {
-	_, err := auth.checkJwt(jwt)
+func (service *UserServiceImpl) IsAuthorized(jwt string, page string) error {
+	_, err := service.checkJwt(jwt)
 	if err != nil {
 		return err
 	}
@@ -94,9 +96,9 @@ func (auth *PublicUserServiceImpl) IsAuthorized(jwt string, page string) error {
 	return nil
 }
 
-func (auth PublicUserServiceImpl) Login(requestId string, body string) (*model.LoginResponse, error) {
+func (service *UserServiceImpl) Login(requestId string, body string) (*model.LoginResponse, error) {
 	var loginRequest model.LoginRequest
-	err := auth.validator.MarshalAndValidateREQ(body, &loginRequest)
+	err := service.validator.MarshalAndValidateREQ(body, &loginRequest)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +112,7 @@ func (auth PublicUserServiceImpl) Login(requestId string, body string) (*model.L
 		return nil, types.NewUnauthorizedError()
 	}
 
-	user, err := auth.userRepo.GetByEmail(requestId, username)
+	user, err := service.userRepo.GetByEmail(requestId, username)
 	if err != nil {
 		var socketErr *types.SocketError
 		if errors.As(err, &socketErr) {
@@ -127,11 +129,11 @@ func (auth PublicUserServiceImpl) Login(requestId string, body string) (*model.L
 		return nil, types.NewUnauthorizedError()
 	}
 
-	return auth.generateLoginResponseFromUser(*user)
+	return service.generateLoginResponseFromUser(*user)
 
 }
 
-func (auth *PublicUserServiceImpl) Logout(jwt string) error {
+func (service *UserServiceImpl) Logout(jwt string) error {
 	userId, err := utils.GetIssuerFromJwt(jwt, constants.PASSWORD_SECRET_HASHING_KEY)
 	if err != nil {
 		logger.Errorf("Unabled to logout token: '%s'", jwt)
@@ -140,9 +142,9 @@ func (auth *PublicUserServiceImpl) Logout(jwt string) error {
 	return nil
 }
 
-func (auth *PublicUserServiceImpl) Register(body string) (*model.LoginResponse, error) {
+func (service *UserServiceImpl) Register(body string) (*model.LoginResponse, error) {
 	var registerRequest model.UserRequest
-	err := auth.validator.MarshalAndValidateREQ(body, &registerRequest)
+	err := service.validator.MarshalAndValidateREQ(body, &registerRequest)
 	if err != nil {
 		return nil, err
 	}
@@ -151,15 +153,28 @@ func (auth *PublicUserServiceImpl) Register(body string) (*model.LoginResponse, 
 		return nil, types.NewInvalidInputError()
 	}
 
-	user, err := auth.userRepo.RegisterUser(registerRequest.FirstName, registerRequest.LastName, registerRequest.Email, registerRequest.Password, constants.CUSTOMER_ROLE_ID)
+	hashedPassword, err := hashPassword(registerRequest.Password)
 	if err != nil {
 		return nil, err
 	}
 
-	return auth.generateLoginResponseFromUser(*user)
+	user := model.UserResponse{
+		FirstName:      registerRequest.FirstName,
+		LastName:       registerRequest.LastName,
+		Email:          registerRequest.Email,
+		HashedPassword: hashedPassword,
+		RoleID:         constants.CUSTOMER_ROLE_ID,
+		CreatedUser:    MySystemAutoID,
+		CreatedAt:      utils.GetCurrentDateFormatedForInsertingIntoDB(time.Now()),
+	}
+	if err := service.userRepo.RegisterUser(&user); err != nil {
+		return nil, err
+	}
+
+	return service.generateLoginResponseFromUser(user)
 }
 
-func (auth *PublicUserServiceImpl) User(jwt string) (*model.UserResponse, error) {
+func (service *UserServiceImpl) User(jwt string) (*model.UserResponse, error) {
 	issuer, err := utils.GetIssuerFromJwt(jwt, constants.PASSWORD_SECRET_HASHING_KEY)
 	if err != nil {
 		logger.Errorf("Cant get issuer from jwt '%s'", issuer)
@@ -170,10 +185,74 @@ func (auth *PublicUserServiceImpl) User(jwt string) (*model.UserResponse, error)
 		logger.Errorf("Cant parse as Uint: '%s'", issuer)
 		return nil, types.NewInternalServerError()
 	}
-	user, err := auth.userRepo.GetByID(userId)
+	user, err := service.userRepo.GetByID(userId)
 	if err != nil {
 		logger.Errorf("No user from token: '%s'", jwt)
 		return nil, types.NewInternalServerError()
 	}
 	return user, nil
+}
+
+func (service *UserServiceImpl) UpdateUserInfo(userId uint64, body string, updatingUserId uint64) (*model.UserResponse, error) {
+	var updateUserRequest model.UserUpdateRequest
+	err := service.validator.MarshalAndValidateREQ(body, &updateUserRequest)
+	if err != nil {
+		return nil, err
+	}
+
+	user, err := service.userRepo.GetByID(userId)
+	if err != nil {
+		return nil, err
+	}
+
+	user.FirstName = updateUserRequest.FirstName
+	user.LastName = updateUserRequest.LastName
+	user.UpdatedUser = &updatingUserId
+	if err := service.userRepo.Update(*user); err != nil {
+		return nil, err
+	}
+
+	return user, nil
+}
+
+func (service *UserServiceImpl) UpdateUserPassword(userId uint64, body string, updatingUserId uint64) (*model.UserResponse, error) {
+	var updateUserRequest model.ChangePasswordRequest
+	err := service.validator.MarshalAndValidateREQ(body, &updateUserRequest)
+	if err != nil {
+		return nil, err
+	}
+
+	if updateUserRequest.ConfirmPassowrd != updateUserRequest.Password {
+		return nil, types.NewInvalidInputError()
+	}
+
+	hashedPassword, err := hashPassword(updateUserRequest.Password)
+	if err != nil {
+		return nil, err
+	}
+
+	user, err := service.userRepo.GetByID(userId)
+	if err != nil {
+		return nil, err
+	}
+
+	user.HashedPassword = hashedPassword
+	user.UpdatedUser = &updatingUserId
+	if err := service.userRepo.ResetPassword(*user); err != nil {
+		return nil, err
+	}
+
+	return user, nil
+}
+
+const MySystemAutoID = 1
+
+func hashPassword(password string) ([]byte, error) {
+	hashedPassword, err := utils.HashPassword(password)
+	if err != nil {
+		logger.Errorf("Error hashing password: %s", err.Error())
+		return nil, types.NewInternalServerError()
+	}
+
+	return hashedPassword, nil
 }

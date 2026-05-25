@@ -3,6 +3,7 @@ import {
   CreateProductRequest,
   Discount,
   ProductDetails,
+  PromotionSettings,
   ProductSummary,
   UpdateDiscountRequest,
   UpdateProductRequest,
@@ -18,6 +19,8 @@ export const MOCK_DISCOUNTS: Discount[] = [
     percentage_basis_points: 1000,
     amount_cents: null,
     currency: '',
+    buy_quantity: 0,
+    free_quantity: 0,
     min_product_count: 1,
     starts_at: '',
     ends_at: '',
@@ -33,13 +36,38 @@ export const MOCK_DISCOUNTS: Discount[] = [
     percentage_basis_points: null,
     amount_cents: 500,
     currency: 'USD',
+    buy_quantity: 0,
+    free_quantity: 0,
     min_product_count: 2,
     starts_at: '',
     ends_at: '',
     status: 'Draft',
     product_ids: ['1', '4'],
   },
+  {
+    id: '3',
+    name: 'Buy three get one',
+    description: 'Quantity bonus for bundle-friendly products.',
+    discount_type: 'QuantityBonus',
+    scope: 'ProductSet',
+    percentage_basis_points: null,
+    amount_cents: null,
+    currency: '',
+    buy_quantity: 3,
+    free_quantity: 1,
+    min_product_count: 4,
+    starts_at: '',
+    ends_at: '',
+    status: 'Active',
+    product_ids: ['1', '2', '4'],
+  },
 ];
+
+export const MOCK_PROMOTION_SETTINGS: PromotionSettings = {
+  promotions_enabled: true,
+  updated_user: '1',
+  updated_at: new Date().toISOString(),
+};
 
 export const MOCK_PRODUCTS: ProductSummary[] = [
   {
@@ -53,7 +81,6 @@ export const MOCK_PRODUCTS: ProductSummary[] = [
     currency: 'USD',
     inventory_count: 48,
     status: 'Active',
-    discounts: [],
     labels: ['coffee', 'home', 'giftable'],
     photos: [
       {
@@ -76,7 +103,6 @@ export const MOCK_PRODUCTS: ProductSummary[] = [
     currency: 'USD',
     inventory_count: 82,
     status: 'Active',
-    discounts: [],
     labels: ['apparel', 'organic'],
     photos: [
       {
@@ -99,7 +125,6 @@ export const MOCK_PRODUCTS: ProductSummary[] = [
     currency: 'USD',
     inventory_count: 999,
     status: 'Draft',
-    discounts: [],
     labels: ['digital', 'guide'],
     photos: [],
   },
@@ -114,7 +139,6 @@ export const MOCK_PRODUCTS: ProductSummary[] = [
     currency: 'USD',
     inventory_count: 16,
     status: 'Archived',
-    discounts: [],
     labels: ['bundle', 'giftable'],
     photos: [
       {
@@ -130,15 +154,16 @@ export const MOCK_PRODUCTS: ProductSummary[] = [
 
 let mockProducts = [...MOCK_PRODUCTS];
 let mockDiscounts = [...MOCK_DISCOUNTS];
+let mockPromotionSettings = { ...MOCK_PROMOTION_SETTINGS };
 
 export function getMockProducts(): ProductSummary[] {
-  return mockProducts.map(withApplicableDiscounts);
+  return [...mockProducts];
 }
 
 export function getMockProductById(id: string): ProductDetails | undefined {
   const product = mockProducts.find((product) => product.id === id);
 
-  return product ? withApplicableDiscounts(product) : undefined;
+  return product ? { ...product } : undefined;
 }
 
 export function createMockProduct(request: CreateProductRequest): ProductDetails {
@@ -146,7 +171,6 @@ export function createMockProduct(request: CreateProductRequest): ProductDetails
     id: createMockProductId(),
     ...request,
     labels: request.labels ?? [],
-    discounts: [],
   };
 
   mockProducts = [product, ...mockProducts];
@@ -162,7 +186,6 @@ export function updateMockProduct(
     id,
     ...request,
     labels: request.labels ?? [],
-    discounts: [],
   };
 
   mockProducts = mockProducts.map((product) =>
@@ -241,25 +264,26 @@ export function deleteMockDiscount(id: string): void {
   mockDiscounts = mockDiscounts.filter((discount) => discount.id !== id);
 }
 
+export function getMockPromotionSettings(): PromotionSettings {
+  return { ...mockPromotionSettings };
+}
+
+export function updateMockPromotionSettings(
+  promotionsEnabled: boolean,
+): PromotionSettings {
+  mockPromotionSettings = {
+    promotions_enabled: promotionsEnabled,
+    updated_user: '1',
+    updated_at: new Date().toISOString(),
+  };
+
+  return getMockPromotionSettings();
+}
+
 export function createMockProductId(): string {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
     return crypto.randomUUID();
   }
 
   return String(Date.now());
-}
-
-function withApplicableDiscounts<Product extends ProductSummary>(
-  product: Product,
-): Product {
-  const discounts = mockDiscounts.filter(
-    (discount) =>
-      discount.scope === 'Global' ||
-      discount.product_ids.some((productID) => String(productID) === String(product.id)),
-  );
-
-  return {
-    ...product,
-    discounts,
-  };
 }

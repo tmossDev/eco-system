@@ -19,20 +19,20 @@ import (
 	"tmossDev.github.com/eco-system/user-management/backend/app/user-gateway/routes"
 )
 
-type fakePublicUserService struct {
+type fakeUserService struct {
 	loginResponse *model.LoginResponse
 	logoutToken   string
 }
 
-func (service *fakePublicUserService) IsAuthenticated(string) error {
+func (service *fakeUserService) IsAuthenticated(string) error {
 	return nil
 }
 
-func (service *fakePublicUserService) IsAuthorized(string, string) error {
+func (service *fakeUserService) IsAuthorized(string, string) error {
 	return nil
 }
 
-func (service *fakePublicUserService) User(string) (*model.UserResponse, error) {
+func (service *fakeUserService) User(string) (*model.UserResponse, error) {
 	return &model.UserResponse{
 		ID:        2,
 		FirstName: "Jane",
@@ -42,37 +42,33 @@ func (service *fakePublicUserService) User(string) (*model.UserResponse, error) 
 	}, nil
 }
 
-func (service *fakePublicUserService) Logout(jwt string) error {
+func (service *fakeUserService) Logout(jwt string) error {
 	service.logoutToken = jwt
 	return nil
 }
 
-func (service *fakePublicUserService) Register(string) (*model.LoginResponse, error) {
+func (service *fakeUserService) Register(string) (*model.LoginResponse, error) {
 	return service.loginResponse, nil
 }
 
-func (service *fakePublicUserService) Login(string, string) (*model.LoginResponse, error) {
+func (service *fakeUserService) Login(string, string) (*model.LoginResponse, error) {
 	return service.loginResponse, nil
 }
 
-func (service *fakePublicUserService) Shutdown() {}
-
-type fakePrivateUserService struct{}
-
-func (service *fakePrivateUserService) UpdateUserInfo(uint64, string, uint64) (*model.UserResponse, error) {
+func (service *fakeUserService) UpdateUserInfo(uint64, string, uint64) (*model.UserResponse, error) {
 	return nil, nil
 }
 
-func (service *fakePrivateUserService) UpdateUserPassword(uint64, string, uint64) (*model.UserResponse, error) {
+func (service *fakeUserService) UpdateUserPassword(uint64, string, uint64) (*model.UserResponse, error) {
 	return nil, nil
 }
 
-func (service *fakePrivateUserService) Shutdown() {}
+func (service *fakeUserService) Shutdown() {}
 
 type gatewayTestServer struct {
-	app           *iris.Application
-	publicService *fakePublicUserService
-	token         string
+	app         *iris.Application
+	userService *fakeUserService
+	token       string
 }
 
 func newGatewayTestServer(t *testing.T) *gatewayTestServer {
@@ -83,7 +79,7 @@ func newGatewayTestServer(t *testing.T) *gatewayTestServer {
 		t.Fatalf("generate test jwt: %v", err)
 	}
 
-	publicService := &fakePublicUserService{
+	userService := &fakeUserService{
 		loginResponse: &model.LoginResponse{
 			Jwt:         token,
 			AccessToken: token,
@@ -109,16 +105,16 @@ func newGatewayTestServer(t *testing.T) *gatewayTestServer {
 		middleware.RequestIDMiddleware,
 		jwtMiddleware([]string{"/auth/login", "/login", "/auth/logout", "/logout", "/refresh", "/health"}),
 	)
-	routes.Setup(app, publicService, &fakePrivateUserService{})
+	routes.Setup(app, userService)
 
 	if err := app.Build(); err != nil {
 		t.Fatalf("build iris app: %v", err)
 	}
 
 	return &gatewayTestServer{
-		app:           app,
-		publicService: publicService,
-		token:         token,
+		app:         app,
+		userService: userService,
+		token:       token,
 	}
 }
 
@@ -180,7 +176,7 @@ func TestGatewayFunctionalLogout(t *testing.T) {
 	if response.Code != http.StatusOK {
 		t.Fatalf("expected status %d, got %d: %s", http.StatusOK, response.Code, response.Body.String())
 	}
-	if server.publicService.logoutToken != server.token {
+	if server.userService.logoutToken != server.token {
 		t.Fatalf("expected logout token to be passed to service")
 	}
 }

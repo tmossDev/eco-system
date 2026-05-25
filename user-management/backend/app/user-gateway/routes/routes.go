@@ -6,9 +6,9 @@ import (
 	"tmossDev.github.com/eco-system/user-management/backend/domain/user/service"
 )
 
-func Setup(app *iris.Application, publicUserService service.PublicUserService, privateUserService service.PrivateUserService) {
+func Setup(app *iris.Application, userService service.UserService) {
 
-	gatewayController := controller.NewGatewayControllerImp(publicUserService, privateUserService)
+	gatewayController := controller.NewGatewayControllerImp(userService)
 	// auth routes
 	app.Post("/api/register", gatewayController.Register())
 	app.Post("/api/auth/login", gatewayController.Login())
@@ -27,7 +27,7 @@ func Setup(app *iris.Application, publicUserService service.PublicUserService, p
 	app.Put("/api/users/{id:uint64}", gatewayController.UpdateUser())
 	app.Delete("/api/users/{id:uint64}", gatewayController.DeleteUser())
 
-	// private routes
+	// user routes
 	app.Get("/api/users/me", gatewayController.User())
 	app.Put("/api/users/info", gatewayController.UpdateInfo())
 	app.Put("/api/users/password", gatewayController.UpdatePassword())

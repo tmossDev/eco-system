@@ -6,9 +6,9 @@ import (
 	"tmossDev.github.com/eco-system/user-management/backend/domain/user/service"
 )
 
-func Setup(app *iris.Application, publicUserService service.PublicUserService, privateUserService service.PrivateUserService) {
+func Setup(app *iris.Application, userService service.UserService) {
 
-	gatewayController := controller.NewServiceControllerImp(publicUserService, privateUserService)
+	gatewayController := controller.NewServiceControllerImp(userService)
 	// auth routes
 	app.Post("/api/auth/login", gatewayController.Login())
 	app.Post("/api/login", gatewayController.Login())

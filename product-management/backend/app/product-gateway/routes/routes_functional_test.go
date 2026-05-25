@@ -14,7 +14,8 @@ import (
 	"github.com/kataras/iris/v12"
 	"tmossDev.github.com/eco-system/product-management/backend/app/product-gateway/routes"
 	"tmossDev.github.com/eco-system/product-management/backend/domain/product/model"
-	productService "tmossDev.github.com/eco-system/product-management/backend/domain/product/service"
+	productRepository "tmossDev.github.com/eco-system/product-management/backend/domain/product/repository"
+	promotionModel "tmossDev.github.com/eco-system/product-management/backend/domain/promotion/model"
 	sharedConstants "tmossDev.github.com/eco-system/shared-components/backend/package/constants"
 	transportHTTP "tmossDev.github.com/eco-system/shared-components/backend/package/transport/http"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/transport/http/middleware"
@@ -25,25 +26,11 @@ import (
 )
 
 type fakeProductService struct {
-	products  []model.ProductResponse
-	discounts []model.Discount
+	products []model.ProductResponse
 }
 
 func newFakeProductService() *fakeProductService {
 	return &fakeProductService{
-		discounts: []model.Discount{
-			{
-				ID:                    1,
-				Name:                  "Store-wide launch offer",
-				DiscountType:          "Percentage",
-				Scope:                 "Global",
-				PercentageBasisPoints: int64Ptr(1000),
-				MinProductCount:       1,
-				Status:                "Active",
-				CreatedUser:           1,
-				CreatedAt:             time.Now().Format(time.RFC3339),
-			},
-		},
 		products: []model.ProductResponse{
 			{
 				ID:               1,
@@ -67,6 +54,34 @@ func newFakeProductService() *fakeProductService {
 				CreatedUser: 1,
 				CreatedAt:   time.Now().Format(time.RFC3339),
 			},
+		},
+	}
+}
+
+type fakePromotionService struct {
+	discounts []promotionModel.Discount
+	settings  promotionModel.PromotionSettings
+}
+
+func newFakePromotionService() *fakePromotionService {
+	return &fakePromotionService{
+		discounts: []promotionModel.Discount{
+			{
+				ID:                    1,
+				Name:                  "Store-wide launch offer",
+				DiscountType:          "Percentage",
+				Scope:                 "Global",
+				PercentageBasisPoints: int64Ptr(1000),
+				MinProductCount:       1,
+				Status:                "Active",
+				CreatedUser:           1,
+				CreatedAt:             time.Now().Format(time.RFC3339),
+			},
+		},
+		settings: promotionModel.PromotionSettings{
+			PromotionsEnabled: true,
+			UpdatedUser:       1,
+			UpdatedAt:         time.Now().Format(time.RFC3339),
 		},
 	}
 }
@@ -110,11 +125,11 @@ func (service *fakeProductService) DeleteProduct(uint64, uint64) error {
 	return nil
 }
 
-func (service *fakeProductService) ListDiscounts() ([]model.Discount, error) {
+func (service *fakePromotionService) ListDiscounts() ([]promotionModel.Discount, error) {
 	return service.discounts, nil
 }
 
-func (service *fakeProductService) GetDiscount(discountID uint64) (*model.Discount, error) {
+func (service *fakePromotionService) GetDiscount(discountID uint64) (*promotionModel.Discount, error) {
 	for _, discount := range service.discounts {
 		if discount.ID == discountID {
 			return &discount, nil
@@ -124,15 +139,29 @@ func (service *fakeProductService) GetDiscount(discountID uint64) (*model.Discou
 	return &service.discounts[0], nil
 }
 
-func (service *fakeProductService) CreateDiscount(string, uint64) (*model.Discount, error) {
+func (service *fakePromotionService) CreateDiscount(body string, _ uint64) (*promotionModel.Discount, error) {
+	var request promotionModel.DiscountRequest
+	_ = json.Unmarshal([]byte(body), &request)
+
 	discount := service.discounts[0]
 	discount.ID = 2
-	service.discounts = append([]model.Discount{discount}, service.discounts...)
+	discount.Name = request.Name
+	discount.Description = request.Description
+	discount.DiscountType = request.DiscountType
+	discount.Scope = request.Scope
+	discount.PercentageBasisPoints = request.PercentageBasisPoints
+	discount.AmountCents = request.AmountCents
+	discount.Currency = request.Currency
+	discount.BuyQuantity = request.BuyQuantity
+	discount.FreeQuantity = request.FreeQuantity
+	discount.MinProductCount = request.MinProductCount
+	discount.Status = request.Status
+	service.discounts = append([]promotionModel.Discount{discount}, service.discounts...)
 
 	return &discount, nil
 }
 
-func (service *fakeProductService) UpdateDiscount(discountID uint64, _ string, _ uint64) (*model.Discount, error) {
+func (service *fakePromotionService) UpdateDiscount(discountID uint64, _ string, _ uint64) (*promotionModel.Discount, error) {
 	discount := service.discounts[0]
 	discount.ID = discountID
 	discount.Name = "Updated Discount"
@@ -140,9 +169,23 @@ func (service *fakeProductService) UpdateDiscount(discountID uint64, _ string, _
 	return &discount, nil
 }
 
-func (service *fakeProductService) DeleteDiscount(uint64, uint64) error {
+func (service *fakePromotionService) DeleteDiscount(uint64, uint64) error {
 	return nil
 }
+
+func (service *fakePromotionService) GetPromotionSettings() (*promotionModel.PromotionSettings, error) {
+	return &service.settings, nil
+}
+
+func (service *fakePromotionService) UpdatePromotionSettings(body string, _ uint64) (*promotionModel.PromotionSettings, error) {
+	var request promotionModel.PromotionSettingsRequest
+	_ = json.Unmarshal([]byte(body), &request)
+	service.settings.PromotionsEnabled = request.PromotionsEnabled
+
+	return &service.settings, nil
+}
+
+func (service *fakePromotionService) Shutdown() {}
 
 func (service *fakeProductService) UploadProductPhoto(uint64, string, io.Reader, uint64) (*model.ProductResponse, error) {
 	product := service.products[0]
@@ -156,7 +199,7 @@ func (service *fakeProductService) UploadProductPhoto(uint64, string, io.Reader,
 	return &product, nil
 }
 
-func (service *fakeProductService) GetProductMedia(string) (*productService.ProductMediaObject, error) {
+func (service *fakeProductService) GetProductMedia(string) (*productRepository.ProductMediaObject, error) {
 	return nil, nil
 }
 
@@ -221,7 +264,7 @@ func newProductGatewayTestServer(t *testing.T) *productGatewayTestServer {
 			},
 		},
 	}
-	routes.Setup(app, newFakeProductService(), authClient)
+	routes.Setup(app, newFakeProductService(), newFakePromotionService(), authClient)
 
 	if err := app.Build(); err != nil {
 		t.Fatalf("build iris app: %v", err)
@@ -407,6 +450,129 @@ func TestProductGatewayFunctionalDeleteProduct(t *testing.T) {
 	}
 }
 
+func TestProductGatewayFunctionalListDiscounts(t *testing.T) {
+	server := newProductGatewayTestServer(t)
+
+	response := server.doJSON(http.MethodGet, "/api/discounts", server.token, nil)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d: %s", http.StatusOK, response.Code, response.Body.String())
+	}
+
+	var discounts []map[string]any
+	if err := json.Unmarshal(response.Body.Bytes(), &discounts); err != nil {
+		t.Fatalf("decode discounts response: %v", err)
+	}
+	if len(discounts) == 0 {
+		t.Fatal("expected seeded discounts")
+	}
+	if discounts[0]["name"] != "Store-wide launch offer" {
+		t.Fatalf("expected seeded discount response, got %#v", discounts[0])
+	}
+}
+
+func TestProductGatewayFunctionalGetDiscount(t *testing.T) {
+	server := newProductGatewayTestServer(t)
+
+	response := server.doJSON(http.MethodGet, "/api/discounts/1", server.token, nil)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d: %s", http.StatusOK, response.Code, response.Body.String())
+	}
+
+	payload := decodeJSONResponse(t, response)
+	if payload["discount_type"] != "Percentage" {
+		t.Fatalf("expected discount response, got %#v", payload)
+	}
+}
+
+func TestProductGatewayFunctionalCreateDiscount(t *testing.T) {
+	server := newProductGatewayTestServer(t)
+
+	response := server.doJSON(http.MethodPost, "/api/discounts", server.token, discountPayload("Functional Discount"))
+
+	if response.Code != http.StatusCreated {
+		t.Fatalf("expected status %d, got %d: %s", http.StatusCreated, response.Code, response.Body.String())
+	}
+
+	payload := decodeJSONResponse(t, response)
+	if payload["id"] != float64(2) {
+		t.Fatalf("expected created discount id, got %#v", payload)
+	}
+}
+
+func TestProductGatewayFunctionalEditDiscount(t *testing.T) {
+	server := newProductGatewayTestServer(t)
+
+	response := server.doJSON(http.MethodPut, "/api/discounts/1", server.token, discountPayload("Updated Discount"))
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d: %s", http.StatusOK, response.Code, response.Body.String())
+	}
+
+	payload := decodeJSONResponse(t, response)
+	if payload["name"] != "Updated Discount" {
+		t.Fatalf("expected updated discount response, got %#v", payload)
+	}
+}
+
+func TestProductGatewayFunctionalDeleteDiscount(t *testing.T) {
+	server := newProductGatewayTestServer(t)
+
+	response := server.doJSON(http.MethodDelete, "/api/discounts/1", server.token, nil)
+
+	if response.Code != http.StatusNoContent {
+		t.Fatalf("expected status %d, got %d: %s", http.StatusNoContent, response.Code, response.Body.String())
+	}
+}
+
+func TestProductGatewayFunctionalCreateQuantityBonusDiscount(t *testing.T) {
+	server := newProductGatewayTestServer(t)
+
+	response := server.doJSON(http.MethodPost, "/api/discounts", server.token, quantityBonusPayload())
+
+	if response.Code != http.StatusCreated {
+		t.Fatalf("expected status %d, got %d: %s", http.StatusCreated, response.Code, response.Body.String())
+	}
+
+	payload := decodeJSONResponse(t, response)
+	if payload["discount_type"] != "QuantityBonus" || payload["buy_quantity"] != float64(3) || payload["free_quantity"] != float64(1) {
+		t.Fatalf("expected quantity bonus discount response, got %#v", payload)
+	}
+}
+
+func TestProductGatewayFunctionalGetPromotionSettings(t *testing.T) {
+	server := newProductGatewayTestServer(t)
+
+	response := server.doJSON(http.MethodGet, "/api/promotions/settings", server.token, nil)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d: %s", http.StatusOK, response.Code, response.Body.String())
+	}
+
+	payload := decodeJSONResponse(t, response)
+	if payload["promotions_enabled"] != true {
+		t.Fatalf("expected promotions to be enabled, got %#v", payload)
+	}
+}
+
+func TestProductGatewayFunctionalUpdatePromotionSettings(t *testing.T) {
+	server := newProductGatewayTestServer(t)
+
+	response := server.doJSON(http.MethodPut, "/api/promotions/settings", server.token, map[string]any{
+		"promotions_enabled": false,
+	})
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d: %s", http.StatusOK, response.Code, response.Body.String())
+	}
+
+	payload := decodeJSONResponse(t, response)
+	if payload["promotions_enabled"] != false {
+		t.Fatalf("expected promotions to be disabled, got %#v", payload)
+	}
+}
+
 func productPayload(sku string) map[string]any {
 	return map[string]any{
 		"sku":               sku,
@@ -426,5 +592,30 @@ func productPayload(sku string) map[string]any {
 				"is_primary":    true,
 			},
 		},
+	}
+}
+
+func discountPayload(name string) map[string]any {
+	return map[string]any{
+		"name":                    name,
+		"description":             "Created by a functional test.",
+		"discount_type":           "Percentage",
+		"scope":                   "Global",
+		"percentage_basis_points": 1000,
+		"min_product_count":       1,
+		"status":                  "Active",
+	}
+}
+
+func quantityBonusPayload() map[string]any {
+	return map[string]any{
+		"name":              "Buy three get one",
+		"description":       "Created by a functional test.",
+		"discount_type":     "QuantityBonus",
+		"scope":             "Global",
+		"buy_quantity":      3,
+		"free_quantity":     1,
+		"min_product_count": 4,
+		"status":            "Active",
 	}
 }

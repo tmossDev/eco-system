@@ -5,6 +5,8 @@ import { finalize, forkJoin } from 'rxjs';
 import {
   CreateDiscountRequest,
   Discount,
+  DiscountType,
+  PromotionSettings,
   ProductSummary,
 } from '../../../core/services/product/product.model';
 import { formatDiscountValue } from '../../../core/services/product/product-pricing';
@@ -54,6 +56,22 @@ type PromotionTarget = 'all' | 'category' | 'label' | 'selected';
           >
             {{ isSaving() ? 'Saving...' : 'Create promotion' }}
           </button>
+        </div>
+
+        <div class="global-toggle">
+          <div>
+            <strong>Global promotions</strong>
+            <span>{{ promotionSettings().promotions_enabled ? 'Promotions are applied' : 'All promotions are paused' }}</span>
+          </div>
+          <label>
+            <input
+              type="checkbox"
+              [checked]="promotionSettings().promotions_enabled"
+              [disabled]="isSaving()"
+              (change)="toggleGlobalPromotions($event)"
+            />
+            <span>Enabled</span>
+          </label>
         </div>
 
         <div class="form-grid">
@@ -130,19 +148,44 @@ type PromotionTarget = 'all' | 'category' | 'label' | 'selected';
             >
               <option>Percentage</option>
               <option>Amount</option>
+              <option>QuantityBonus</option>
             </select>
           </label>
 
-          <label>
-            <span>{{ form().discount_type === 'Percentage' ? 'Percent' : 'Amount cents' }}</span>
-            <input
-              type="number"
-              min="1"
-              name="discount_value"
-              [ngModel]="discountValue()"
-              (ngModelChange)="updateDiscountValue($event)"
-            />
-          </label>
+          @if (form().discount_type === 'QuantityBonus') {
+            <label>
+              <span>Buy quantity</span>
+              <input
+                type="number"
+                min="1"
+                name="buy_quantity"
+                [ngModel]="form().buy_quantity"
+                (ngModelChange)="updateForm('buy_quantity', $event)"
+              />
+            </label>
+
+            <label>
+              <span>Free quantity</span>
+              <input
+                type="number"
+                min="1"
+                name="free_quantity"
+                [ngModel]="form().free_quantity"
+                (ngModelChange)="updateForm('free_quantity', $event)"
+              />
+            </label>
+          } @else {
+            <label>
+              <span>{{ form().discount_type === 'Percentage' ? 'Percent' : 'Amount cents' }}</span>
+              <input
+                type="number"
+                min="1"
+                name="discount_value"
+                [ngModel]="discountValue()"
+                (ngModelChange)="updateDiscountValue($event)"
+              />
+            </label>
+          }
 
           <label>
             <span>Status</span>
@@ -198,7 +241,7 @@ type PromotionTarget = 'all' | 'category' | 'label' | 'selected';
         <div class="section-header">
           <div>
             <h2>Existing promotions</h2>
-            <p>{{ discounts().length }} configured</p>
+            <p>{{ promotionSummary() }}</p>
           </div>
         </div>
 
@@ -218,6 +261,10 @@ type PromotionTarget = 'all' | 'category' | 'label' | 'selected';
                 <div>
                   <dt>Status</dt>
                   <dd>{{ discount.status }}</dd>
+                </div>
+                <div>
+                  <dt>Type</dt>
+                  <dd>{{ promotionTypeLabel(discount) }}</dd>
                 </div>
                 <div>
                   <dt>Products</dt>
@@ -359,6 +406,31 @@ type PromotionTarget = 'all' | 'category' | 'label' | 'selected';
       gap: 0.65rem;
     }
 
+    .global-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      border: 1px solid #dbe3ef;
+      border-radius: 0.75rem;
+      padding: 0.9rem;
+    }
+
+    .global-toggle div,
+    .global-toggle label {
+      display: grid;
+      gap: 0.25rem;
+    }
+
+    .global-toggle label {
+      grid-auto-flow: column;
+      align-items: center;
+    }
+
+    .global-toggle input {
+      width: auto;
+    }
+
     .selection-list label {
       display: flex;
       align-items: center;
@@ -389,7 +461,7 @@ type PromotionTarget = 'all' | 'category' | 'label' | 'selected';
 
     dl {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(4, 1fr);
       gap: 0.65rem;
       margin: 0;
     }
@@ -460,6 +532,11 @@ export class PromotionsPage implements OnInit {
   protected readonly errorMessage = signal('');
   protected readonly products = signal<ProductSummary[]>([]);
   protected readonly discounts = signal<Discount[]>([]);
+  protected readonly promotionSettings = signal<PromotionSettings>({
+    promotions_enabled: true,
+    updated_user: '',
+    updated_at: '',
+  });
   protected readonly target = signal<PromotionTarget>('label');
   protected readonly targetCategory = signal('');
   protected readonly targetLabel = signal('');
@@ -472,6 +549,8 @@ export class PromotionsPage implements OnInit {
     percentage_basis_points: 1000,
     amount_cents: null,
     currency: '',
+    buy_quantity: 0,
+    free_quantity: 0,
     min_product_count: 1,
     starts_at: '',
     ends_at: '',
@@ -518,7 +597,10 @@ export class PromotionsPage implements OnInit {
   ): void {
     this.form.update((form) => ({
       ...form,
-      [key]: value,
+      [key]:
+        key === 'buy_quantity' || key === 'free_quantity' || key === 'min_product_count'
+          ? Number(value) || 0
+          : value,
     }));
   }
 
@@ -548,7 +630,7 @@ export class PromotionsPage implements OnInit {
     }));
   }
 
-  protected setDiscountType(discountType: CreateDiscountRequest['discount_type']): void {
+  protected setDiscountType(discountType: DiscountType): void {
     this.form.update((form) => ({
       ...form,
       discount_type: discountType,
@@ -556,6 +638,12 @@ export class PromotionsPage implements OnInit {
         discountType === 'Percentage' ? form.percentage_basis_points ?? 1000 : null,
       amount_cents: discountType === 'Amount' ? form.amount_cents ?? 500 : null,
       currency: discountType === 'Amount' ? this.defaultCurrency() : '',
+      buy_quantity: discountType === 'QuantityBonus' ? form.buy_quantity || 1 : 0,
+      free_quantity: discountType === 'QuantityBonus' ? form.free_quantity || 1 : 0,
+      min_product_count:
+        discountType === 'QuantityBonus'
+          ? Math.max(1, (form.buy_quantity || 1) + (form.free_quantity || 1))
+          : form.min_product_count,
     }));
   }
 
@@ -577,10 +665,18 @@ export class PromotionsPage implements OnInit {
     this.errorMessage.set('');
 
     const targetScope = this.targetScopeLabel();
+    const buyQuantity = Number(this.form().buy_quantity) || 0;
+    const freeQuantity = Number(this.form().free_quantity) || 0;
     const request: CreateDiscountRequest = {
       ...this.form(),
       scope: this.target() === 'all' ? 'Global' : 'ProductSet',
       currency: this.form().discount_type === 'Amount' ? this.defaultCurrency() : '',
+      buy_quantity: this.form().discount_type === 'QuantityBonus' ? buyQuantity : 0,
+      free_quantity: this.form().discount_type === 'QuantityBonus' ? freeQuantity : 0,
+      min_product_count:
+        this.form().discount_type === 'QuantityBonus'
+          ? Math.max(1, buyQuantity + freeQuantity)
+          : this.form().min_product_count,
       product_ids:
         this.target() === 'all'
           ? []
@@ -618,6 +714,30 @@ export class PromotionsPage implements OnInit {
       });
   }
 
+  protected toggleGlobalPromotions(event: Event): void {
+    const promotionsEnabled = (event.target as HTMLInputElement).checked;
+    this.isSaving.set(true);
+    this.message.set('');
+    this.errorMessage.set('');
+
+    this.productService
+      .updatePromotionSettings({ promotions_enabled: promotionsEnabled })
+      .pipe(finalize(() => this.isSaving.set(false)))
+      .subscribe({
+        next: (settings) => {
+          this.promotionSettings.set(settings);
+          this.message.set(
+            settings.promotions_enabled
+              ? 'Promotions enabled.'
+              : 'Promotions paused globally.',
+          );
+        },
+        error: () => {
+          this.errorMessage.set('Unable to update promotion settings.');
+        },
+      });
+  }
+
   protected formatDiscount(discount: Discount): string {
     return formatDiscountValue(discount, this.formatMoney.bind(this));
   }
@@ -630,6 +750,32 @@ export class PromotionsPage implements OnInit {
     return `${discount.starts_at || 'Any time'} to ${discount.ends_at || 'No end'}`;
   }
 
+  protected promotionTypeLabel(discount: Discount): string {
+    const labels: Record<DiscountType, string> = {
+      Percentage: 'Percentage',
+      Amount: 'Amount off',
+      QuantityBonus: 'Quantity bonus',
+    };
+
+    return labels[discount.discount_type];
+  }
+
+  protected promotionSummary(): string {
+    const typeCounts = this.discounts().reduce<Record<DiscountType, number>>(
+      (counts, discount) => ({
+        ...counts,
+        [discount.discount_type]: counts[discount.discount_type] + 1,
+      }),
+      {
+        Percentage: 0,
+        Amount: 0,
+        QuantityBonus: 0,
+      },
+    );
+
+    return `${this.discounts().length} configured: ${typeCounts.Percentage} percentage, ${typeCounts.Amount} amount, ${typeCounts.QuantityBonus} quantity bonus`;
+  }
+
   private load(showLoading = true): void {
     if (showLoading) {
       this.isLoading.set(true);
@@ -638,12 +784,14 @@ export class PromotionsPage implements OnInit {
     forkJoin({
       products: this.productService.getProducts(),
       discounts: this.productService.getDiscounts(),
+      settings: this.productService.getPromotionSettings(),
     })
       .pipe(finalize(() => this.isLoading.set(false)))
       .subscribe({
-        next: ({ products, discounts }) => {
+        next: ({ products, discounts, settings }) => {
           this.products.set(products);
           this.discounts.set(discounts);
+          this.promotionSettings.set(settings);
           this.targetCategory.set(this.targetCategory() || this.categories()[0] || '');
           this.targetLabel.set(this.targetLabel() || this.labels()[0] || '');
         },

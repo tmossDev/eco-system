@@ -13,7 +13,6 @@ type ProductResponse struct {
 	Status           string         `json:"status"`
 	Photos           []ProductPhoto `json:"photos"`
 	Labels           []string       `json:"labels"`
-	Discounts        []Discount     `json:"discounts"`
 	CreatedUser      uint64         `json:"created_user"`
 	CreatedAt        string         `json:"created_at"`
 	UpdatedUser      uint64         `json:"updated_user"`
@@ -25,24 +24,4 @@ type ProductPhoto struct {
 	ThumbnailURL string `json:"thumbnail_url"`
 	AltText      string `json:"alt_text"`
 	IsPrimary    bool   `json:"is_primary"`
-}
-
-type Discount struct {
-	ID                    uint64   `json:"id"`
-	Name                  string   `json:"name"`
-	Description           string   `json:"description"`
-	DiscountType          string   `json:"discount_type"`
-	Scope                 string   `json:"scope"`
-	PercentageBasisPoints *int64   `json:"percentage_basis_points"`
-	AmountCents           *int64   `json:"amount_cents"`
-	Currency              string   `json:"currency"`
-	MinProductCount       int64    `json:"min_product_count"`
-	StartsAt              string   `json:"starts_at"`
-	EndsAt                string   `json:"ends_at"`
-	Status                string   `json:"status"`
-	ProductIDs            []uint64 `json:"product_ids"`
-	CreatedUser           uint64   `json:"created_user"`
-	CreatedAt             string   `json:"created_at"`
-	UpdatedUser           uint64   `json:"updated_user"`
-	UpdatedAt             string   `json:"updated_at"`
 }

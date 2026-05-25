@@ -42,11 +42,23 @@ export function calculateDiscountedPrice(
 }
 
 export function formatDiscountValue(
-  discount: Pick<Discount, 'discount_type' | 'percentage_basis_points' | 'amount_cents' | 'currency'>,
+  discount: Pick<
+    Discount,
+    | 'discount_type'
+    | 'percentage_basis_points'
+    | 'amount_cents'
+    | 'currency'
+    | 'buy_quantity'
+    | 'free_quantity'
+  >,
   formatMoney: (priceCents: number, currency: string) => string,
 ): string {
   if (discount.discount_type === 'Percentage') {
     return `${(discount.percentage_basis_points ?? 0) / 100}%`;
+  }
+
+  if (discount.discount_type === 'QuantityBonus') {
+    return `Buy ${discount.buy_quantity}, get ${discount.free_quantity}`;
   }
 
   return formatMoney(discount.amount_cents ?? 0, discount.currency || 'USD');
@@ -55,6 +67,10 @@ export function formatDiscountValue(
 function calculateDiscountCents(priceCents: number, discount: Discount): number {
   if (discount.discount_type === 'Percentage') {
     return Math.round((priceCents * (discount.percentage_basis_points ?? 0)) / 10000);
+  }
+
+  if (discount.discount_type === 'QuantityBonus') {
+    return 0;
   }
 
   return discount.amount_cents ?? 0;

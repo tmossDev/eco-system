@@ -33,8 +33,7 @@ type GatewayController interface {
 }
 
 type GatewayControllerImp struct {
-	publicService  service.PublicUserService
-	privateService service.PrivateUserService
+	userService service.UserService
 }
 
 type dashboardStatResponse struct {
@@ -63,10 +62,9 @@ type adminUserResponse struct {
 	Status string `json:"status"`
 }
 
-func NewGatewayControllerImp(publicService service.PublicUserService, privateService service.PrivateUserService) *GatewayControllerImp {
+func NewGatewayControllerImp(userService service.UserService) *GatewayControllerImp {
 	return &GatewayControllerImp{
-		publicService:  publicService,
-		privateService: privateService,
+		userService: userService,
 	}
 }
 
@@ -137,7 +135,7 @@ func (controller *GatewayControllerImp) Login() iris.Handler {
 		}
 
 		requestId := ctx.Values().GetString(sharedConstants.CTXRequestIdKey)
-		loginResponse, err := controller.publicService.Login(requestId, string(body))
+		loginResponse, err := controller.userService.Login(requestId, string(body))
 		if err != nil {
 			controller.marshalErrorResponse(ctx, err)
 			return
@@ -162,7 +160,7 @@ func (controller *GatewayControllerImp) Register() iris.Handler {
 			return
 		}
 
-		loginResponse, err := controller.publicService.Register(string(body))
+		loginResponse, err := controller.userService.Register(string(body))
 		if err != nil {
 			controller.marshalErrorResponse(ctx, err)
 			return
@@ -187,7 +185,7 @@ func (controller *GatewayControllerImp) User() iris.Handler {
 			return
 		}
 
-		userResponse, err := controller.publicService.User(jwt)
+		userResponse, err := controller.userService.User(jwt)
 		if err != nil {
 			controller.marshalErrorResponse(ctx, err)
 			return
@@ -310,7 +308,7 @@ func (controller *GatewayControllerImp) Logout() iris.Handler {
 			return
 		}
 
-		err = controller.publicService.Logout(jwt)
+		err = controller.userService.Logout(jwt)
 		if err != nil {
 			controller.marshalErrorResponse(ctx, err)
 			return
@@ -338,7 +336,7 @@ func (controller *GatewayControllerImp) UpdateInfo() iris.Handler {
 			return
 		}
 
-		userResponse, err := controller.privateService.UpdateUserInfo(userId, string(body), userId)
+		userResponse, err := controller.userService.UpdateUserInfo(userId, string(body), userId)
 		if err != nil {
 			controller.marshalErrorResponse(ctx, err)
 			return
@@ -362,7 +360,7 @@ func (controller *GatewayControllerImp) UpdatePassword() iris.Handler {
 			return
 		}
 
-		updatedResponse, err := controller.privateService.UpdateUserPassword(userId, string(body), userId)
+		updatedResponse, err := controller.userService.UpdateUserPassword(userId, string(body), userId)
 		if err != nil {
 			controller.marshalErrorResponse(ctx, err)
 			return

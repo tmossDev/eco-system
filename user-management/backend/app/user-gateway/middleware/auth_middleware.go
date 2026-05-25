@@ -28,7 +28,7 @@ func getJwtTokenFromSession(context *fiber.Ctx) (string, error) {
 	return "", errors.New("jwt token not found in headers or cookies")
 }
 
-func IsAuthenticated(c *fiber.Ctx, service service.PublicUserService) error {
+func IsAuthenticated(c *fiber.Ctx, service service.UserService) error {
 	jwt := c.Cookies("jwt")
 
 	err := service.IsAuthenticated(jwt)

@@ -5,6 +5,7 @@ import (
 
 	"github.com/kataras/iris/v12"
 	"tmossDev.github.com/eco-system/product-management/backend/domain/product/service"
+	promotionService "tmossDev.github.com/eco-system/product-management/backend/domain/promotion/service"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/types"
 )
 
@@ -21,15 +22,19 @@ type ServiceController interface {
 	CreateDiscount() iris.Handler
 	UpdateDiscount() iris.Handler
 	DeleteDiscount() iris.Handler
+	GetPromotionSettings() iris.Handler
+	UpdatePromotionSettings() iris.Handler
 }
 
 type ServiceControllerImp struct {
-	productService service.ProductService
+	productService   service.ProductService
+	promotionService promotionService.PromotionService
 }
 
-func NewServiceControllerImp(productService service.ProductService) *ServiceControllerImp {
+func NewServiceControllerImp(productService service.ProductService, promotionService promotionService.PromotionService) *ServiceControllerImp {
 	return &ServiceControllerImp{
-		productService: productService,
+		productService:   productService,
+		promotionService: promotionService,
 	}
 }
 
@@ -143,7 +148,7 @@ func (controller *ServiceControllerImp) DeleteProduct() iris.Handler {
 
 func (controller *ServiceControllerImp) ListDiscounts() iris.Handler {
 	return func(ctx iris.Context) {
-		discounts, err := controller.productService.ListDiscounts()
+		discounts, err := controller.promotionService.ListDiscounts()
 		if err != nil {
 			controller.marshalErrorResponse(ctx, err)
 			return
@@ -161,7 +166,7 @@ func (controller *ServiceControllerImp) DiscountDetails() iris.Handler {
 			return
 		}
 
-		discount, err := controller.productService.GetDiscount(discountID)
+		discount, err := controller.promotionService.GetDiscount(discountID)
 		if err != nil {
 			controller.marshalErrorResponse(ctx, err)
 			return
@@ -179,7 +184,7 @@ func (controller *ServiceControllerImp) CreateDiscount() iris.Handler {
 			return
 		}
 
-		discount, err := controller.productService.CreateDiscount(string(body), systemUserID)
+		discount, err := controller.promotionService.CreateDiscount(string(body), systemUserID)
 		if err != nil {
 			controller.marshalErrorResponse(ctx, err)
 			return
@@ -204,7 +209,7 @@ func (controller *ServiceControllerImp) UpdateDiscount() iris.Handler {
 			return
 		}
 
-		discount, err := controller.productService.UpdateDiscount(discountID, string(body), systemUserID)
+		discount, err := controller.promotionService.UpdateDiscount(discountID, string(body), systemUserID)
 		if err != nil {
 			controller.marshalErrorResponse(ctx, err)
 			return
@@ -222,11 +227,41 @@ func (controller *ServiceControllerImp) DeleteDiscount() iris.Handler {
 			return
 		}
 
-		if err := controller.productService.DeleteDiscount(discountID, systemUserID); err != nil {
+		if err := controller.promotionService.DeleteDiscount(discountID, systemUserID); err != nil {
 			controller.marshalErrorResponse(ctx, err)
 			return
 		}
 
 		ctx.StatusCode(iris.StatusNoContent)
+	}
+}
+
+func (controller *ServiceControllerImp) GetPromotionSettings() iris.Handler {
+	return func(ctx iris.Context) {
+		settings, err := controller.promotionService.GetPromotionSettings()
+		if err != nil {
+			controller.marshalErrorResponse(ctx, err)
+			return
+		}
+
+		_ = ctx.JSON(settings)
+	}
+}
+
+func (controller *ServiceControllerImp) UpdatePromotionSettings() iris.Handler {
+	return func(ctx iris.Context) {
+		body, err := ctx.GetBody()
+		if err != nil {
+			controller.marshalErrorResponse(ctx, types.NewInternalServerError())
+			return
+		}
+
+		settings, err := controller.promotionService.UpdatePromotionSettings(string(body), systemUserID)
+		if err != nil {
+			controller.marshalErrorResponse(ctx, err)
+			return
+		}
+
+		_ = ctx.JSON(settings)
 	}
 }

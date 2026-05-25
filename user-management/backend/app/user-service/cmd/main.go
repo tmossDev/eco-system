@@ -106,11 +106,10 @@ func setup() error {
 	userRepo := postgres.NewPostgresUserRepository(sqlStore)
 	logger.Info(constants.CTXRequestIdKey, "Set up repositories...")
 
-	publicUserService := service.NewPublicService(validater, userRepo)
-	privateUserService := service.NewPrivateService(validater, userRepo)
+	userService := service.NewUserService(validater, userRepo)
 	logger.Info(constants.CTXRequestIdKey, "Set up services...")
 
-	routes.Setup(irisApp, publicUserService, privateUserService)
+	routes.Setup(irisApp, userService)
 	logger.Info(constants.CTXRequestIdKey, "Set up routes...")
 
 	return nil

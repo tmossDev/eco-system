@@ -1,5 +1,15 @@
 # Project Change Log
 
+## v1.13.1 - (7 Changes)
+- Merge public and private service into single user service for user-management
+- Added promotion settings support for enabling and disabling promotions from the backend and product admin web app.
+- Added quantity bonus discount support with buy quantity, free quantity, and minimum product count fields.
+- Added product admin promotion management UI updates for discount creation, editing, activation, archiving, and settings.
+- Split promotion persistence into separate discount and promotion settings repositories.
+- Refactored product-management and user-management repository layers to use domain models instead of request DTOs for create and update writes.
+- Changed repository create and update methods to return only possible errors while services keep ownership of request-to-entity mapping.
+- Moved product media storage into the product repository layer so image persistence sits with the other storage adapters.
+
 ## v1.13.0 - (6 Changes)
 - Added product labels across the product API, Postgres persistence, Liquibase migration, mocks, and product admin UI.
 - Added a Promotions page for creating, scheduling, viewing, activating, and archiving product promotions.

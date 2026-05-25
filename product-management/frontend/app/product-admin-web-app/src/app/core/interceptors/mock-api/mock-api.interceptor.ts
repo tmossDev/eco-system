@@ -23,9 +23,11 @@ import {
   deleteMockProduct,
   getMockDiscountById,
   getMockDiscounts,
+  getMockPromotionSettings,
   getMockProductById,
   getMockProducts,
   updateMockDiscount,
+  updateMockPromotionSettings,
   updateMockProduct,
   uploadMockProductPhoto,
 } from '../../services/product/product.mocks';
@@ -33,6 +35,7 @@ import {
   CreateDiscountRequest,
   CreateProductRequest,
   UpdateDiscountRequest,
+  UpdatePromotionSettingsRequest,
   UpdateProductRequest,
 } from '../../services/product/product.model';
 
@@ -93,6 +96,16 @@ export const mockApiInterceptor: HttpInterceptorFn = (request, next) => {
       createMockDiscount(request.body as CreateDiscountRequest),
       201,
     );
+  }
+
+  if (method === 'GET' && url === '/api/promotions/settings') {
+    return mockResponse(getMockPromotionSettings());
+  }
+
+  if (method === 'PUT' && url === '/api/promotions/settings') {
+    const body = request.body as UpdatePromotionSettingsRequest;
+
+    return mockResponse(updateMockPromotionSettings(body.promotions_enabled));
   }
 
   const discountId = getDiscountIdFromUrl(url);

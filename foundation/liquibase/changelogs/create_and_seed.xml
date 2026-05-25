@@ -107,5 +107,13 @@
             relativeToChangelogFile="false"
             stripComments="true" />
     </changeSet>
+    <changeSet author="tannar.moss" id="add_promotion_settings_and_quantity_bonus">
+        <sqlFile dbms="postgresql"
+            encoding="UTF-8"
+            splitStatements="false"
+            path="v1.1.7_add_promotion_settings_and_quantity_bonus.sql"
+            relativeToChangelogFile="false"
+            stripComments="true" />
+    </changeSet>
 
 </databaseChangeLog>

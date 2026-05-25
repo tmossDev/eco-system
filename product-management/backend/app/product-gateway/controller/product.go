@@ -10,6 +10,7 @@ import (
 	"github.com/kataras/iris/v12"
 	userClient "tmossDev.github.com/eco-system/product-management/backend/app/product-gateway/client"
 	"tmossDev.github.com/eco-system/product-management/backend/domain/product/service"
+	promotionService "tmossDev.github.com/eco-system/product-management/backend/domain/promotion/service"
 	sharedConstants "tmossDev.github.com/eco-system/shared-components/backend/package/constants"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/types"
 )
@@ -30,6 +31,8 @@ type GatewayController interface {
 	CreateDiscount() iris.Handler
 	UpdateDiscount() iris.Handler
 	DeleteDiscount() iris.Handler
+	GetPromotionSettings() iris.Handler
+	UpdatePromotionSettings() iris.Handler
 	UploadProductPhoto() iris.Handler
 	GetProductMedia() iris.Handler
 	GetSettings() iris.Handler
@@ -37,8 +40,9 @@ type GatewayController interface {
 }
 
 type GatewayControllerImp struct {
-	productService service.ProductService
-	authClient     userClient.AuthClient
+	productService   service.ProductService
+	promotionService promotionService.PromotionService
+	authClient       userClient.AuthClient
 }
 
 type dashboardStatResponse struct {
@@ -60,10 +64,11 @@ type applicationSettingsResponse struct {
 	DefaultCurrencyCode string `json:"defaultCurrencyCode"`
 }
 
-func NewGatewayControllerImp(productService service.ProductService, authClient userClient.AuthClient) *GatewayControllerImp {
+func NewGatewayControllerImp(productService service.ProductService, promotionService promotionService.PromotionService, authClient userClient.AuthClient) *GatewayControllerImp {
 	return &GatewayControllerImp{
-		productService: productService,
-		authClient:     authClient,
+		productService:   productService,
+		promotionService: promotionService,
+		authClient:       authClient,
 	}
 }
 
@@ -282,7 +287,7 @@ func (controller *GatewayControllerImp) DeleteProduct() iris.Handler {
 
 func (controller *GatewayControllerImp) ListDiscounts() iris.Handler {
 	return func(ctx iris.Context) {
-		discounts, err := controller.productService.ListDiscounts()
+		discounts, err := controller.promotionService.ListDiscounts()
 		if err != nil {
 			controller.marshalErrorResponse(ctx, err)
 			return
@@ -300,7 +305,7 @@ func (controller *GatewayControllerImp) DiscountDetails() iris.Handler {
 			return
 		}
 
-		discount, err := controller.productService.GetDiscount(discountID)
+		discount, err := controller.promotionService.GetDiscount(discountID)
 		if err != nil {
 			controller.marshalErrorResponse(ctx, err)
 			return
@@ -318,7 +323,7 @@ func (controller *GatewayControllerImp) CreateDiscount() iris.Handler {
 			return
 		}
 
-		discount, err := controller.productService.CreateDiscount(string(body), controller.getActorID(ctx))
+		discount, err := controller.promotionService.CreateDiscount(string(body), controller.getActorID(ctx))
 		if err != nil {
 			controller.marshalErrorResponse(ctx, err)
 			return
@@ -343,7 +348,7 @@ func (controller *GatewayControllerImp) UpdateDiscount() iris.Handler {
 			return
 		}
 
-		discount, err := controller.productService.UpdateDiscount(discountID, string(body), controller.getActorID(ctx))
+		discount, err := controller.promotionService.UpdateDiscount(discountID, string(body), controller.getActorID(ctx))
 		if err != nil {
 			controller.marshalErrorResponse(ctx, err)
 			return
@@ -361,12 +366,42 @@ func (controller *GatewayControllerImp) DeleteDiscount() iris.Handler {
 			return
 		}
 
-		if err := controller.productService.DeleteDiscount(discountID, controller.getActorID(ctx)); err != nil {
+		if err := controller.promotionService.DeleteDiscount(discountID, controller.getActorID(ctx)); err != nil {
 			controller.marshalErrorResponse(ctx, err)
 			return
 		}
 
 		ctx.StatusCode(iris.StatusNoContent)
+	}
+}
+
+func (controller *GatewayControllerImp) GetPromotionSettings() iris.Handler {
+	return func(ctx iris.Context) {
+		settings, err := controller.promotionService.GetPromotionSettings()
+		if err != nil {
+			controller.marshalErrorResponse(ctx, err)
+			return
+		}
+
+		_ = ctx.JSON(settings)
+	}
+}
+
+func (controller *GatewayControllerImp) UpdatePromotionSettings() iris.Handler {
+	return func(ctx iris.Context) {
+		body, err := ctx.GetBody()
+		if err != nil {
+			controller.marshalErrorResponse(ctx, types.NewInternalServerError())
+			return
+		}
+
+		settings, err := controller.promotionService.UpdatePromotionSettings(string(body), controller.getActorID(ctx))
+		if err != nil {
+			controller.marshalErrorResponse(ctx, err)
+			return
+		}
+
+		_ = ctx.JSON(settings)
 	}
 }
 

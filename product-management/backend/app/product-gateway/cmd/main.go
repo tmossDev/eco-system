@@ -15,6 +15,8 @@ import (
 	"tmossDev.github.com/eco-system/product-management/backend/app/product-gateway/routes"
 	"tmossDev.github.com/eco-system/product-management/backend/domain/product/service"
 	"tmossDev.github.com/eco-system/product-management/backend/domain/product/store/postgres"
+	promotionService "tmossDev.github.com/eco-system/product-management/backend/domain/promotion/service"
+	promotionPostgres "tmossDev.github.com/eco-system/product-management/backend/domain/promotion/store/postgres"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/config/aws"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/config/local"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/config/types"
@@ -121,13 +123,16 @@ func setup() error {
 	logger.Info(constants.CTXRequestIdKey, "Set up validator...")
 
 	productRepo := postgres.NewPostgresProductRepository(sqlStore)
+	discountRepo := promotionPostgres.NewPostgresDiscountRepository(sqlStore)
+	promotionRepo := promotionPostgres.NewPostgresPromotionRepository(sqlStore)
 	logger.Info(constants.CTXRequestIdKey, "Set up repositories...")
 
 	productService := service.NewProductService(validater, productRepo)
+	promotionSvc := promotionService.NewPromotionService(validater, discountRepo, promotionRepo)
 	authClient := userClient.NewHTTPAuthClient(env.Getenv("USER_SERVICE_URL", "http://user-service:8080"))
 	logger.Info(constants.CTXRequestIdKey, "Set up services...")
 
-	routes.Setup(irisApp, productService, authClient)
+	routes.Setup(irisApp, productService, promotionSvc, authClient)
 	logger.Info(constants.CTXRequestIdKey, "Set up routes...")
 
 	return nil

@@ -6,8 +6,10 @@ import {
   CreateProductRequest,
   Discount,
   ProductDetails,
+  PromotionSettings,
   ProductSummary,
   UpdateDiscountRequest,
+  UpdatePromotionSettingsRequest,
   UpdateProductRequest,
 } from './product.model';
 
@@ -72,5 +74,15 @@ export class ProductService {
 
   public deleteDiscount(id: string): Observable<void> {
     return this.http.delete<void>(`/api/discounts/${id}`);
+  }
+
+  public getPromotionSettings(): Observable<PromotionSettings> {
+    return this.http.get<PromotionSettings>('/api/promotions/settings');
+  }
+
+  public updatePromotionSettings(
+    request: UpdatePromotionSettingsRequest,
+  ): Observable<PromotionSettings> {
+    return this.http.put<PromotionSettings>('/api/promotions/settings', request);
   }
 }

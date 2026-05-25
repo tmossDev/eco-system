@@ -1,6 +1,6 @@
 export type ProductStatus = 'Draft' | 'Active' | 'Archived';
 export type DiscountStatus = 'Draft' | 'Active' | 'Archived';
-export type DiscountType = 'Percentage' | 'Amount';
+export type DiscountType = 'Percentage' | 'Amount' | 'QuantityBonus';
 export type DiscountScope = 'Global' | 'ProductSet';
 export type PromotionTargetScope = 'All' | 'Category' | 'Label' | 'Selected';
 
@@ -17,7 +17,7 @@ export interface ProductSummary {
   status: ProductStatus;
   photos: ProductPhoto[];
   labels: string[];
-  discounts: Discount[];
+  discounts?: Discount[];
 }
 
 export interface ProductDetails extends ProductSummary {}
@@ -54,6 +54,8 @@ export interface Discount {
   percentage_basis_points: number | null;
   amount_cents: number | null;
   currency: string;
+  buy_quantity: number;
+  free_quantity: number;
   min_product_count: number;
   starts_at: string;
   ends_at: string;
@@ -74,6 +76,8 @@ export interface CreateDiscountRequest {
   percentage_basis_points: number | null;
   amount_cents: number | null;
   currency: string;
+  buy_quantity: number;
+  free_quantity: number;
   min_product_count: number;
   starts_at: string;
   ends_at: string;
@@ -85,3 +89,13 @@ export interface CreateDiscountRequest {
 }
 
 export interface UpdateDiscountRequest extends CreateDiscountRequest {}
+
+export interface PromotionSettings {
+  promotions_enabled: boolean;
+  updated_user: string | number;
+  updated_at: string;
+}
+
+export interface UpdatePromotionSettingsRequest {
+  promotions_enabled: boolean;
+}

@@ -4,11 +4,12 @@ import (
 	"github.com/kataras/iris/v12"
 	"tmossDev.github.com/eco-system/product-management/backend/app/product-service/controller"
 	"tmossDev.github.com/eco-system/product-management/backend/domain/product/service"
+	promotionService "tmossDev.github.com/eco-system/product-management/backend/domain/promotion/service"
 )
 
-func Setup(app *iris.Application, productService service.ProductService) {
+func Setup(app *iris.Application, productService service.ProductService, promotionSvc promotionService.PromotionService) {
 
-	productController := controller.NewServiceControllerImp(productService)
+	productController := controller.NewServiceControllerImp(productService, promotionSvc)
 	app.Get("/api/products", productController.ListProducts())
 	app.Post("/api/products", productController.CreateProduct())
 	app.Get("/api/products/{id:uint64}", productController.ProductDetails())
@@ -19,4 +20,6 @@ func Setup(app *iris.Application, productService service.ProductService) {
 	app.Get("/api/discounts/{id:uint64}", productController.DiscountDetails())
 	app.Put("/api/discounts/{id:uint64}", productController.UpdateDiscount())
 	app.Delete("/api/discounts/{id:uint64}", productController.DeleteDiscount())
+	app.Get("/api/promotions/settings", productController.GetPromotionSettings())
+	app.Put("/api/promotions/settings", productController.UpdatePromotionSettings())
 }

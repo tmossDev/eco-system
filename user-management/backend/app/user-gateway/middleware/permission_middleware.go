@@ -5,7 +5,7 @@ import (
 	"tmossDev.github.com/eco-system/user-management/backend/domain/user/service"
 )
 
-func IsAuthorized(c *fiber.Ctx, page string, service service.PublicUserService) error {
+func IsAuthorized(c *fiber.Ctx, page string, service service.UserService) error {
 	jwt := c.Cookies("jwt")
 
 	err := service.IsAuthorized(jwt, page)

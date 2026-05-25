@@ -2,7 +2,6 @@ package mysql
 
 import (
 	"database/sql"
-	"time"
 
 	"tmossDev.github.com/eco-system/shared-components/backend/package/datastore"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/datastore/flows"
@@ -16,8 +15,6 @@ import (
 type MySqlUserRepository struct {
 	store datastore.DataStore
 }
-
-const MySystemAutoID = 1
 
 func (repo *MySqlUserRepository) Shutdown() {
 	err := repo.store.Close()
@@ -83,78 +80,59 @@ func (repo *MySqlUserRepository) GetByID(userId uint64) (*model.UserResponse, er
 	return user, nil
 }
 
-func (repo *MySqlUserRepository) RegisterUser(firstName string, lastName string, email string, password string, roleId uint64) (*model.UserResponse, error) {
-	hashedPassword, err := utils.HashPassword(password)
-	if err != nil {
-		logger.Errorf("Error creating hashPassword: %s", err.Error())
-		return nil, types.NewInternalServerError()
-	}
-	insertedAt := utils.GetCurrentDateFormatedForInsertingIntoDB(time.Now())
-	logger.Debugf("Running query '%s' with parameter '%s', '%s', '%s', '%v', '%d', '%d' and '%s'", RegisterUser, firstName, lastName, email, hashedPassword, roleId, MySystemAutoID, insertedAt)
+func (repo *MySqlUserRepository) RegisterUser(user *model.UserResponse) error {
+	logger.Debugf("Running query '%s' with parameter '%s', '%s', '%s', '%v', '%d', '%d' and '%s'", RegisterUser, user.FirstName, user.LastName, user.Email, user.HashedPassword, user.RoleID, user.CreatedUser, user.CreatedAt)
 	lastInsertedId, err := flows.PerformEdit(
 		"RegisterUser",
 		RegisterUser,
 		repo.store,
-		firstName, lastName, email, hashedPassword, roleId, MySystemAutoID, insertedAt)
+		user.FirstName, user.LastName, user.Email, user.HashedPassword, user.RoleID, user.CreatedUser, user.CreatedAt)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return &model.UserResponse{
-		ID:          uint64(lastInsertedId),
-		FirstName:   firstName,
-		LastName:    lastName,
-		Email:       email,
-		RoleID:      roleId,
-		CreatedUser: MySystemAutoID,
-		CreatedAt:   insertedAt,
-	}, nil
+	user.ID = uint64(lastInsertedId)
+	return nil
 }
 
-func (repo *MySqlUserRepository) Update(userId uint64, firstName string, lastName string, updatingUserId uint64) (*model.UserResponse, error) {
-	logger.Debugf("Running query '%s' with parameter '%s', '%s', '%d' and '%d'", UpdateUser, firstName, lastName, updatingUserId, userId)
+func (repo *MySqlUserRepository) Update(user model.UserResponse) error {
+	logger.Debugf("Running query '%s' with parameter '%s', '%s', '%d' and '%d'", UpdateUser, user.FirstName, user.LastName, user.UpdatedUser, user.ID)
 	_, err := flows.PerformEdit(
 		"UpdateUser",
 		UpdateUser,
 		repo.store,
-		firstName, lastName, updatingUserId, userId)
+		user.FirstName, user.LastName, user.UpdatedUser, user.ID)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return repo.GetByID(userId)
+	return nil
 }
 
-func (repo *MySqlUserRepository) ResetPassword(userId uint64, newPassword string, updatingUserId uint64) (*model.UserResponse, error) {
-	hashedPassword, err := utils.HashPassword(newPassword)
-	if err != nil {
-		logger.Errorf("Error hashing password: %s", err.Error())
-		return nil, types.NewInternalServerError()
-	}
-
-	logger.Debugf("Running query '%s' with parameter '%v', '%d' and '%d'", ResetPassword, hashedPassword, updatingUserId, userId)
-	_, err = flows.PerformEdit(
+func (repo *MySqlUserRepository) ResetPassword(user model.UserResponse) error {
+	logger.Debugf("Running query '%s' with parameter '%v', '%d' and '%d'", ResetPassword, user.HashedPassword, user.UpdatedUser, user.ID)
+	_, err := flows.PerformEdit(
 		"ResetPassword",
 		ResetPassword,
 		repo.store,
-		hashedPassword, updatingUserId, userId)
+		user.HashedPassword, user.UpdatedUser, user.ID)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return repo.GetByID(userId)
+	return nil
 }
 
-func (repo *MySqlUserRepository) ResetEmail(userId uint64, newEmail string, updatingUserId uint64) (*model.UserResponse, error) {
-	logger.Debugf("Running query '%s' with parameter '%s', '%d' and '%d'", ResetEmail, newEmail, updatingUserId, userId)
+func (repo *MySqlUserRepository) ResetEmail(user model.UserResponse) error {
+	logger.Debugf("Running query '%s' with parameter '%s', '%d' and '%d'", ResetEmail, user.Email, user.UpdatedUser, user.ID)
 	_, err := flows.PerformEdit(
 		"ResetEmail",
 		ResetEmail,
 		repo.store,
-		newEmail, updatingUserId, userId)
+		user.Email, user.UpdatedUser, user.ID)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return repo.GetByID(userId)
+	return nil
 }

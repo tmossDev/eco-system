@@ -25,14 +25,12 @@ type ServiceController interface {
 }
 
 type ServiceControllerImp struct {
-	publicService  service.PublicUserService
-	privateService service.PrivateUserService
+	userService service.UserService
 }
 
-func NewServiceControllerImp(publicService service.PublicUserService, privateService service.PrivateUserService) *ServiceControllerImp {
+func NewServiceControllerImp(userService service.UserService) *ServiceControllerImp {
 	return &ServiceControllerImp{
-		publicService:  publicService,
-		privateService: privateService,
+		userService: userService,
 	}
 }
 
@@ -103,7 +101,7 @@ func (controller *ServiceControllerImp) Login() iris.Handler {
 		}
 
 		requestId := ctx.Values().GetString(sharedConstants.CTXRequestIdKey)
-		loginResponse, err := controller.publicService.Login(requestId, string(body))
+		loginResponse, err := controller.userService.Login(requestId, string(body))
 		if err != nil {
 			controller.marshalErrorResponse(ctx, err)
 			return
@@ -128,7 +126,7 @@ func (controller *ServiceControllerImp) Register() iris.Handler {
 			return
 		}
 
-		loginResponse, err := controller.publicService.Register(string(body))
+		loginResponse, err := controller.userService.Register(string(body))
 		if err != nil {
 			controller.marshalErrorResponse(ctx, err)
 			return
@@ -153,7 +151,7 @@ func (controller *ServiceControllerImp) User() iris.Handler {
 			return
 		}
 
-		userResponse, err := controller.publicService.User(jwt)
+		userResponse, err := controller.userService.User(jwt)
 		if err != nil {
 			controller.marshalErrorResponse(ctx, err)
 			return
@@ -171,7 +169,7 @@ func (controller *ServiceControllerImp) Logout() iris.Handler {
 			return
 		}
 
-		err = controller.publicService.Logout(jwt)
+		err = controller.userService.Logout(jwt)
 		if err != nil {
 			controller.marshalErrorResponse(ctx, err)
 			return
@@ -199,7 +197,7 @@ func (controller *ServiceControllerImp) UpdateInfo() iris.Handler {
 			return
 		}
 
-		userResponse, err := controller.privateService.UpdateUserInfo(userId, string(body), userId)
+		userResponse, err := controller.userService.UpdateUserInfo(userId, string(body), userId)
 		if err != nil {
 			controller.marshalErrorResponse(ctx, err)
 			return
@@ -223,7 +221,7 @@ func (controller *ServiceControllerImp) UpdatePassword() iris.Handler {
 			return
 		}
 
-		updatedResponse, err := controller.privateService.UpdateUserPassword(userId, string(body), userId)
+		updatedResponse, err := controller.userService.UpdateUserPassword(userId, string(body), userId)
 		if err != nil {
 			controller.marshalErrorResponse(ctx, err)
 			return
