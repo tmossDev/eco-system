@@ -6,6 +6,9 @@
     "@angular/core": "catalog:",
     "@ds/icon": "workspace:*"
   },
+  "devDependencies": {
+    "@ds/tokens": "workspace:*"
+  },
   "dependencies": {
     "tslib": "catalog:"
   },

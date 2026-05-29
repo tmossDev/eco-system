@@ -5,6 +5,9 @@
     "@angular/common": "catalog:",
     "@angular/core": "catalog:"
   },
+  "devDependencies": {
+    "@ds/tokens": "workspace:*"
+  },
   "dependencies": {
     "tslib": "catalog:"
   },

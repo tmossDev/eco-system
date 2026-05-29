@@ -1,0 +1,19 @@
+{
+  "shadow": {
+    "inset-border": {
+      "value": "rgba(0, 0, 0, 0.15) 0 0 0 1px inset"
+    },
+    "sm": {
+      "value": "0 8px 18px rgb(15 23 42 / 8%)"
+    },
+    "md": {
+      "value": "0 12px 24px rgb(37 99 235 / 14%)"
+    },
+    "lg": {
+      "value": "0 22px 45px rgb(15 23 42 / 16%)"
+    },
+    "brand": {
+      "value": "0 12px 25px rgb(37 99 235 / 25%)"
+    }
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "color": {
+    "brand": {
+      "primary": {
+        "value": "#2563eb"
+      },
+      "primary-hover": {
+        "value": "#1d4ed8"
+      },
+      "primary-soft": {
+        "value": "#eff6ff"
+      }
+    },
+    "neutral": {
+      "0": {
+        "value": "#ffffff"
+      },
+      "50": {
+        "value": "#f8fafc"
+      },
+      "100": {
+        "value": "#f1f5f9"
+      },
+      "200": {
+        "value": "#e2e8f0"
+      },
+      "300": {
+        "value": "#cbd5e1"
+      },
+      "500": {
+        "value": "#64748b"
+      },
+      "600": {
+        "value": "#475569"
+      },
+      "900": {
+        "value": "#172033"
+      }
+    },
+    "surface": {
+      "base": {
+        "value": "{color.neutral.0}"
+      },
+      "muted": {
+        "value": "{color.neutral.50}"
+      },
+      "brand": {
+        "value": "{color.brand.primary-soft}"
+      }
+    },
+    "text": {
+      "base": {
+        "value": "{color.neutral.900}"
+      },
+      "muted": {
+        "value": "{color.neutral.500}"
+      },
+      "inverse": {
+        "value": "{color.neutral.0}"
+      },
+      "brand": {
+        "value": "{color.brand.primary-hover}"
+      }
+    },
+    "border": {
+      "subtle": {
+        "value": "{color.neutral.200}"
+      },
+      "default": {
+        "value": "{color.neutral.300}"
+      }
+    }
+  }
+}

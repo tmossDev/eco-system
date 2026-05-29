@@ -39,3 +39,4 @@ catalog:
   "storybook": "^10.3.6"
   "typescript": "~5.9.2"
   "vitest": "^4.0.8"
+  "style-dictionary": "^5.4.1"

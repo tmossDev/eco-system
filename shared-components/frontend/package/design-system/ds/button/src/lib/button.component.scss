@@ -1,0 +1,37 @@
+@use "@ds/tokens/scss" as tokens;
+
+.ds-button {
+  display: inline-block;
+  cursor: pointer;
+  border: 0;
+  border-radius: tokens.$size-radius-pill;
+  font-weight: 700;
+  line-height: 1;
+  font-family: "Nunito Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+.ds-button--primary {
+  background-color: tokens.$color-brand-primary;
+  color: tokens.$color-text-inverse;
+}
+
+.ds-button--secondary {
+  background-color: transparent;
+  color: tokens.$color-text-base;
+  box-shadow: tokens.$shadow-inset-border;
+}
+
+.ds-button--small {
+  padding: 10px 16px;
+  font-size: tokens.$size-font-xs;
+}
+
+.ds-button--medium {
+  padding: 11px 20px;
+  font-size: tokens.$size-font-sm;
+}
+
+.ds-button--large {
+  padding: 12px 24px;
+  font-size: tokens.$size-font-md;
+}

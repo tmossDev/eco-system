@@ -1,0 +1,118 @@
+
+$color-brand-primary: #2563eb !default;
+$color-brand-primary-hover: #1d4ed8 !default;
+$color-brand-primary-soft: #eff6ff !default;
+$color-neutral-0: #ffffff !default;
+$color-neutral-50: #f8fafc !default;
+$color-neutral-100: #f1f5f9 !default;
+$color-neutral-200: #e2e8f0 !default;
+$color-neutral-300: #cbd5e1 !default;
+$color-neutral-500: #64748b !default;
+$color-neutral-600: #475569 !default;
+$color-neutral-900: #172033 !default;
+$shadow-inset-border: rgba(0, 0, 0, 0.15) 0 0 0 1px inset !default;
+$shadow-sm: 0 8px 18px rgb(15 23 42 / 8%) !default;
+$shadow-md: 0 12px 24px rgb(37 99 235 / 14%) !default;
+$shadow-lg: 0 22px 45px rgb(15 23 42 / 16%) !default;
+$shadow-brand: 0 12px 25px rgb(37 99 235 / 25%) !default;
+$motion-duration-fast: 160ms !default;
+$motion-duration-normal: 260ms !default;
+$motion-easing-standard: ease !default;
+$motion-easing-emphasized: cubic-bezier(0.2, 0.8, 0.2, 1) !default;
+$size-radius-sm: 0.375rem !default;
+$size-radius-md: 0.75rem !default;
+$size-radius-lg: 0.85rem !default;
+$size-radius-pill: 999px !default;
+$size-spacing-1: 0.25rem !default;
+$size-spacing-2: 0.5rem !default;
+$size-spacing-3: 0.75rem !default;
+$size-spacing-4: 1rem !default;
+$size-spacing-5: 1.25rem !default;
+$size-spacing-6: 1.5rem !default;
+$size-font-xs: 0.75rem !default;
+$size-font-sm: 0.875rem !default;
+$size-font-md: 1rem !default;
+$size-font-lg: 1.125rem !default;
+$color-surface-base: $color-neutral-0 !default;
+$color-surface-muted: $color-neutral-50 !default;
+$color-surface-brand: $color-brand-primary-soft !default;
+$color-text-base: $color-neutral-900 !default;
+$color-text-muted: $color-neutral-500 !default;
+$color-text-inverse: $color-neutral-0 !default;
+$color-text-brand: $color-brand-primary-hover !default;
+$color-border-subtle: $color-neutral-200 !default;
+$color-border-default: $color-neutral-300 !default;
+
+$ds-tokens: (
+  'color': (
+    'brand': (
+      'primary': $color-brand-primary,
+      'primary-hover': $color-brand-primary-hover,
+      'primary-soft': $color-brand-primary-soft
+    ),
+    'neutral': (
+      '0': $color-neutral-0,
+      '50': $color-neutral-50,
+      '100': $color-neutral-100,
+      '200': $color-neutral-200,
+      '300': $color-neutral-300,
+      '500': $color-neutral-500,
+      '600': $color-neutral-600,
+      '900': $color-neutral-900
+    ),
+    'surface': (
+      'base': $color-surface-base,
+      'muted': $color-surface-muted,
+      'brand': $color-surface-brand
+    ),
+    'text': (
+      'base': $color-text-base,
+      'muted': $color-text-muted,
+      'inverse': $color-text-inverse,
+      'brand': $color-text-brand
+    ),
+    'border': (
+      'subtle': $color-border-subtle,
+      'default': $color-border-default
+    )
+  ),
+  'shadow': (
+    'inset-border': $shadow-inset-border,
+    'sm': $shadow-sm,
+    'md': $shadow-md,
+    'lg': $shadow-lg,
+    'brand': $shadow-brand
+  ),
+  'motion': (
+    'duration': (
+      'fast': $motion-duration-fast,
+      'normal': $motion-duration-normal
+    ),
+    'easing': (
+      'standard': $motion-easing-standard,
+      'emphasized': $motion-easing-emphasized
+    )
+  ),
+  'size': (
+    'radius': (
+      'sm': $size-radius-sm,
+      'md': $size-radius-md,
+      'lg': $size-radius-lg,
+      'pill': $size-radius-pill
+    ),
+    'spacing': (
+      '1': $size-spacing-1,
+      '2': $size-spacing-2,
+      '3': $size-spacing-3,
+      '4': $size-spacing-4,
+      '5': $size-spacing-5,
+      '6': $size-spacing-6
+    ),
+    'font': (
+      'xs': $size-font-xs,
+      'sm': $size-font-sm,
+      'md': $size-font-md,
+      'lg': $size-font-lg
+    )
+  )
+);

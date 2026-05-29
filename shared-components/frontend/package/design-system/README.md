@@ -31,10 +31,36 @@ ng generate --help
 To build the project run:
 
 ```bash
-ng build
+corepack pnpm build
 ```
 
 This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+
+## Design Tokens
+
+Design tokens live in `ds/tokens/tokens` and are generated with Style Dictionary into `@ds/tokens`.
+
+```bash
+corepack pnpm build:tokens
+```
+
+Components can use the generated SCSS module:
+
+```scss
+@use "@ds/tokens/scss" as tokens;
+
+.example {
+  color: tokens.$color-text-base;
+}
+```
+
+Applications that need runtime CSS custom properties can import:
+
+```scss
+@use "@ds/tokens/scss/theme";
+```
+
+When publishing a component package outside this repo, publish/install `@ds/tokens` with it so the component styles keep the same token contract.
 
 ## Running unit tests
 
