@@ -1,0 +1,3 @@
+GRANT SELECT, INSERT, UPDATE, DELETE ON carts TO app_user;
+GRANT SELECT, INSERT, UPDATE, DELETE ON cart_items TO app_user;
+GRANT USAGE, SELECT ON SEQUENCE carts_id_seq TO app_user;

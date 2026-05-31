@@ -372,6 +372,7 @@ jobs:
         run: |
           go test ./user-management/backend/app/user-gateway/routes -run 'TestGatewayFunctional'
           go test ./product-management/backend/app/product-gateway/routes -run 'TestProductGatewayFunctional'
+          go test ./online-storefront/backend/app/cart-gateway/routes
           go test ./online-storefront/backend/app/storefront-gateway/routes
 
       - name: Set up Node
@@ -392,8 +393,9 @@ jobs:
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/bin/user-gateway ./user-management/backend/app/user-gateway/cmd
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/bin/product-service ./product-management/backend/app/product-service/cmd
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/bin/product-gateway ./product-management/backend/app/product-gateway/cmd
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/bin/cart-gateway ./online-storefront/backend/app/cart-gateway/cmd
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/bin/storefront-gateway ./online-storefront/backend/app/storefront-gateway/cmd
-          file build/bin/user-service build/bin/user-gateway build/bin/product-service build/bin/product-gateway build/bin/storefront-gateway
+          file build/bin/user-service build/bin/user-gateway build/bin/product-service build/bin/product-gateway build/bin/cart-gateway build/bin/storefront-gateway
 
       - name: Build frontend applications and storybooks
         shell: bash
@@ -409,6 +411,11 @@ jobs:
       - name: Build local application images
         shell: bash
         run: |
+          docker build \
+            -f dockerfile \
+            --build-arg APP_NAME=cart-gateway \
+            -t "$IMAGE_PREFIX/cart-gateway:$IMAGE_TAG" \
+            .
           docker build \
             -f dockerfile \
             --build-arg APP_NAME=user-service \
@@ -460,6 +467,7 @@ jobs:
               "$IMAGE_PREFIX/user-gateway:$IMAGE_TAG" \
               "$IMAGE_PREFIX/product-service:$IMAGE_TAG" \
               "$IMAGE_PREFIX/product-gateway:$IMAGE_TAG" \
+              "$IMAGE_PREFIX/cart-gateway:$IMAGE_TAG" \
               "$IMAGE_PREFIX/storefront-gateway:$IMAGE_TAG" \
               "$IMAGE_PREFIX/admin-web-app:$IMAGE_TAG" \
               "$IMAGE_PREFIX/product-admin-web-app:$IMAGE_TAG" \
@@ -472,6 +480,7 @@ jobs:
               "$IMAGE_PREFIX/user-gateway:$IMAGE_TAG" \
               "$IMAGE_PREFIX/product-service:$IMAGE_TAG" \
               "$IMAGE_PREFIX/product-gateway:$IMAGE_TAG" \
+              "$IMAGE_PREFIX/cart-gateway:$IMAGE_TAG" \
               "$IMAGE_PREFIX/storefront-gateway:$IMAGE_TAG" \
               "$IMAGE_PREFIX/admin-web-app:$IMAGE_TAG" \
               "$IMAGE_PREFIX/product-admin-web-app:$IMAGE_TAG" \
@@ -541,6 +550,7 @@ jobs:
           helm dependency build product-management/backend/app/product-service/deployment
           helm dependency build product-management/backend/app/product-gateway/deployment
           helm dependency build product-management/frontend/app/product-admin-web-app/deployment
+          helm dependency build online-storefront/backend/app/cart-gateway/deployment
           helm dependency build online-storefront/backend/app/storefront-gateway/deployment
           helm dependency build online-storefront/frontend/app/storefront-web-app/deployment
           helm dependency build shared-components/deployment
@@ -695,6 +705,17 @@ jobs:
         run: |
           helm upgrade --install online-storefront online-storefront/deployment \
             --namespace "$NAMESPACE" \
+            --set cart-gateway.app.image.repository="$IMAGE_PREFIX/cart-gateway" \
+            --set cart-gateway.app.image.tag="$IMAGE_TAG" \
+            --set cart-gateway.app.image.pullPolicy=Never \
+            --set cart-gateway.app.configMap.enabled=true \
+            --set-string cart-gateway.app.configMap.data.DB_DIALECT=postgresql \
+            --set-string cart-gateway.app.configMap.data.DB_NAME="$POSTGRES_DB" \
+            --set-string cart-gateway.app.configMap.data.DB_HOST="$POSTGRES_HOST" \
+            --set-string cart-gateway.app.configMap.data.DB_PORT="$POSTGRES_PORT" \
+            --set-string cart-gateway.app.configMap.data.DB_USER="$POSTGRES_APP_USER" \
+            --set cart-gateway.app.secret.enabled=true \
+            --set-string cart-gateway.app.secret.stringData.DB_PASSWORD="$APP_PASSWORD" \
             --set storefront-gateway.app.image.repository="$IMAGE_PREFIX/storefront-gateway" \
             --set storefront-gateway.app.image.tag="$IMAGE_TAG" \
             --set storefront-gateway.app.image.pullPolicy=Never \
@@ -710,6 +731,13 @@ jobs:
             --set storefront-web-app.app.ingress.hosts[0].host="$STOREFRONT_WEB_APP_HOST" \
             --set storefront-web-app.app.ingress.hosts[0].paths[0].path=/ \
             --set storefront-web-app.app.ingress.hosts[0].paths[0].pathType=Prefix \
+            --set cartGatewayApiIngress.enabled=true \
+            --set cartGatewayApiIngress.className="$INGRESS_CLASS_NAME" \
+            --set cartGatewayApiIngress.host="$STOREFRONT_WEB_APP_HOST" \
+            --set cartGatewayApiIngress.path=/api/cart \
+            --set cartGatewayApiIngress.pathType=Prefix \
+            --set cartGatewayApiIngress.serviceName=cart-gateway \
+            --set cartGatewayApiIngress.servicePortName=http \
             --set storefrontWebAppApiIngress.enabled=true \
             --set storefrontWebAppApiIngress.className="$INGRESS_CLASS_NAME" \
             --set storefrontWebAppApiIngress.host="$STOREFRONT_WEB_APP_HOST" \
@@ -723,6 +751,7 @@ jobs:
         run: |
           set -euo pipefail
           kubectl rollout status deployment/storefront-gateway -n "$NAMESPACE" --timeout=180s
+          kubectl rollout status deployment/cart-gateway -n "$NAMESPACE" --timeout=180s
           kubectl rollout status deployment/storefront-web-app -n "$NAMESPACE" --timeout=180s
 
       - name: Run deployed online storefront smoke test
@@ -748,6 +777,85 @@ jobs:
           done
 
           curl --silent --fail http://127.0.0.1:18082/api/products >/dev/null
+
+      - name: Run deployed storefront gateway functional tests
+        shell: bash
+        env:
+          STOREFRONT_GATEWAY_BASE_URL: http://127.0.0.1:18082
+          STOREFRONT_FUNCTIONAL_TEST_EMAIL: admin@test.com
+          STOREFRONT_FUNCTIONAL_TEST_PASSWORD: password
+        run: |
+          set -euo pipefail
+
+          show_gateway_logs() {
+            echo "::group::Recent storefront-gateway logs"
+            kubectl logs -n "$NAMESPACE" deployment/storefront-gateway --tail=120 || true
+            echo "::endgroup::"
+          }
+          kubectl port-forward -n "$NAMESPACE" service/storefront-gateway 18082:8080 &
+          PORT_FORWARD_PID="$!"
+          trap 'kill "$PORT_FORWARD_PID" 2>/dev/null || true; show_gateway_logs' EXIT
+
+          for attempt in {1..30}; do
+            if curl --silent --fail "$STOREFRONT_GATEWAY_BASE_URL/health" >/dev/null; then
+              break
+            fi
+
+            if [[ "$attempt" == "30" ]]; then
+              echo "Timed out waiting for port-forwarded storefront-gateway service" >&2
+              exit 1
+            fi
+
+            sleep 1
+          done
+
+          go test ./online-storefront/backend/app/storefront-gateway/routes \
+            -tags integration \
+            -run TestDeployedStorefrontGatewayFunctional \
+            -v
+
+      - name: Run deployed cart gateway functional tests
+        shell: bash
+        env:
+          CART_GATEWAY_BASE_URL: http://127.0.0.1:18084
+          STOREFRONT_GATEWAY_BASE_URL: http://127.0.0.1:18082
+          CART_FUNCTIONAL_TEST_EMAIL: admin@test.com
+          CART_FUNCTIONAL_TEST_PASSWORD: password
+        run: |
+          set -euo pipefail
+
+          show_gateway_logs() {
+            echo "::group::Recent cart-gateway logs"
+            kubectl logs -n "$NAMESPACE" deployment/cart-gateway --tail=120 || true
+            echo "::endgroup::"
+            echo "::group::Recent storefront-gateway logs"
+            kubectl logs -n "$NAMESPACE" deployment/storefront-gateway --tail=120 || true
+            echo "::endgroup::"
+          }
+          kubectl port-forward -n "$NAMESPACE" service/cart-gateway 18084:8080 &
+          CART_PORT_FORWARD_PID="$!"
+          kubectl port-forward -n "$NAMESPACE" service/storefront-gateway 18082:8080 &
+          STOREFRONT_PORT_FORWARD_PID="$!"
+          trap 'kill "$CART_PORT_FORWARD_PID" "$STOREFRONT_PORT_FORWARD_PID" 2>/dev/null || true; show_gateway_logs' EXIT
+
+          for attempt in {1..30}; do
+            if curl --silent --fail "$CART_GATEWAY_BASE_URL/health" >/dev/null \
+              && curl --silent --fail "$STOREFRONT_GATEWAY_BASE_URL/health" >/dev/null; then
+              break
+            fi
+
+            if [[ "$attempt" == "30" ]]; then
+              echo "Timed out waiting for port-forwarded online storefront backend services" >&2
+              exit 1
+            fi
+
+            sleep 1
+          done
+
+          go test ./online-storefront/backend/app/cart-gateway/routes \
+            -tags integration \
+            -run TestDeployedCartGatewayFunctional \
+            -v
 
       - name: Run deployed gateway functional tests
         shell: bash

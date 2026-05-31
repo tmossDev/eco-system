@@ -1,5 +1,17 @@
+cart-gateway: {}
 storefront-gateway: {}
 storefront-web-app: {}
+
+cartGatewayApiIngress:
+  enabled: false
+  className: ""
+  annotations: {}
+  host: ""
+  path: /api/cart
+  pathType: Prefix
+  serviceName: cart-gateway
+  servicePortName: http
+  tls: []
 
 storefrontWebAppApiIngress:
   enabled: false

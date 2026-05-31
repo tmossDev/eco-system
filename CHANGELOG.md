@@ -1,5 +1,12 @@
 # Project Change Log
 
+## v1.15.0 - (5 Changes)
+- Added the online storefront cart-gateway backend application with authenticated customer cart tracking.
+- Added cart and cart item persistence with one active cart per customer, product links, quantity checks, and Liquibase grants.
+- Added cart API routes for reading, adding, updating, removing, and clearing the current customer's cart.
+- Added Helm, local deployment, and GitHub Actions wiring for building, routing, deploying, and rolling out cart-gateway.
+- Added deployed functional tests for storefront-gateway catalog and authentication flows plus cart-gateway cart lifecycle flows.
+
 ## v1.14.0 - (3 Changes)
 - Added the online storefront Go gateway with public active-product catalog reads, signup, login, logout, current-user lookup, product media proxying, focused functional tests, and Helm deployment charts.
 - Added the online storefront Angular web app with a public catalog, product detail pages, account registration, sign-in, sign-out, session-aware navigation, and Helm deployment wiring.

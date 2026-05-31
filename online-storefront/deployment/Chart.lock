@@ -1,9 +1,12 @@
 dependencies:
+- name: cart-gateway
+  repository: file://../backend/app/cart-gateway/deployment
+  version: 0.1.0
 - name: storefront-gateway
   repository: file://../backend/app/storefront-gateway/deployment
   version: 0.1.0
 - name: storefront-web-app
   repository: file://../frontend/app/storefront-web-app/deployment
   version: 0.1.0
-digest: sha256:d97904d7cd2998d098fb6bd51782b114a7468d3060ad7b98f09b457a8ad6e1ea
-generated: "2026-05-31T10:02:27.124456449+02:00"
+digest: sha256:a968a46bd4e647057ab69b31f53913b277b7a18e26357e1f039273c32aa210df
+generated: "2026-05-31T16:21:43.722516767+02:00"

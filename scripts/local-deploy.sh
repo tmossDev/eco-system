@@ -164,6 +164,7 @@ build_application_images() {
   docker build -f dockerfile --build-arg APP_NAME=user-gateway -t "$IMAGE_PREFIX/user-gateway:$IMAGE_TAG" .
   docker build -f dockerfile --build-arg APP_NAME=product-service -t "$IMAGE_PREFIX/product-service:$IMAGE_TAG" .
   docker build -f dockerfile --build-arg APP_NAME=product-gateway -t "$IMAGE_PREFIX/product-gateway:$IMAGE_TAG" .
+  docker build -f dockerfile --build-arg APP_NAME=cart-gateway -t "$IMAGE_PREFIX/cart-gateway:$IMAGE_TAG" .
   docker build -f dockerfile --build-arg APP_NAME=storefront-gateway -t "$IMAGE_PREFIX/storefront-gateway:$IMAGE_TAG" .
   docker build -f user-management/frontend/app/admin-web-app/Dockerfile -t "$IMAGE_PREFIX/admin-web-app:$IMAGE_TAG" .
   docker build -f product-management/frontend/app/product-admin-web-app/Dockerfile -t "$IMAGE_PREFIX/product-admin-web-app:$IMAGE_TAG" .
@@ -174,6 +175,7 @@ build_application_images() {
   import_image "$IMAGE_PREFIX/user-gateway:$IMAGE_TAG"
   import_image "$IMAGE_PREFIX/product-service:$IMAGE_TAG"
   import_image "$IMAGE_PREFIX/product-gateway:$IMAGE_TAG"
+  import_image "$IMAGE_PREFIX/cart-gateway:$IMAGE_TAG"
   import_image "$IMAGE_PREFIX/storefront-gateway:$IMAGE_TAG"
   import_image "$IMAGE_PREFIX/admin-web-app:$IMAGE_TAG"
   import_image "$IMAGE_PREFIX/product-admin-web-app:$IMAGE_TAG"
@@ -190,6 +192,7 @@ deploy_application() {
   helm dependency build product-management/backend/app/product-service/deployment
   helm dependency build product-management/backend/app/product-gateway/deployment
   helm dependency build product-management/frontend/app/product-admin-web-app/deployment
+  helm dependency build online-storefront/backend/app/cart-gateway/deployment
   helm dependency build online-storefront/backend/app/storefront-gateway/deployment
   helm dependency build online-storefront/frontend/app/storefront-web-app/deployment
   helm dependency build shared-components/deployment
@@ -320,6 +323,17 @@ deploy_application() {
 
   helm upgrade --install online-storefront online-storefront/deployment \
     --namespace "$NAMESPACE" \
+    --set cart-gateway.app.image.repository="$IMAGE_PREFIX/cart-gateway" \
+    --set cart-gateway.app.image.tag="$IMAGE_TAG" \
+    --set cart-gateway.app.image.pullPolicy=Never \
+    --set cart-gateway.app.configMap.enabled=true \
+    --set-string cart-gateway.app.configMap.data.DB_DIALECT=postgresql \
+    --set-string cart-gateway.app.configMap.data.DB_NAME="${POSTGRES_DB:-ecoDB}" \
+    --set-string cart-gateway.app.configMap.data.DB_HOST="${POSTGRES_HOST:-postgres.${FOUNDATION_NAMESPACE}.svc.cluster.local}" \
+    --set-string cart-gateway.app.configMap.data.DB_PORT="${POSTGRES_PORT:-5432}" \
+    --set-string cart-gateway.app.configMap.data.DB_USER="${POSTGRES_APP_USER:-app_user}" \
+    --set cart-gateway.app.secret.enabled=true \
+    --set-string cart-gateway.app.secret.stringData.DB_PASSWORD="$APP_PASSWORD" \
     --set storefront-gateway.app.image.repository="$IMAGE_PREFIX/storefront-gateway" \
     --set storefront-gateway.app.image.tag="$IMAGE_TAG" \
     --set storefront-gateway.app.image.pullPolicy=Never \
@@ -335,6 +349,13 @@ deploy_application() {
     --set storefront-web-app.app.ingress.hosts[0].host="$STOREFRONT_WEB_APP_HOST" \
     --set storefront-web-app.app.ingress.hosts[0].paths[0].path=/ \
     --set storefront-web-app.app.ingress.hosts[0].paths[0].pathType=Prefix \
+    --set cartGatewayApiIngress.enabled=true \
+    --set cartGatewayApiIngress.className="${INGRESS_CLASS_NAME:-traefik}" \
+    --set cartGatewayApiIngress.host="$STOREFRONT_WEB_APP_HOST" \
+    --set cartGatewayApiIngress.path=/api/cart \
+    --set cartGatewayApiIngress.pathType=Prefix \
+    --set cartGatewayApiIngress.serviceName=cart-gateway \
+    --set cartGatewayApiIngress.servicePortName=http \
     --set storefrontWebAppApiIngress.enabled=true \
     --set storefrontWebAppApiIngress.className="${INGRESS_CLASS_NAME:-traefik}" \
     --set storefrontWebAppApiIngress.host="$STOREFRONT_WEB_APP_HOST" \
