@@ -1,9 +1,11 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
 import { Product, ProductPhoto } from '../../core/services/product.models';
 import { ProductService } from '../../core/services/product.service';
+import { AuthService } from '../../core/services/auth.service';
+import { CartService } from '../../core/services/cart.service';
 
 @Component({
   selector: 'app-product-detail-page',
@@ -39,7 +41,12 @@ import { ProductService } from '../../core/services/product.service';
               <strong>Available now</strong>
               <span>{{ item.inventory_count }} currently in stock</span>
             </div>
-            <p class="next">Cart and checkout are arriving in the next storefront update.</p>
+            <button type="button" [disabled]="isAddingToCart()" (click)="addToCart(item)">
+              {{ isAddingToCart() ? 'Adding...' : 'Add to cart' }}
+            </button>
+            @if (cartMessage()) {
+              <p class="cart-message">{{ cartMessage() }}</p>
+            }
           </div>
         </div>
       }
@@ -57,18 +64,25 @@ import { ProductService } from '../../core/services/product.service';
     .lead { margin: 2rem 0 .5rem; color: #455448; font-size: 1.1rem; font-weight: 700; line-height: 1.6; }
     .description { color: #6d786e; line-height: 1.8; }
     .notice { display: grid; gap: .2rem; margin-top: 1.8rem; border-radius: .9rem; background: #e8ede2; padding: 1rem; color: #31543c; }
-    .notice span, .next { color: #718071; font-size: .86rem; }
-    .next { margin-top: 1rem; }
+    .notice span, .cart-message { color: #718071; font-size: .86rem; }
+    button { margin-top: 1.2rem; border: 0; border-radius: 999px; background: #31543c; padding: .85rem 1.2rem; color: white; cursor: pointer; font-weight: 700; }
+    button:disabled { cursor: wait; opacity: .7; }
+    .cart-message { margin-top: .7rem; }
     .error { color: #9b3f34; }
     @media (max-width: 760px) { .product { grid-template-columns: 1fr; } }
   `,
 })
 export class ProductDetailPage implements OnInit {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly authService = inject(AuthService);
+  private readonly cartService = inject(CartService);
   private readonly productService = inject(ProductService);
   protected readonly product = signal<Product | null>(null);
   protected readonly isLoading = signal(true);
   protected readonly errorMessage = signal('');
+  protected readonly isAddingToCart = signal(false);
+  protected readonly cartMessage = signal('');
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
@@ -96,5 +110,22 @@ export class ProductDetailPage implements OnInit {
       style: 'currency',
       currency: product.currency,
     }).format(product.price_cents / 100);
+  }
+
+  protected addToCart(product: Product): void {
+    if (!this.authService.isAuthenticated()) {
+      void this.router.navigate(['/auth/login']);
+      return;
+    }
+
+    this.isAddingToCart.set(true);
+    this.cartMessage.set('');
+    this.cartService
+      .addItem(product.id)
+      .pipe(finalize(() => this.isAddingToCart.set(false)))
+      .subscribe({
+        next: () => this.cartMessage.set('Added to your cart.'),
+        error: () => this.cartMessage.set('Unable to add this item. Please try again.'),
+      });
   }
 }

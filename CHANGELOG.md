@@ -1,5 +1,10 @@
 # Project Change Log
 
+## v1.16.0 - (3 Changes)
+- Added a storefront cart service with backend synchronization, authentication-aware state, and cart item counts.
+- Added cart navigation, add-to-cart actions, and a responsive cart page for quantity updates, removal, and clearing.
+- Updated storefront account messaging now that cart functionality is available.
+
 ## v1.15.0 - (5 Changes)
 - Added the online storefront cart-gateway backend application with authenticated customer cart tracking.
 - Added cart and cart item persistence with one active cart per customer, product links, quantity checks, and Liquibase grants.

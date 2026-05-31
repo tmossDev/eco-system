@@ -13,7 +13,7 @@ import { AuthService } from '../../core/services/auth.service';
       <form [formGroup]="form" (ngSubmit)="submit()">
         <p class="eyebrow">Join Northstar</p>
         <h1>Create account</h1>
-        <p class="intro">Set up your account now, ready for a smoother checkout when the cart arrives.</p>
+        <p class="intro">Set up your account to keep your cart close and make future checkout smoother.</p>
         <div class="row">
           <label>First name <input type="text" formControlName="first_name" autocomplete="given-name"></label>
           <label>Last name <input type="text" formControlName="last_name" autocomplete="family-name"></label>
