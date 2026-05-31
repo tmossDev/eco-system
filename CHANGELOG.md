@@ -1,5 +1,10 @@
 # Project Change Log
 
+## v1.14.0 - (3 Changes)
+- Added the online storefront Go gateway with public active-product catalog reads, signup, login, logout, current-user lookup, product media proxying, focused functional tests, and Helm deployment charts.
+- Added the online storefront Angular web app with a public catalog, product detail pages, account registration, sign-in, sign-out, session-aware navigation, and Helm deployment wiring.
+- Added GitHub Actions and local deployment automation for building, importing, deploying, rolling out, and smoke testing the online storefront gateway and web app.
+
 ## v1.13.1 - (9 Changes)
 - Merge public and private service into single user service for user-management
 - Added promotion settings support for enabling and disabling promotions from the backend and product admin web app.

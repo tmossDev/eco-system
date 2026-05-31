@@ -2,5 +2,7 @@ node_modules
 **/node_modules
 
 build/
+**/dist/
+**/.angular/
 runtime-config.json
 **/deployment/charts/*.tgz

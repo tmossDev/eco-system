@@ -1,0 +1,13 @@
+storefront-gateway: {}
+storefront-web-app: {}
+
+storefrontWebAppApiIngress:
+  enabled: false
+  className: ""
+  annotations: {}
+  host: ""
+  path: /api
+  pathType: Prefix
+  serviceName: storefront-gateway
+  servicePortName: http
+  tls: []

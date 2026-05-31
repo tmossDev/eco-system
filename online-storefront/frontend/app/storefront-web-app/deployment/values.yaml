@@ -1,0 +1,57 @@
+app:
+  nameOverride: storefront-web-app
+  fullnameOverride: storefront-web-app
+  partOf: online-storefront
+  component: frontend
+  image:
+    repository: eco-system/storefront-web-app
+    tag: latest
+    pullPolicy: IfNotPresent
+  ports:
+    - name: http
+      containerPort: 80
+      protocol: TCP
+  service:
+    enabled: true
+    ports:
+      - name: http
+        port: 80
+        targetPort: http
+        protocol: TCP
+  configMap:
+    enabled: true
+    envFrom: false
+    data:
+      config.json: |
+        {}
+  nginxConfig:
+    enabled: true
+    data:
+      default.conf: |
+        server {
+          listen 80;
+          server_name _;
+          root /usr/share/nginx/html;
+          index index.html;
+
+          location / {
+            try_files $uri $uri/ /index.html;
+          }
+        }
+  volumeMounts:
+    - name: runtime-config
+      mountPath: /usr/share/nginx/html/assets/config.json
+      subPath: config.json
+  volumes:
+    - name: runtime-config
+      configMap:
+        name: storefront-web-app
+        items:
+          - key: config.json
+            path: config.json
+  readinessProbe:
+    httpGet:
+      path: /
+      port: http
+    initialDelaySeconds: 10
+    periodSeconds: 10

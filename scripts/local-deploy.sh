@@ -81,6 +81,7 @@ USER_SERVICE_HOST="${USER_SERVICE_HOST:-$NAMESPACE.user-service.${BASE_DOMAIN:-c
 PRODUCT_ADMIN_WEB_APP_HOST="${PRODUCT_ADMIN_WEB_APP_HOST:-$NAMESPACE.product-admin-web-app.${BASE_DOMAIN:-com}}"
 PRODUCT_GATEWAY_HOST="${PRODUCT_GATEWAY_HOST:-$NAMESPACE.product-gateway.${BASE_DOMAIN:-com}}"
 PRODUCT_SERVICE_HOST="${PRODUCT_SERVICE_HOST:-$NAMESPACE.product-service.${BASE_DOMAIN:-com}}"
+STOREFRONT_WEB_APP_HOST="${STOREFRONT_WEB_APP_HOST:-$NAMESPACE.storefront-web-app.${BASE_DOMAIN:-com}}"
 STORYBOOK_HOST="${STORYBOOK_HOST:-$NAMESPACE.storybook.${BASE_DOMAIN:-com}}"
 PRODUCT_BACKEND_API_URL="${PRODUCT_BACKEND_API_URL:-http://product-service:8080}"
 
@@ -163,16 +164,20 @@ build_application_images() {
   docker build -f dockerfile --build-arg APP_NAME=user-gateway -t "$IMAGE_PREFIX/user-gateway:$IMAGE_TAG" .
   docker build -f dockerfile --build-arg APP_NAME=product-service -t "$IMAGE_PREFIX/product-service:$IMAGE_TAG" .
   docker build -f dockerfile --build-arg APP_NAME=product-gateway -t "$IMAGE_PREFIX/product-gateway:$IMAGE_TAG" .
+  docker build -f dockerfile --build-arg APP_NAME=storefront-gateway -t "$IMAGE_PREFIX/storefront-gateway:$IMAGE_TAG" .
   docker build -f user-management/frontend/app/admin-web-app/Dockerfile -t "$IMAGE_PREFIX/admin-web-app:$IMAGE_TAG" .
   docker build -f product-management/frontend/app/product-admin-web-app/Dockerfile -t "$IMAGE_PREFIX/product-admin-web-app:$IMAGE_TAG" .
+  docker build -f online-storefront/frontend/app/storefront-web-app/Dockerfile -t "$IMAGE_PREFIX/storefront-web-app:$IMAGE_TAG" .
   docker build -f shared-components/frontend/app/storybook/Dockerfile -t "$IMAGE_PREFIX/storybook:$IMAGE_TAG" .
 
   import_image "$IMAGE_PREFIX/user-service:$IMAGE_TAG"
   import_image "$IMAGE_PREFIX/user-gateway:$IMAGE_TAG"
   import_image "$IMAGE_PREFIX/product-service:$IMAGE_TAG"
   import_image "$IMAGE_PREFIX/product-gateway:$IMAGE_TAG"
+  import_image "$IMAGE_PREFIX/storefront-gateway:$IMAGE_TAG"
   import_image "$IMAGE_PREFIX/admin-web-app:$IMAGE_TAG"
   import_image "$IMAGE_PREFIX/product-admin-web-app:$IMAGE_TAG"
+  import_image "$IMAGE_PREFIX/storefront-web-app:$IMAGE_TAG"
   import_image "$IMAGE_PREFIX/storybook:$IMAGE_TAG"
 }
 
@@ -185,9 +190,12 @@ deploy_application() {
   helm dependency build product-management/backend/app/product-service/deployment
   helm dependency build product-management/backend/app/product-gateway/deployment
   helm dependency build product-management/frontend/app/product-admin-web-app/deployment
+  helm dependency build online-storefront/backend/app/storefront-gateway/deployment
+  helm dependency build online-storefront/frontend/app/storefront-web-app/deployment
   helm dependency build shared-components/deployment
   helm dependency build user-management/deployment
   helm dependency build product-management/deployment
+  helm dependency build online-storefront/deployment
 
   create_namespace "$NAMESPACE"
 
@@ -309,6 +317,31 @@ deploy_application() {
     --set productAdminWebAppApiIngress.pathType=Prefix \
     --set productAdminWebAppApiIngress.serviceName=product-gateway \
     --set productAdminWebAppApiIngress.servicePortName=http
+
+  helm upgrade --install online-storefront online-storefront/deployment \
+    --namespace "$NAMESPACE" \
+    --set storefront-gateway.app.image.repository="$IMAGE_PREFIX/storefront-gateway" \
+    --set storefront-gateway.app.image.tag="$IMAGE_TAG" \
+    --set storefront-gateway.app.image.pullPolicy=Never \
+    --set-string storefront-gateway.app.env.USER_SERVICE_URL="${USER_SERVICE_INTERNAL_URL:-http://user-service:8080}" \
+    --set-string storefront-gateway.app.env.PRODUCT_SERVICE_URL="${PRODUCT_SERVICE_INTERNAL_URL:-http://product-service:8080}" \
+    --set-string storefront-gateway.app.env.PRODUCT_GATEWAY_URL="${PRODUCT_GATEWAY_INTERNAL_URL:-http://product-gateway:8080}" \
+    --set-string storefront-gateway.app.env.FRONTEND_ORIGIN="http://${STOREFRONT_WEB_APP_HOST}" \
+    --set storefront-web-app.app.image.repository="$IMAGE_PREFIX/storefront-web-app" \
+    --set storefront-web-app.app.image.tag="$IMAGE_TAG" \
+    --set storefront-web-app.app.image.pullPolicy=Never \
+    --set storefront-web-app.app.ingress.enabled=true \
+    --set storefront-web-app.app.ingress.className="${INGRESS_CLASS_NAME:-traefik}" \
+    --set storefront-web-app.app.ingress.hosts[0].host="$STOREFRONT_WEB_APP_HOST" \
+    --set storefront-web-app.app.ingress.hosts[0].paths[0].path=/ \
+    --set storefront-web-app.app.ingress.hosts[0].paths[0].pathType=Prefix \
+    --set storefrontWebAppApiIngress.enabled=true \
+    --set storefrontWebAppApiIngress.className="${INGRESS_CLASS_NAME:-traefik}" \
+    --set storefrontWebAppApiIngress.host="$STOREFRONT_WEB_APP_HOST" \
+    --set storefrontWebAppApiIngress.path=/api \
+    --set storefrontWebAppApiIngress.pathType=Prefix \
+    --set storefrontWebAppApiIngress.serviceName=storefront-gateway \
+    --set storefrontWebAppApiIngress.servicePortName=http
 }
 
 main() {

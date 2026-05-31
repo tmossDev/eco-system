@@ -1,0 +1,13 @@
+apiVersion: v2
+name: online-storefront
+description: Online storefront deployment
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+dependencies:
+  - name: storefront-gateway
+    version: 0.1.0
+    repository: file://../backend/app/storefront-gateway/deployment
+  - name: storefront-web-app
+    version: 0.1.0
+    repository: file://../frontend/app/storefront-web-app/deployment

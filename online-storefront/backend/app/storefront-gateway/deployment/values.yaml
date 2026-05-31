@@ -1,0 +1,31 @@
+app:
+  nameOverride: storefront-gateway
+  fullnameOverride: storefront-gateway
+  partOf: online-storefront
+  component: backend
+  image:
+    repository: eco-system/storefront-gateway
+    tag: latest
+    pullPolicy: IfNotPresent
+  ports:
+    - name: http
+      containerPort: 8080
+      protocol: TCP
+  service:
+    enabled: true
+    ports:
+      - name: http
+        port: 8080
+        targetPort: http
+        protocol: TCP
+  env:
+    PORT: "8080"
+    USER_SERVICE_URL: http://user-service:8080
+    PRODUCT_SERVICE_URL: http://product-service:8080
+    PRODUCT_GATEWAY_URL: http://product-gateway:8080
+  readinessProbe:
+    httpGet:
+      path: /health
+      port: http
+    initialDelaySeconds: 5
+    periodSeconds: 10

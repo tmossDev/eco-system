@@ -54,6 +54,7 @@ jobs:
       product_admin_web_app_host: ${{ steps.context.outputs.product_admin_web_app_host }}
       product_gateway_host: ${{ steps.context.outputs.product_gateway_host }}
       product_service_host: ${{ steps.context.outputs.product_service_host }}
+      storefront_web_app_host: ${{ steps.context.outputs.storefront_web_app_host }}
       storybook_host: ${{ steps.context.outputs.storybook_host }}
     steps:
       - name: Checkout
@@ -175,6 +176,7 @@ jobs:
             echo "product_admin_web_app_host=${NAMESPACE}.product-admin-web-app.${BASE_DOMAIN}"
             echo "product_gateway_host=${NAMESPACE}.product-gateway.${BASE_DOMAIN}"
             echo "product_service_host=${NAMESPACE}.product-service.${BASE_DOMAIN}"
+            echo "storefront_web_app_host=${NAMESPACE}.storefront-web-app.${BASE_DOMAIN}"
             echo "storybook_host=${NAMESPACE}.storybook.${BASE_DOMAIN}"
           } >> "$GITHUB_OUTPUT"
 
@@ -344,6 +346,7 @@ jobs:
           echo "APP_PASSWORD=$APP_PASSWORD" >> "$GITHUB_ENV"
           echo "USER_SERVICE_INTERNAL_URL=${USER_SERVICE_INTERNAL_URL:-http://user-service:8080}" >> "$GITHUB_ENV"
           echo "PRODUCT_SERVICE_INTERNAL_URL=${PRODUCT_SERVICE_INTERNAL_URL:-http://product-service:8080}" >> "$GITHUB_ENV"
+          echo "PRODUCT_GATEWAY_INTERNAL_URL=${PRODUCT_GATEWAY_INTERNAL_URL:-http://product-gateway:8080}" >> "$GITHUB_ENV"
           echo "INGRESS_CLASS_NAME=${INGRESS_CLASS_NAME:-traefik}" >> "$GITHUB_ENV"
           echo "ADMIN_WEB_APP_HOST=${{ needs.prepare.outputs.admin_web_app_host }}" >> "$GITHUB_ENV"
           echo "USER_GATEWAY_HOST=${{ needs.prepare.outputs.user_gateway_host }}" >> "$GITHUB_ENV"
@@ -351,11 +354,13 @@ jobs:
           echo "PRODUCT_ADMIN_WEB_APP_HOST=${{ needs.prepare.outputs.product_admin_web_app_host }}" >> "$GITHUB_ENV"
           echo "PRODUCT_GATEWAY_HOST=${{ needs.prepare.outputs.product_gateway_host }}" >> "$GITHUB_ENV"
           echo "PRODUCT_SERVICE_HOST=${{ needs.prepare.outputs.product_service_host }}" >> "$GITHUB_ENV"
+          echo "STOREFRONT_WEB_APP_HOST=${{ needs.prepare.outputs.storefront_web_app_host }}" >> "$GITHUB_ENV"
           echo "STORYBOOK_HOST=${{ needs.prepare.outputs.storybook_host }}" >> "$GITHUB_ENV"
           echo "BACKEND_API_URL=http://${{ needs.prepare.outputs.user_gateway_host }}" >> "$GITHUB_ENV"
           echo "PRODUCT_BACKEND_API_URL=" >> "$GITHUB_ENV"
           echo "FRONTEND_ORIGIN=http://${{ needs.prepare.outputs.admin_web_app_host }}" >> "$GITHUB_ENV"
           echo "PRODUCT_FRONTEND_ORIGIN=http://${{ needs.prepare.outputs.product_admin_web_app_host }}" >> "$GITHUB_ENV"
+          echo "STOREFRONT_FRONTEND_ORIGIN=http://${{ needs.prepare.outputs.storefront_web_app_host }}" >> "$GITHUB_ENV"
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -367,6 +372,7 @@ jobs:
         run: |
           go test ./user-management/backend/app/user-gateway/routes -run 'TestGatewayFunctional'
           go test ./product-management/backend/app/product-gateway/routes -run 'TestProductGatewayFunctional'
+          go test ./online-storefront/backend/app/storefront-gateway/routes
 
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -386,7 +392,8 @@ jobs:
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/bin/user-gateway ./user-management/backend/app/user-gateway/cmd
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/bin/product-service ./product-management/backend/app/product-service/cmd
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/bin/product-gateway ./product-management/backend/app/product-gateway/cmd
-          file build/bin/user-service build/bin/user-gateway build/bin/product-service build/bin/product-gateway
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/bin/storefront-gateway ./online-storefront/backend/app/storefront-gateway/cmd
+          file build/bin/user-service build/bin/user-gateway build/bin/product-service build/bin/product-gateway build/bin/storefront-gateway
 
       - name: Build frontend applications and storybooks
         shell: bash
@@ -396,6 +403,7 @@ jobs:
           pnpm --filter admin-web-app build-storybook
           pnpm --filter product-admin-web-app build
           pnpm --filter product-admin-web-app build-storybook
+          pnpm --filter storefront-web-app build
           pnpm --filter storybook build-storybook
 
       - name: Build local application images
@@ -422,12 +430,21 @@ jobs:
             -t "$IMAGE_PREFIX/product-gateway:$IMAGE_TAG" \
             .
           docker build \
+            -f dockerfile \
+            --build-arg APP_NAME=storefront-gateway \
+            -t "$IMAGE_PREFIX/storefront-gateway:$IMAGE_TAG" \
+            .
+          docker build \
             -f user-management/frontend/app/admin-web-app/Dockerfile \
             -t "$IMAGE_PREFIX/admin-web-app:$IMAGE_TAG" \
             .
           docker build \
             -f product-management/frontend/app/product-admin-web-app/Dockerfile \
             -t "$IMAGE_PREFIX/product-admin-web-app:$IMAGE_TAG" \
+            .
+          docker build \
+            -f online-storefront/frontend/app/storefront-web-app/Dockerfile \
+            -t "$IMAGE_PREFIX/storefront-web-app:$IMAGE_TAG" \
             .
           docker build \
             -f shared-components/frontend/app/storybook/Dockerfile \
@@ -443,8 +460,10 @@ jobs:
               "$IMAGE_PREFIX/user-gateway:$IMAGE_TAG" \
               "$IMAGE_PREFIX/product-service:$IMAGE_TAG" \
               "$IMAGE_PREFIX/product-gateway:$IMAGE_TAG" \
+              "$IMAGE_PREFIX/storefront-gateway:$IMAGE_TAG" \
               "$IMAGE_PREFIX/admin-web-app:$IMAGE_TAG" \
               "$IMAGE_PREFIX/product-admin-web-app:$IMAGE_TAG" \
+              "$IMAGE_PREFIX/storefront-web-app:$IMAGE_TAG" \
               "$IMAGE_PREFIX/storybook:$IMAGE_TAG" \
               -c "${K3D_CLUSTER:-eco-cluster}"
           elif command -v k3s >/dev/null 2>&1; then
@@ -453,8 +472,10 @@ jobs:
               "$IMAGE_PREFIX/user-gateway:$IMAGE_TAG" \
               "$IMAGE_PREFIX/product-service:$IMAGE_TAG" \
               "$IMAGE_PREFIX/product-gateway:$IMAGE_TAG" \
+              "$IMAGE_PREFIX/storefront-gateway:$IMAGE_TAG" \
               "$IMAGE_PREFIX/admin-web-app:$IMAGE_TAG" \
               "$IMAGE_PREFIX/product-admin-web-app:$IMAGE_TAG" \
+              "$IMAGE_PREFIX/storefront-web-app:$IMAGE_TAG" \
               "$IMAGE_PREFIX/storybook:$IMAGE_TAG" \
               | sudo k3s ctr -n k8s.io images import -
           fi
@@ -520,9 +541,12 @@ jobs:
           helm dependency build product-management/backend/app/product-service/deployment
           helm dependency build product-management/backend/app/product-gateway/deployment
           helm dependency build product-management/frontend/app/product-admin-web-app/deployment
+          helm dependency build online-storefront/backend/app/storefront-gateway/deployment
+          helm dependency build online-storefront/frontend/app/storefront-web-app/deployment
           helm dependency build shared-components/deployment
           helm dependency build user-management/deployment
           helm dependency build product-management/deployment
+          helm dependency build online-storefront/deployment
 
       - name: Deploy shared-components storybook
         shell: bash
@@ -666,6 +690,65 @@ jobs:
           kubectl rollout status deployment/product-gateway -n "$NAMESPACE" --timeout=180s
           kubectl rollout status deployment/product-admin-web-app -n "$NAMESPACE" --timeout=180s
 
+      - name: Deploy online storefront
+        shell: bash
+        run: |
+          helm upgrade --install online-storefront online-storefront/deployment \
+            --namespace "$NAMESPACE" \
+            --set storefront-gateway.app.image.repository="$IMAGE_PREFIX/storefront-gateway" \
+            --set storefront-gateway.app.image.tag="$IMAGE_TAG" \
+            --set storefront-gateway.app.image.pullPolicy=Never \
+            --set-string storefront-gateway.app.env.USER_SERVICE_URL="$USER_SERVICE_INTERNAL_URL" \
+            --set-string storefront-gateway.app.env.PRODUCT_SERVICE_URL="$PRODUCT_SERVICE_INTERNAL_URL" \
+            --set-string storefront-gateway.app.env.PRODUCT_GATEWAY_URL="$PRODUCT_GATEWAY_INTERNAL_URL" \
+            --set-string storefront-gateway.app.env.FRONTEND_ORIGIN="$STOREFRONT_FRONTEND_ORIGIN" \
+            --set storefront-web-app.app.image.repository="$IMAGE_PREFIX/storefront-web-app" \
+            --set storefront-web-app.app.image.tag="$IMAGE_TAG" \
+            --set storefront-web-app.app.image.pullPolicy=Never \
+            --set storefront-web-app.app.ingress.enabled=true \
+            --set storefront-web-app.app.ingress.className="$INGRESS_CLASS_NAME" \
+            --set storefront-web-app.app.ingress.hosts[0].host="$STOREFRONT_WEB_APP_HOST" \
+            --set storefront-web-app.app.ingress.hosts[0].paths[0].path=/ \
+            --set storefront-web-app.app.ingress.hosts[0].paths[0].pathType=Prefix \
+            --set storefrontWebAppApiIngress.enabled=true \
+            --set storefrontWebAppApiIngress.className="$INGRESS_CLASS_NAME" \
+            --set storefrontWebAppApiIngress.host="$STOREFRONT_WEB_APP_HOST" \
+            --set storefrontWebAppApiIngress.path=/api \
+            --set storefrontWebAppApiIngress.pathType=Prefix \
+            --set storefrontWebAppApiIngress.serviceName=storefront-gateway \
+            --set storefrontWebAppApiIngress.servicePortName=http
+
+      - name: Wait for online storefront rollout
+        shell: bash
+        run: |
+          set -euo pipefail
+          kubectl rollout status deployment/storefront-gateway -n "$NAMESPACE" --timeout=180s
+          kubectl rollout status deployment/storefront-web-app -n "$NAMESPACE" --timeout=180s
+
+      - name: Run deployed online storefront smoke test
+        shell: bash
+        run: |
+          set -euo pipefail
+          kubectl port-forward -n "$NAMESPACE" service/storefront-gateway 18082:8080 &
+          GATEWAY_PORT_FORWARD_PID="$!"
+          kubectl port-forward -n "$NAMESPACE" service/storefront-web-app 18083:80 &
+          WEB_PORT_FORWARD_PID="$!"
+          trap 'kill "$GATEWAY_PORT_FORWARD_PID" "$WEB_PORT_FORWARD_PID" 2>/dev/null || true' EXIT
+
+          for attempt in {1..30}; do
+            if curl --silent --fail http://127.0.0.1:18082/health >/dev/null \
+              && curl --silent --fail http://127.0.0.1:18083/ >/dev/null; then
+              break
+            fi
+            if [[ "$attempt" == "30" ]]; then
+              echo "Timed out waiting for online storefront services" >&2
+              exit 1
+            fi
+            sleep 1
+          done
+
+          curl --silent --fail http://127.0.0.1:18082/api/products >/dev/null
+
       - name: Run deployed gateway functional tests
         shell: bash
         env:
@@ -759,6 +842,7 @@ jobs:
               ['User service', 'http://${{ needs.prepare.outputs.user_service_host }}'],
               ['Product gateway', 'http://${{ needs.prepare.outputs.product_gateway_host }}'],
               ['Product service', 'http://${{ needs.prepare.outputs.product_service_host }}'],
+              ['Online storefront', 'http://${{ needs.prepare.outputs.storefront_web_app_host }}'],
             ];
 
             const decoratorBox = `
