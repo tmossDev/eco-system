@@ -1,0 +1,13 @@
+apiVersion: v2
+name: order-management
+description: Order management deployment chart
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+dependencies:
+  - name: order-service
+    version: 0.1.0
+    repository: file://../backend/app/order-service/deployment
+  - name: order-gateway
+    version: 0.1.0
+    repository: file://../backend/app/order-gateway/deployment

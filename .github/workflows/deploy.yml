@@ -176,6 +176,8 @@ jobs:
             echo "product_admin_web_app_host=${NAMESPACE}.product-admin-web-app.${BASE_DOMAIN}"
             echo "product_gateway_host=${NAMESPACE}.product-gateway.${BASE_DOMAIN}"
             echo "product_service_host=${NAMESPACE}.product-service.${BASE_DOMAIN}"
+            echo "order_gateway_host=${NAMESPACE}.order-gateway.${BASE_DOMAIN}"
+            echo "order_service_host=${NAMESPACE}.order-service.${BASE_DOMAIN}"
             echo "storefront_web_app_host=${NAMESPACE}.storefront-web-app.${BASE_DOMAIN}"
             echo "storybook_host=${NAMESPACE}.storybook.${BASE_DOMAIN}"
           } >> "$GITHUB_OUTPUT"
@@ -354,6 +356,8 @@ jobs:
           echo "PRODUCT_ADMIN_WEB_APP_HOST=${{ needs.prepare.outputs.product_admin_web_app_host }}" >> "$GITHUB_ENV"
           echo "PRODUCT_GATEWAY_HOST=${{ needs.prepare.outputs.product_gateway_host }}" >> "$GITHUB_ENV"
           echo "PRODUCT_SERVICE_HOST=${{ needs.prepare.outputs.product_service_host }}" >> "$GITHUB_ENV"
+          echo "ORDER_GATEWAY_HOST=${{ needs.prepare.outputs.order_gateway_host }}" >> "$GITHUB_ENV"
+          echo "ORDER_SERVICE_HOST=${{ needs.prepare.outputs.order_service_host }}" >> "$GITHUB_ENV"
           echo "STOREFRONT_WEB_APP_HOST=${{ needs.prepare.outputs.storefront_web_app_host }}" >> "$GITHUB_ENV"
           echo "STORYBOOK_HOST=${{ needs.prepare.outputs.storybook_host }}" >> "$GITHUB_ENV"
           echo "BACKEND_API_URL=http://${{ needs.prepare.outputs.user_gateway_host }}" >> "$GITHUB_ENV"
@@ -372,6 +376,8 @@ jobs:
         run: |
           go test ./user-management/backend/app/user-gateway/routes -run 'TestGatewayFunctional'
           go test ./product-management/backend/app/product-gateway/routes -run 'TestProductGatewayFunctional'
+          go test ./order-management/backend/app/order-gateway/routes
+          go test ./order-management/backend/app/order-service/routes
           go test ./online-storefront/backend/app/cart-gateway/routes
           go test ./online-storefront/backend/app/storefront-gateway/routes
 
@@ -393,9 +399,11 @@ jobs:
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/bin/user-gateway ./user-management/backend/app/user-gateway/cmd
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/bin/product-service ./product-management/backend/app/product-service/cmd
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/bin/product-gateway ./product-management/backend/app/product-gateway/cmd
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/bin/order-service ./order-management/backend/app/order-service/cmd
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/bin/order-gateway ./order-management/backend/app/order-gateway/cmd
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/bin/cart-gateway ./online-storefront/backend/app/cart-gateway/cmd
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/bin/storefront-gateway ./online-storefront/backend/app/storefront-gateway/cmd
-          file build/bin/user-service build/bin/user-gateway build/bin/product-service build/bin/product-gateway build/bin/cart-gateway build/bin/storefront-gateway
+          file build/bin/user-service build/bin/user-gateway build/bin/product-service build/bin/product-gateway build/bin/order-service build/bin/order-gateway build/bin/cart-gateway build/bin/storefront-gateway
 
       - name: Build frontend applications and storybooks
         shell: bash
@@ -438,6 +446,16 @@ jobs:
             .
           docker build \
             -f dockerfile \
+            --build-arg APP_NAME=order-service \
+            -t "$IMAGE_PREFIX/order-service:$IMAGE_TAG" \
+            .
+          docker build \
+            -f dockerfile \
+            --build-arg APP_NAME=order-gateway \
+            -t "$IMAGE_PREFIX/order-gateway:$IMAGE_TAG" \
+            .
+          docker build \
+            -f dockerfile \
             --build-arg APP_NAME=storefront-gateway \
             -t "$IMAGE_PREFIX/storefront-gateway:$IMAGE_TAG" \
             .
@@ -467,6 +485,8 @@ jobs:
               "$IMAGE_PREFIX/user-gateway:$IMAGE_TAG" \
               "$IMAGE_PREFIX/product-service:$IMAGE_TAG" \
               "$IMAGE_PREFIX/product-gateway:$IMAGE_TAG" \
+              "$IMAGE_PREFIX/order-service:$IMAGE_TAG" \
+              "$IMAGE_PREFIX/order-gateway:$IMAGE_TAG" \
               "$IMAGE_PREFIX/cart-gateway:$IMAGE_TAG" \
               "$IMAGE_PREFIX/storefront-gateway:$IMAGE_TAG" \
               "$IMAGE_PREFIX/admin-web-app:$IMAGE_TAG" \
@@ -480,6 +500,8 @@ jobs:
               "$IMAGE_PREFIX/user-gateway:$IMAGE_TAG" \
               "$IMAGE_PREFIX/product-service:$IMAGE_TAG" \
               "$IMAGE_PREFIX/product-gateway:$IMAGE_TAG" \
+              "$IMAGE_PREFIX/order-service:$IMAGE_TAG" \
+              "$IMAGE_PREFIX/order-gateway:$IMAGE_TAG" \
               "$IMAGE_PREFIX/cart-gateway:$IMAGE_TAG" \
               "$IMAGE_PREFIX/storefront-gateway:$IMAGE_TAG" \
               "$IMAGE_PREFIX/admin-web-app:$IMAGE_TAG" \
@@ -550,12 +572,15 @@ jobs:
           helm dependency build product-management/backend/app/product-service/deployment
           helm dependency build product-management/backend/app/product-gateway/deployment
           helm dependency build product-management/frontend/app/product-admin-web-app/deployment
+          helm dependency build order-management/backend/app/order-service/deployment
+          helm dependency build order-management/backend/app/order-gateway/deployment
           helm dependency build online-storefront/backend/app/cart-gateway/deployment
           helm dependency build online-storefront/backend/app/storefront-gateway/deployment
           helm dependency build online-storefront/frontend/app/storefront-web-app/deployment
           helm dependency build shared-components/deployment
           helm dependency build user-management/deployment
           helm dependency build product-management/deployment
+          helm dependency build order-management/deployment
           helm dependency build online-storefront/deployment
 
       - name: Deploy shared-components storybook
@@ -686,6 +711,53 @@ jobs:
             --set productAdminWebAppApiIngress.serviceName=product-gateway \
             --set productAdminWebAppApiIngress.servicePortName=http
 
+      - name: Deploy order-management
+        shell: bash
+        run: |
+          helm upgrade --install order-management order-management/deployment \
+            --namespace "$NAMESPACE" \
+            --set order-service.app.image.repository="$IMAGE_PREFIX/order-service" \
+            --set order-service.app.image.tag="$IMAGE_TAG" \
+            --set order-service.app.image.pullPolicy=Never \
+            --set order-service.app.configMap.enabled=true \
+            --set-string order-service.app.configMap.data.DB_DIALECT=postgresql \
+            --set-string order-service.app.configMap.data.DB_NAME="$POSTGRES_DB" \
+            --set-string order-service.app.configMap.data.DB_HOST="$POSTGRES_HOST" \
+            --set-string order-service.app.configMap.data.DB_PORT="$POSTGRES_PORT" \
+            --set-string order-service.app.configMap.data.DB_USER="$POSTGRES_APP_USER" \
+            --set order-service.app.secret.enabled=true \
+            --set-string order-service.app.secret.stringData.DB_PASSWORD="$APP_PASSWORD" \
+            --set order-service.app.ingress.enabled=true \
+            --set order-service.app.ingress.className="$INGRESS_CLASS_NAME" \
+            --set order-service.app.ingress.hosts[0].host="$ORDER_SERVICE_HOST" \
+            --set order-service.app.ingress.hosts[0].paths[0].path=/ \
+            --set order-service.app.ingress.hosts[0].paths[0].pathType=Prefix \
+            --set order-gateway.app.image.repository="$IMAGE_PREFIX/order-gateway" \
+            --set order-gateway.app.image.tag="$IMAGE_TAG" \
+            --set order-gateway.app.image.pullPolicy=Never \
+            --set order-gateway.app.configMap.enabled=true \
+            --set-string order-gateway.app.configMap.data.DB_DIALECT=postgresql \
+            --set-string order-gateway.app.configMap.data.DB_NAME="$POSTGRES_DB" \
+            --set-string order-gateway.app.configMap.data.DB_HOST="$POSTGRES_HOST" \
+            --set-string order-gateway.app.configMap.data.DB_PORT="$POSTGRES_PORT" \
+            --set-string order-gateway.app.configMap.data.DB_USER="$POSTGRES_APP_USER" \
+            --set-string order-gateway.app.configMap.data.USER_SERVICE_URL="$USER_SERVICE_INTERNAL_URL" \
+            --set-string order-gateway.app.configMap.data.FRONTEND_ORIGIN="http://$ORDER_GATEWAY_HOST" \
+            --set order-gateway.app.secret.enabled=true \
+            --set-string order-gateway.app.secret.stringData.DB_PASSWORD="$APP_PASSWORD" \
+            --set order-gateway.app.ingress.enabled=true \
+            --set order-gateway.app.ingress.className="$INGRESS_CLASS_NAME" \
+            --set order-gateway.app.ingress.hosts[0].host="$ORDER_GATEWAY_HOST" \
+            --set order-gateway.app.ingress.hosts[0].paths[0].path=/ \
+            --set order-gateway.app.ingress.hosts[0].paths[0].pathType=Prefix \
+            --set orderGatewayApiIngress.enabled=true \
+            --set orderGatewayApiIngress.className="$INGRESS_CLASS_NAME" \
+            --set orderGatewayApiIngress.host="$ORDER_GATEWAY_HOST" \
+            --set orderGatewayApiIngress.path=/api \
+            --set orderGatewayApiIngress.pathType=Prefix \
+            --set orderGatewayApiIngress.serviceName=order-gateway \
+            --set orderGatewayApiIngress.servicePortName=http
+
       - name: Wait for user-management rollout
         shell: bash
         run: |
@@ -699,6 +771,13 @@ jobs:
           set -euo pipefail
           kubectl rollout status deployment/product-gateway -n "$NAMESPACE" --timeout=180s
           kubectl rollout status deployment/product-admin-web-app -n "$NAMESPACE" --timeout=180s
+
+      - name: Wait for order-management rollout
+        shell: bash
+        run: |
+          set -euo pipefail
+          kubectl rollout status deployment/order-gateway -n "$NAMESPACE" --timeout=180s
+          kubectl rollout status deployment/order-service -n "$NAMESPACE" --timeout=180s
 
       - name: Deploy online storefront
         shell: bash
@@ -734,8 +813,10 @@ jobs:
             --set cartGatewayApiIngress.enabled=true \
             --set cartGatewayApiIngress.className="$INGRESS_CLASS_NAME" \
             --set cartGatewayApiIngress.host="$STOREFRONT_WEB_APP_HOST" \
-            --set cartGatewayApiIngress.path=/api/cart \
-            --set cartGatewayApiIngress.pathType=Prefix \
+            --set cartGatewayApiIngress.paths[0].path=/api/cart \
+            --set cartGatewayApiIngress.paths[0].pathType=Prefix \
+            --set cartGatewayApiIngress.paths[1].path=/api/orders \
+            --set cartGatewayApiIngress.paths[1].pathType=Prefix \
             --set cartGatewayApiIngress.serviceName=storefront-cart-gateway \
             --set cartGatewayApiIngress.servicePortName=http \
             --set storefrontWebAppApiIngress.enabled=true \

@@ -1,5 +1,11 @@
 # Project Change Log
 
+## v1.18.0 - (4 Changes)
+- Added shared backend order request and response contracts for reuse across storefront and order management.
+- Added the order-management backend use case with order-gateway and order-service applications.
+- Added order-management APIs for order listing, order detail lookup, and fulfillment status updates.
+- Added Helm deployment charts and ingress wiring for order-management backend services.
+
 ## v1.17.0 - (5 Changes)
 - Added order and order item persistence for storefront checkout with product snapshots and order totals.
 - Added a cart checkout API route that creates an order, reserves product inventory, and closes the active cart transactionally.

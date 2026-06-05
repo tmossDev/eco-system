@@ -81,6 +81,8 @@ USER_SERVICE_HOST="${USER_SERVICE_HOST:-$NAMESPACE.user-service.${BASE_DOMAIN:-c
 PRODUCT_ADMIN_WEB_APP_HOST="${PRODUCT_ADMIN_WEB_APP_HOST:-$NAMESPACE.product-admin-web-app.${BASE_DOMAIN:-com}}"
 PRODUCT_GATEWAY_HOST="${PRODUCT_GATEWAY_HOST:-$NAMESPACE.product-gateway.${BASE_DOMAIN:-com}}"
 PRODUCT_SERVICE_HOST="${PRODUCT_SERVICE_HOST:-$NAMESPACE.product-service.${BASE_DOMAIN:-com}}"
+ORDER_GATEWAY_HOST="${ORDER_GATEWAY_HOST:-$NAMESPACE.order-gateway.${BASE_DOMAIN:-com}}"
+ORDER_SERVICE_HOST="${ORDER_SERVICE_HOST:-$NAMESPACE.order-service.${BASE_DOMAIN:-com}}"
 STOREFRONT_WEB_APP_HOST="${STOREFRONT_WEB_APP_HOST:-$NAMESPACE.storefront-web-app.${BASE_DOMAIN:-com}}"
 STORYBOOK_HOST="${STORYBOOK_HOST:-$NAMESPACE.storybook.${BASE_DOMAIN:-com}}"
 PRODUCT_BACKEND_API_URL="${PRODUCT_BACKEND_API_URL:-http://product-service:8080}"
@@ -164,6 +166,8 @@ build_application_images() {
   docker build -f dockerfile --build-arg APP_NAME=user-gateway -t "$IMAGE_PREFIX/user-gateway:$IMAGE_TAG" .
   docker build -f dockerfile --build-arg APP_NAME=product-service -t "$IMAGE_PREFIX/product-service:$IMAGE_TAG" .
   docker build -f dockerfile --build-arg APP_NAME=product-gateway -t "$IMAGE_PREFIX/product-gateway:$IMAGE_TAG" .
+  docker build -f dockerfile --build-arg APP_NAME=order-service -t "$IMAGE_PREFIX/order-service:$IMAGE_TAG" .
+  docker build -f dockerfile --build-arg APP_NAME=order-gateway -t "$IMAGE_PREFIX/order-gateway:$IMAGE_TAG" .
   docker build -f dockerfile --build-arg APP_NAME=cart-gateway -t "$IMAGE_PREFIX/cart-gateway:$IMAGE_TAG" .
   docker build -f dockerfile --build-arg APP_NAME=storefront-gateway -t "$IMAGE_PREFIX/storefront-gateway:$IMAGE_TAG" .
   docker build -f user-management/frontend/app/admin-web-app/Dockerfile -t "$IMAGE_PREFIX/admin-web-app:$IMAGE_TAG" .
@@ -175,6 +179,8 @@ build_application_images() {
   import_image "$IMAGE_PREFIX/user-gateway:$IMAGE_TAG"
   import_image "$IMAGE_PREFIX/product-service:$IMAGE_TAG"
   import_image "$IMAGE_PREFIX/product-gateway:$IMAGE_TAG"
+  import_image "$IMAGE_PREFIX/order-service:$IMAGE_TAG"
+  import_image "$IMAGE_PREFIX/order-gateway:$IMAGE_TAG"
   import_image "$IMAGE_PREFIX/cart-gateway:$IMAGE_TAG"
   import_image "$IMAGE_PREFIX/storefront-gateway:$IMAGE_TAG"
   import_image "$IMAGE_PREFIX/admin-web-app:$IMAGE_TAG"
@@ -192,12 +198,15 @@ deploy_application() {
   helm dependency build product-management/backend/app/product-service/deployment
   helm dependency build product-management/backend/app/product-gateway/deployment
   helm dependency build product-management/frontend/app/product-admin-web-app/deployment
+  helm dependency build order-management/backend/app/order-service/deployment
+  helm dependency build order-management/backend/app/order-gateway/deployment
   helm dependency build online-storefront/backend/app/cart-gateway/deployment
   helm dependency build online-storefront/backend/app/storefront-gateway/deployment
   helm dependency build online-storefront/frontend/app/storefront-web-app/deployment
   helm dependency build shared-components/deployment
   helm dependency build user-management/deployment
   helm dependency build product-management/deployment
+  helm dependency build order-management/deployment
   helm dependency build online-storefront/deployment
 
   create_namespace "$NAMESPACE"
@@ -321,6 +330,50 @@ deploy_application() {
     --set productAdminWebAppApiIngress.serviceName=product-gateway \
     --set productAdminWebAppApiIngress.servicePortName=http
 
+  helm upgrade --install order-management order-management/deployment \
+    --namespace "$NAMESPACE" \
+    --set order-service.app.image.repository="$IMAGE_PREFIX/order-service" \
+    --set order-service.app.image.tag="$IMAGE_TAG" \
+    --set order-service.app.image.pullPolicy=Never \
+    --set order-service.app.configMap.enabled=true \
+    --set-string order-service.app.configMap.data.DB_DIALECT=postgresql \
+    --set-string order-service.app.configMap.data.DB_NAME="${POSTGRES_DB:-ecoDB}" \
+    --set-string order-service.app.configMap.data.DB_HOST="${POSTGRES_HOST:-postgres.${FOUNDATION_NAMESPACE}.svc.cluster.local}" \
+    --set-string order-service.app.configMap.data.DB_PORT="${POSTGRES_PORT:-5432}" \
+    --set-string order-service.app.configMap.data.DB_USER="${POSTGRES_APP_USER:-app_user}" \
+    --set order-service.app.secret.enabled=true \
+    --set-string order-service.app.secret.stringData.DB_PASSWORD="$APP_PASSWORD" \
+    --set order-service.app.ingress.enabled=true \
+    --set order-service.app.ingress.className="${INGRESS_CLASS_NAME:-traefik}" \
+    --set order-service.app.ingress.hosts[0].host="$ORDER_SERVICE_HOST" \
+    --set order-service.app.ingress.hosts[0].paths[0].path=/ \
+    --set order-service.app.ingress.hosts[0].paths[0].pathType=Prefix \
+    --set order-gateway.app.image.repository="$IMAGE_PREFIX/order-gateway" \
+    --set order-gateway.app.image.tag="$IMAGE_TAG" \
+    --set order-gateway.app.image.pullPolicy=Never \
+    --set order-gateway.app.configMap.enabled=true \
+    --set-string order-gateway.app.configMap.data.DB_DIALECT=postgresql \
+    --set-string order-gateway.app.configMap.data.DB_NAME="${POSTGRES_DB:-ecoDB}" \
+    --set-string order-gateway.app.configMap.data.DB_HOST="${POSTGRES_HOST:-postgres.${FOUNDATION_NAMESPACE}.svc.cluster.local}" \
+    --set-string order-gateway.app.configMap.data.DB_PORT="${POSTGRES_PORT:-5432}" \
+    --set-string order-gateway.app.configMap.data.DB_USER="${POSTGRES_APP_USER:-app_user}" \
+    --set-string order-gateway.app.configMap.data.USER_SERVICE_URL="${USER_SERVICE_INTERNAL_URL:-http://user-service:8080}" \
+    --set-string order-gateway.app.configMap.data.FRONTEND_ORIGIN="http://${ORDER_GATEWAY_HOST}" \
+    --set order-gateway.app.secret.enabled=true \
+    --set-string order-gateway.app.secret.stringData.DB_PASSWORD="$APP_PASSWORD" \
+    --set order-gateway.app.ingress.enabled=true \
+    --set order-gateway.app.ingress.className="${INGRESS_CLASS_NAME:-traefik}" \
+    --set order-gateway.app.ingress.hosts[0].host="$ORDER_GATEWAY_HOST" \
+    --set order-gateway.app.ingress.hosts[0].paths[0].path=/ \
+    --set order-gateway.app.ingress.hosts[0].paths[0].pathType=Prefix \
+    --set orderGatewayApiIngress.enabled=true \
+    --set orderGatewayApiIngress.className="${INGRESS_CLASS_NAME:-traefik}" \
+    --set orderGatewayApiIngress.host="$ORDER_GATEWAY_HOST" \
+    --set orderGatewayApiIngress.path=/api \
+    --set orderGatewayApiIngress.pathType=Prefix \
+    --set orderGatewayApiIngress.serviceName=order-gateway \
+    --set orderGatewayApiIngress.servicePortName=http
+
   helm upgrade --install online-storefront online-storefront/deployment \
     --namespace "$NAMESPACE" \
     --set cart-gateway.app.image.repository="$IMAGE_PREFIX/cart-gateway" \
@@ -352,8 +405,10 @@ deploy_application() {
     --set cartGatewayApiIngress.enabled=true \
     --set cartGatewayApiIngress.className="${INGRESS_CLASS_NAME:-traefik}" \
     --set cartGatewayApiIngress.host="$STOREFRONT_WEB_APP_HOST" \
-    --set cartGatewayApiIngress.path=/api/cart \
-    --set cartGatewayApiIngress.pathType=Prefix \
+    --set cartGatewayApiIngress.paths[0].path=/api/cart \
+    --set cartGatewayApiIngress.paths[0].pathType=Prefix \
+    --set cartGatewayApiIngress.paths[1].path=/api/orders \
+    --set cartGatewayApiIngress.paths[1].pathType=Prefix \
     --set cartGatewayApiIngress.serviceName=storefront-cart-gateway \
     --set cartGatewayApiIngress.servicePortName=http \
     --set storefrontWebAppApiIngress.enabled=true \

@@ -1,0 +1,8 @@
+orderGatewayApiIngress:
+  enabled: true
+  className: traefik
+  host: eco-test.order-management.com
+  path: /api
+  pathType: Prefix
+  serviceName: order-gateway
+  servicePortName: http

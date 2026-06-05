@@ -1,0 +1,13 @@
+order-service: {}
+order-gateway: {}
+
+orderGatewayApiIngress:
+  enabled: false
+  className: ""
+  annotations: {}
+  host: ""
+  path: /api
+  pathType: Prefix
+  serviceName: order-gateway
+  servicePortName: http
+  tls: []

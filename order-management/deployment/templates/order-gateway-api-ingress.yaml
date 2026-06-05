@@ -1,16 +1,16 @@
-{{- with .Values.cartGatewayApiIngress }}
+{{- with .Values.orderGatewayApiIngress }}
 {{- if and .enabled .host }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: storefront-cart-gateway-api
+  name: order-gateway-api
   labels:
-    app.kubernetes.io/name: storefront-cart-gateway-api
+    app.kubernetes.io/name: order-gateway-api
     app.kubernetes.io/instance: {{ $.Release.Name }}
     app.kubernetes.io/version: {{ $.Chart.AppVersion | quote }}
     app.kubernetes.io/managed-by: {{ $.Release.Service }}
     app.kubernetes.io/component: backend
-    app.kubernetes.io/part-of: online-storefront
+    app.kubernetes.io/part-of: order-management
   {{- with .annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
@@ -27,15 +27,12 @@ spec:
     - host: {{ .host | quote }}
       http:
         paths:
-          {{- $paths := .paths | default (list (dict "path" (.path | default "/api/cart") "pathType" (.pathType | default "Prefix"))) }}
-          {{- range $paths }}
-          - path: {{ .path | default "/api/cart" }}
+          - path: {{ .path | default "/api" }}
             pathType: {{ .pathType | default "Prefix" }}
             backend:
               service:
-                name: {{ $.Values.cartGatewayApiIngress.serviceName | default "storefront-cart-gateway" }}
+                name: {{ .serviceName | default "order-gateway" }}
                 port:
-                  name: {{ $.Values.cartGatewayApiIngress.servicePortName | default "http" }}
-          {{- end }}
+                  name: {{ .servicePortName | default "http" }}
 {{- end }}
 {{- end }}

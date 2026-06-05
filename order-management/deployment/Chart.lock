@@ -1,0 +1,9 @@
+dependencies:
+- name: order-service
+  repository: file://../backend/app/order-service/deployment
+  version: 0.1.0
+- name: order-gateway
+  repository: file://../backend/app/order-gateway/deployment
+  version: 0.1.0
+digest: sha256:7cf87ebad0331a57f416bea027da820a54866d87f9486c30a8b101ca9d959123
+generated: "2026-06-05T23:05:24.559057109+02:00"
