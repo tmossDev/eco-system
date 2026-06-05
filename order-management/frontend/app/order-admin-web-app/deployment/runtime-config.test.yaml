@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: order-admin-web-app-runtime-config
+data:
+  config.json: |
+    {
+      "BACKEND_API_URL": "",
+      "ENABLE_MOCK_API": false
+    }

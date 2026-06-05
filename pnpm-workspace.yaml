@@ -1,6 +1,7 @@
 packages:
   - "user-management/frontend/app/*"
   - "product-management/frontend/app/*"
+  - "order-management/frontend/app/*"
   - "online-storefront/frontend/app/*"
   - "shared-components/frontend/package/*"
   - "shared-components/frontend/package/design-system/ds/*"

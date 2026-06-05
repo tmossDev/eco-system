@@ -1,7 +1,7 @@
-orderGatewayApiIngress:
+orderAdminWebAppApiIngress:
   enabled: true
   className: traefik
-  host: eco-test.order-management.com
+  host: eco-test.order-admin-web-app.com
   path: /api
   pathType: Prefix
   serviceName: order-gateway

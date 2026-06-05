@@ -1,7 +1,8 @@
 order-service: {}
 order-gateway: {}
+order-admin-web-app: {}
 
-orderGatewayApiIngress:
+orderAdminWebAppApiIngress:
   enabled: false
   className: ""
   annotations: {}

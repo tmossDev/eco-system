@@ -54,6 +54,9 @@ jobs:
       product_admin_web_app_host: ${{ steps.context.outputs.product_admin_web_app_host }}
       product_gateway_host: ${{ steps.context.outputs.product_gateway_host }}
       product_service_host: ${{ steps.context.outputs.product_service_host }}
+      order_admin_web_app_host: ${{ steps.context.outputs.order_admin_web_app_host }}
+      order_gateway_host: ${{ steps.context.outputs.order_gateway_host }}
+      order_service_host: ${{ steps.context.outputs.order_service_host }}
       storefront_web_app_host: ${{ steps.context.outputs.storefront_web_app_host }}
       storybook_host: ${{ steps.context.outputs.storybook_host }}
     steps:
@@ -176,6 +179,7 @@ jobs:
             echo "product_admin_web_app_host=${NAMESPACE}.product-admin-web-app.${BASE_DOMAIN}"
             echo "product_gateway_host=${NAMESPACE}.product-gateway.${BASE_DOMAIN}"
             echo "product_service_host=${NAMESPACE}.product-service.${BASE_DOMAIN}"
+            echo "order_admin_web_app_host=${NAMESPACE}.order-admin-web-app.${BASE_DOMAIN}"
             echo "order_gateway_host=${NAMESPACE}.order-gateway.${BASE_DOMAIN}"
             echo "order_service_host=${NAMESPACE}.order-service.${BASE_DOMAIN}"
             echo "storefront_web_app_host=${NAMESPACE}.storefront-web-app.${BASE_DOMAIN}"
@@ -356,14 +360,17 @@ jobs:
           echo "PRODUCT_ADMIN_WEB_APP_HOST=${{ needs.prepare.outputs.product_admin_web_app_host }}" >> "$GITHUB_ENV"
           echo "PRODUCT_GATEWAY_HOST=${{ needs.prepare.outputs.product_gateway_host }}" >> "$GITHUB_ENV"
           echo "PRODUCT_SERVICE_HOST=${{ needs.prepare.outputs.product_service_host }}" >> "$GITHUB_ENV"
+          echo "ORDER_ADMIN_WEB_APP_HOST=${{ needs.prepare.outputs.order_admin_web_app_host }}" >> "$GITHUB_ENV"
           echo "ORDER_GATEWAY_HOST=${{ needs.prepare.outputs.order_gateway_host }}" >> "$GITHUB_ENV"
           echo "ORDER_SERVICE_HOST=${{ needs.prepare.outputs.order_service_host }}" >> "$GITHUB_ENV"
           echo "STOREFRONT_WEB_APP_HOST=${{ needs.prepare.outputs.storefront_web_app_host }}" >> "$GITHUB_ENV"
           echo "STORYBOOK_HOST=${{ needs.prepare.outputs.storybook_host }}" >> "$GITHUB_ENV"
           echo "BACKEND_API_URL=http://${{ needs.prepare.outputs.user_gateway_host }}" >> "$GITHUB_ENV"
           echo "PRODUCT_BACKEND_API_URL=" >> "$GITHUB_ENV"
+          echo "ORDER_BACKEND_API_URL=" >> "$GITHUB_ENV"
           echo "FRONTEND_ORIGIN=http://${{ needs.prepare.outputs.admin_web_app_host }}" >> "$GITHUB_ENV"
           echo "PRODUCT_FRONTEND_ORIGIN=http://${{ needs.prepare.outputs.product_admin_web_app_host }}" >> "$GITHUB_ENV"
+          echo "ORDER_FRONTEND_ORIGIN=http://${{ needs.prepare.outputs.order_admin_web_app_host }}" >> "$GITHUB_ENV"
           echo "STOREFRONT_FRONTEND_ORIGIN=http://${{ needs.prepare.outputs.storefront_web_app_host }}" >> "$GITHUB_ENV"
 
       - name: Set up Go
@@ -413,6 +420,8 @@ jobs:
           pnpm --filter admin-web-app build-storybook
           pnpm --filter product-admin-web-app build
           pnpm --filter product-admin-web-app build-storybook
+          pnpm --filter order-admin-web-app build
+          pnpm --filter order-admin-web-app build-storybook
           pnpm --filter storefront-web-app build
           pnpm --filter storybook build-storybook
 
@@ -468,6 +477,10 @@ jobs:
             -t "$IMAGE_PREFIX/product-admin-web-app:$IMAGE_TAG" \
             .
           docker build \
+            -f order-management/frontend/app/order-admin-web-app/Dockerfile \
+            -t "$IMAGE_PREFIX/order-admin-web-app:$IMAGE_TAG" \
+            .
+          docker build \
             -f online-storefront/frontend/app/storefront-web-app/Dockerfile \
             -t "$IMAGE_PREFIX/storefront-web-app:$IMAGE_TAG" \
             .
@@ -491,6 +504,7 @@ jobs:
               "$IMAGE_PREFIX/storefront-gateway:$IMAGE_TAG" \
               "$IMAGE_PREFIX/admin-web-app:$IMAGE_TAG" \
               "$IMAGE_PREFIX/product-admin-web-app:$IMAGE_TAG" \
+              "$IMAGE_PREFIX/order-admin-web-app:$IMAGE_TAG" \
               "$IMAGE_PREFIX/storefront-web-app:$IMAGE_TAG" \
               "$IMAGE_PREFIX/storybook:$IMAGE_TAG" \
               -c "${K3D_CLUSTER:-eco-cluster}"
@@ -506,6 +520,7 @@ jobs:
               "$IMAGE_PREFIX/storefront-gateway:$IMAGE_TAG" \
               "$IMAGE_PREFIX/admin-web-app:$IMAGE_TAG" \
               "$IMAGE_PREFIX/product-admin-web-app:$IMAGE_TAG" \
+              "$IMAGE_PREFIX/order-admin-web-app:$IMAGE_TAG" \
               "$IMAGE_PREFIX/storefront-web-app:$IMAGE_TAG" \
               "$IMAGE_PREFIX/storybook:$IMAGE_TAG" \
               | sudo k3s ctr -n k8s.io images import -
@@ -574,6 +589,7 @@ jobs:
           helm dependency build product-management/frontend/app/product-admin-web-app/deployment
           helm dependency build order-management/backend/app/order-service/deployment
           helm dependency build order-management/backend/app/order-gateway/deployment
+          helm dependency build order-management/frontend/app/order-admin-web-app/deployment
           helm dependency build online-storefront/backend/app/cart-gateway/deployment
           helm dependency build online-storefront/backend/app/storefront-gateway/deployment
           helm dependency build online-storefront/frontend/app/storefront-web-app/deployment
@@ -714,6 +730,8 @@ jobs:
       - name: Deploy order-management
         shell: bash
         run: |
+          printf '{"BACKEND_API_URL":"%s","ENABLE_MOCK_API":false}\n' "$ORDER_BACKEND_API_URL" > order-runtime-config.json
+
           helm upgrade --install order-management order-management/deployment \
             --namespace "$NAMESPACE" \
             --set order-service.app.image.repository="$IMAGE_PREFIX/order-service" \
@@ -742,7 +760,7 @@ jobs:
             --set-string order-gateway.app.configMap.data.DB_PORT="$POSTGRES_PORT" \
             --set-string order-gateway.app.configMap.data.DB_USER="$POSTGRES_APP_USER" \
             --set-string order-gateway.app.configMap.data.USER_SERVICE_URL="$USER_SERVICE_INTERNAL_URL" \
-            --set-string order-gateway.app.configMap.data.FRONTEND_ORIGIN="http://$ORDER_GATEWAY_HOST" \
+            --set-string order-gateway.app.configMap.data.FRONTEND_ORIGIN="$ORDER_FRONTEND_ORIGIN" \
             --set order-gateway.app.secret.enabled=true \
             --set-string order-gateway.app.secret.stringData.DB_PASSWORD="$APP_PASSWORD" \
             --set order-gateway.app.ingress.enabled=true \
@@ -750,13 +768,24 @@ jobs:
             --set order-gateway.app.ingress.hosts[0].host="$ORDER_GATEWAY_HOST" \
             --set order-gateway.app.ingress.hosts[0].paths[0].path=/ \
             --set order-gateway.app.ingress.hosts[0].paths[0].pathType=Prefix \
-            --set orderGatewayApiIngress.enabled=true \
-            --set orderGatewayApiIngress.className="$INGRESS_CLASS_NAME" \
-            --set orderGatewayApiIngress.host="$ORDER_GATEWAY_HOST" \
-            --set orderGatewayApiIngress.path=/api \
-            --set orderGatewayApiIngress.pathType=Prefix \
-            --set orderGatewayApiIngress.serviceName=order-gateway \
-            --set orderGatewayApiIngress.servicePortName=http
+            --set order-admin-web-app.app.image.repository="$IMAGE_PREFIX/order-admin-web-app" \
+            --set order-admin-web-app.app.image.tag="$IMAGE_TAG" \
+            --set order-admin-web-app.app.image.pullPolicy=Never \
+            --set order-admin-web-app.app.configMap.enabled=true \
+            --set order-admin-web-app.app.configMap.envFrom=false \
+            --set-file order-admin-web-app.app.configMap.data.config\\.json=order-runtime-config.json \
+            --set order-admin-web-app.app.ingress.enabled=true \
+            --set order-admin-web-app.app.ingress.className="$INGRESS_CLASS_NAME" \
+            --set order-admin-web-app.app.ingress.hosts[0].host="$ORDER_ADMIN_WEB_APP_HOST" \
+            --set order-admin-web-app.app.ingress.hosts[0].paths[0].path=/ \
+            --set order-admin-web-app.app.ingress.hosts[0].paths[0].pathType=Prefix \
+            --set orderAdminWebAppApiIngress.enabled=true \
+            --set orderAdminWebAppApiIngress.className="$INGRESS_CLASS_NAME" \
+            --set orderAdminWebAppApiIngress.host="$ORDER_ADMIN_WEB_APP_HOST" \
+            --set orderAdminWebAppApiIngress.path=/api \
+            --set orderAdminWebAppApiIngress.pathType=Prefix \
+            --set orderAdminWebAppApiIngress.serviceName=order-gateway \
+            --set orderAdminWebAppApiIngress.servicePortName=http
 
       - name: Wait for user-management rollout
         shell: bash
@@ -778,6 +807,7 @@ jobs:
           set -euo pipefail
           kubectl rollout status deployment/order-gateway -n "$NAMESPACE" --timeout=180s
           kubectl rollout status deployment/order-service -n "$NAMESPACE" --timeout=180s
+          kubectl rollout status deployment/order-admin-web-app -n "$NAMESPACE" --timeout=180s
 
       - name: Deploy online storefront
         shell: bash

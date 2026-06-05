@@ -1,0 +1,47 @@
+{
+  "name": "order-admin-web-app",
+  "version": "0.0.0",
+  "scripts": {
+    "ng": "ng",
+    "start": "ng serve",
+    "build": "ng build",
+    "watch": "ng build --watch --configuration development",
+    "test": "ng test",
+    "storybook": "ng run order-admin-web-app:storybook",
+    "build-storybook": "ng run order-admin-web-app:build-storybook"
+  },
+  "private": true,
+  "packageManager": "pnpm@11.0.9",
+  "dependencies": {
+    "@angular/common": "catalog:",
+    "@angular/compiler": "catalog:",
+    "@angular/core": "catalog:",
+    "@angular/forms": "catalog:",
+    "@angular/platform-browser": "catalog:",
+    "@angular/router": "catalog:",
+    "rxjs": "catalog:",
+    "tslib": "catalog:"
+  },
+  "peerDependencies": {
+    "@ds/navigation-bar": "workspace:*"
+  },
+  "devDependencies": {
+    "@angular/build": "catalog:",
+    "@angular/cli": "catalog:",
+    "@angular/compiler-cli": "catalog:",
+    "jsdom": "catalog:",
+    "prettier": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "storybook": "catalog:",
+    "@storybook/angular": "catalog:",
+    "@storybook/addon-a11y": "catalog:",
+    "@storybook/addon-docs": "catalog:",
+    "@storybook/addon-onboarding": "catalog:",
+    "@angular-devkit/build-angular": "catalog:",
+    "@angular-devkit/architect": "catalog:",
+    "@angular-devkit/core": "catalog:",
+    "@angular/platform-browser-dynamic": "catalog:",
+    "@types/node": "catalog:"
+  }
+}

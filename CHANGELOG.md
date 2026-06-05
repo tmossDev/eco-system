@@ -1,9 +1,10 @@
 # Project Change Log
 
-## v1.18.0 - (4 Changes)
+## v1.18.0 - (5 Changes)
 - Added shared backend order request and response contracts for reuse across storefront and order management.
 - Added the order-management backend use case with order-gateway and order-service applications.
 - Added order-management APIs for order listing, order detail lookup, and fulfillment status updates.
+- Added the order-admin-web-app for order management and fulfillment workflows.
 - Added Helm deployment charts and ingress wiring for order-management backend services.
 
 ## v1.17.0 - (5 Changes)

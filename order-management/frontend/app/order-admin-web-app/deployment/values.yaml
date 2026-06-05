@@ -1,0 +1,46 @@
+app:
+  nameOverride: order-admin-web-app
+  fullnameOverride: order-admin-web-app
+  partOf: order-management
+  component: frontend
+  image:
+    repository: eco-system/order-admin-web-app
+    tag: latest
+    pullPolicy: IfNotPresent
+  ports:
+    - name: http
+      containerPort: 80
+      protocol: TCP
+  service:
+    enabled: true
+    ports:
+      - name: http
+        port: 80
+        targetPort: http
+        protocol: TCP
+  configMap:
+    enabled: true
+    envFrom: false
+    data:
+      config.json: |
+        {
+          "BACKEND_API_URL": "",
+          "ENABLE_MOCK_API": false
+        }
+  volumeMounts:
+    - name: runtime-config
+      mountPath: /usr/share/nginx/html/assets/config.json
+      subPath: config.json
+  volumes:
+    - name: runtime-config
+      configMap:
+        name: order-admin-web-app
+        items:
+          - key: config.json
+            path: config.json
+  readinessProbe:
+    httpGet:
+      path: /
+      port: http
+    initialDelaySeconds: 10
+    periodSeconds: 10

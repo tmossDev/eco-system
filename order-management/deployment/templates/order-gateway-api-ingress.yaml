@@ -1,4 +1,4 @@
-{{- with .Values.orderGatewayApiIngress }}
+{{- with .Values.orderAdminWebAppApiIngress }}
 {{- if and .enabled .host }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress

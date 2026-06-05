@@ -11,3 +11,6 @@ dependencies:
   - name: order-gateway
     version: 0.1.0
     repository: file://../backend/app/order-gateway/deployment
+  - name: order-admin-web-app
+    version: 0.1.0
+    repository: file://../frontend/app/order-admin-web-app/deployment

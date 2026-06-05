@@ -1,0 +1,538 @@
+import { Component } from '@angular/core';
+import { provideRouter, RouterLink, RouterOutlet } from '@angular/router';
+import type { Meta, StoryObj } from '@storybook/angular';
+import { applicationConfig, moduleMetadata } from '@storybook/angular';
+
+import { MainLayout } from './main-layout';
+
+@Component({
+  selector: 'app-main-layout-story-dashboard',
+  imports: [RouterLink],
+  template: `
+    <section class="story-page">
+      <div class="page-header">
+        <div>
+          <p class="eyebrow">Overview</p>
+          <h1>Dashboard</h1>
+          <p class="description">
+            Preview the main application layout with navigation and routed page
+            content.
+          </p>
+        </div>
+
+        <a routerLink="/orders" class="primary-action">Manage orders</a>
+      </div>
+
+      <div class="stats-grid">
+        <article class="stat-card">
+          <span>Total orders</span>
+          <strong>128</strong>
+          <small>12 created this month</small>
+        </article>
+
+        <article class="stat-card">
+          <span>Paid orders</span>
+          <strong>96</strong>
+          <small>Ready for fulfillment</small>
+        </article>
+
+        <article class="stat-card">
+          <span>Created orders</span>
+          <strong>8</strong>
+          <small>Awaiting payment</small>
+        </article>
+      </div>
+
+      <article class="panel">
+        <h2>Recent activity</h2>
+        <ul>
+          <li>Order #128 moved to Fulfilled</li>
+          <li>Order #127 moved to Paid</li>
+          <li>Order #126 was cancelled</li>
+        </ul>
+      </article>
+    </section>
+  `,
+  styles: `
+    .story-page {
+      padding: 2rem;
+      color: #172033;
+    }
+
+    .page-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .eyebrow {
+      margin: 0 0 0.5rem;
+      color: #56657f;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    h1,
+    h2 {
+      margin: 0;
+    }
+
+    h1 {
+      font-size: clamp(2rem, 4vw, 3rem);
+      letter-spacing: 0;
+    }
+
+    h2 {
+      margin-bottom: 1rem;
+      font-size: 1.15rem;
+    }
+
+    .description {
+      max-width: 42rem;
+      margin: 0.75rem 0 0;
+      color: #56657f;
+      line-height: 1.6;
+    }
+
+    .primary-action {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      background: #2563eb;
+      color: #ffffff;
+      padding: 0.75rem 1rem;
+      font-weight: 700;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .stat-card,
+    .panel {
+      border: 1px solid #dbe3ef;
+      border-radius: 8px;
+      background: #ffffff;
+      box-shadow: 0 10px 30px rgb(15 23 42 / 6%);
+    }
+
+    .stat-card {
+      padding: 1.25rem;
+    }
+
+    .stat-card span,
+    .stat-card small,
+    .panel li {
+      color: #56657f;
+    }
+
+    .stat-card strong {
+      display: block;
+      margin: 0.5rem 0;
+      font-size: 2rem;
+    }
+
+    .panel {
+      padding: 1.25rem;
+    }
+
+    .panel ul {
+      margin: 0;
+      padding-left: 1.2rem;
+      line-height: 1.8;
+    }
+
+    @media (max-width: 900px) {
+      .page-header {
+        display: grid;
+      }
+
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  `,
+})
+class MainLayoutStoryDashboard {}
+
+@Component({
+  selector: 'app-main-layout-story-orders',
+  template: `
+    <section class="story-page">
+      <div class="page-header">
+        <div>
+          <p class="eyebrow">Fulfillment queue</p>
+          <h1>Orders</h1>
+          <p class="description">
+            This route preview shows a simple orders table inside the main layout.
+          </p>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <div class="table-header">
+          <h2>All orders</h2>
+          <span>4 orders</span>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Order</th>
+                <th>Customer</th>
+                <th>Total</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              <tr>
+                <td><strong>#128</strong></td>
+                <td>alex.morgan&#64;example.com</td>
+                <td>$84.50</td>
+                <td><span class="status active">Active</span></td>
+              </tr>
+              <tr>
+                <td><strong>#127</strong></td>
+                <td>priya.shah&#64;example.com</td>
+                <td>$42.00</td>
+                <td><span class="status active">Active</span></td>
+              </tr>
+              <tr>
+                <td><strong>#126</strong></td>
+                <td>jordan.lee&#64;example.com</td>
+                <td>$19.99</td>
+                <td><span class="status draft">Draft</span></td>
+              </tr>
+              <tr>
+                <td><strong>#125</strong></td>
+                <td>sam.taylor&#64;example.com</td>
+                <td>$63.40</td>
+                <td><span class="status archived">Archived</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  `,
+  styles: `
+    .story-page {
+      padding: 2rem;
+      color: #172033;
+    }
+
+    .page-header {
+      margin-bottom: 2rem;
+    }
+
+    .eyebrow {
+      margin: 0 0 0.5rem;
+      color: #56657f;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    h1,
+    h2 {
+      margin: 0;
+    }
+
+    h1 {
+      font-size: clamp(2rem, 4vw, 3rem);
+      letter-spacing: 0;
+    }
+
+    h2 {
+      font-size: 1.15rem;
+    }
+
+    .description {
+      max-width: 42rem;
+      margin: 0.75rem 0 0;
+      color: #56657f;
+      line-height: 1.6;
+    }
+
+    .table-card {
+      overflow: hidden;
+      border: 1px solid #dbe3ef;
+      border-radius: 8px;
+      background: #ffffff;
+      box-shadow: 0 10px 30px rgb(15 23 42 / 6%);
+    }
+
+    .table-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 1.25rem;
+      border-bottom: 1px solid #dbe3ef;
+    }
+
+    .table-header span {
+      color: #56657f;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      min-width: 720px;
+      border-collapse: collapse;
+    }
+
+    th,
+    td {
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid #eef2f7;
+      text-align: left;
+    }
+
+    th {
+      color: #56657f;
+      font-size: 0.8rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .status {
+      display: inline-flex;
+      border-radius: 999px;
+      padding: 0.3rem 0.65rem;
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
+
+    .active {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .pending {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .suspended {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+  `,
+})
+class MainLayoutStoryOrders {}
+
+@Component({
+  selector: 'app-main-layout-story-settings',
+  template: `
+    <section class="story-page">
+      <div class="page-header">
+        <p class="eyebrow">Preferences</p>
+          <h1>Fulfillment</h1>
+        <p class="description">
+          Example fulfillment controls rendered inside the main layout outlet.
+        </p>
+      </div>
+
+      <form class="settings-card">
+        <label>
+          <span>Queue name</span>
+          <input type="text" value="Order Admin Web App" />
+        </label>
+
+        <label>
+          <span>Default status</span>
+          <select>
+            <option>Created</option>
+            <option>Paid</option>
+            <option>Fulfilled</option>
+          </select>
+        </label>
+
+        <div class="toggle-row">
+          <div>
+            <strong>Fulfillment alerts</strong>
+            <p>Send updates when order status changes.</p>
+          </div>
+
+          <input type="checkbox" checked />
+        </div>
+      </form>
+    </section>
+  `,
+  styles: `
+    .story-page {
+      padding: 2rem;
+      color: #172033;
+    }
+
+    .page-header {
+      margin-bottom: 2rem;
+    }
+
+    .eyebrow {
+      margin: 0 0 0.5rem;
+      color: #56657f;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2rem, 4vw, 3rem);
+      letter-spacing: 0;
+    }
+
+    .description {
+      max-width: 42rem;
+      margin: 0.75rem 0 0;
+      color: #56657f;
+      line-height: 1.6;
+    }
+
+    .settings-card {
+      display: grid;
+      gap: 1.25rem;
+      max-width: 44rem;
+      border: 1px solid #dbe3ef;
+      border-radius: 8px;
+      background: #ffffff;
+      padding: 1.5rem;
+      box-shadow: 0 10px 30px rgb(15 23 42 / 6%);
+    }
+
+    label {
+      display: grid;
+      gap: 0.4rem;
+      font-weight: 700;
+    }
+
+    input,
+    select {
+      width: 100%;
+      box-sizing: border-box;
+      border: 1px solid #cbd5e1;
+      border-radius: 0.75rem;
+      padding: 0.8rem 0.9rem;
+      color: #172033;
+      font: inherit;
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      border-top: 1px solid #eef2f7;
+      padding-top: 1.25rem;
+    }
+
+    .toggle-row p {
+      margin: 0.25rem 0 0;
+      color: #56657f;
+    }
+
+    .toggle-row input {
+      width: 1.25rem;
+      height: 1.25rem;
+      flex: 0 0 auto;
+    }
+  `,
+})
+class MainLayoutStorySettings {}
+
+@Component({
+  selector: 'app-main-layout-story-shell',
+  imports: [RouterOutlet],
+  template: `<router-outlet />`,
+})
+class MainLayoutStoryShell {}
+
+const meta: Meta<MainLayoutStoryShell> = {
+  title: 'App/Layout/Main Layout',
+  component: MainLayoutStoryShell,
+  decorators: [
+    applicationConfig({
+      providers: [
+        provideRouter([
+          {
+            path: '',
+            component: MainLayout,
+            children: [
+              {
+                path: '',
+                component: MainLayoutStoryDashboard,
+              },
+              {
+                path: 'orders',
+                component: MainLayoutStoryOrders,
+              },
+              {
+                path: 'settings',
+                component: MainLayoutStorySettings,
+              },
+            ],
+          },
+        ]),
+      ],
+    }),
+    moduleMetadata({
+      imports: [
+        MainLayout,
+        MainLayoutStoryShell,
+        MainLayoutStoryDashboard,
+        MainLayoutStoryOrders,
+        MainLayoutStorySettings,
+      ],
+    }),
+  ],
+  parameters: {
+    layout: 'fullscreen',
+  },
+};
+
+export default meta;
+type Story = StoryObj<MainLayoutStoryShell>;
+
+export const Dashboard: Story = {};
+
+export const Orders: Story = {
+  render: () => ({
+    template: `
+      <app-main-layout>
+        <app-main-layout-story-orders />
+      </app-main-layout>
+    `,
+  }),
+};
+
+export const Settings: Story = {
+  render: () => ({
+    template: `
+      <app-main-layout>
+        <app-main-layout-story-settings />
+      </app-main-layout>
+    `,
+  }),
+};
