@@ -3,9 +3,9 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: admin-web-app-api
+  name: user-admin-web-app-api
   labels:
-    app.kubernetes.io/name: admin-web-app-api
+    app.kubernetes.io/name: user-admin-web-app-api
     app.kubernetes.io/instance: {{ $.Release.Name }}
     app.kubernetes.io/version: {{ $.Chart.AppVersion | quote }}
     app.kubernetes.io/managed-by: {{ $.Release.Service }}

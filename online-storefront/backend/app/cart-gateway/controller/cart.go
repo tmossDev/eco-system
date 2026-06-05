@@ -6,18 +6,20 @@ import (
 	"strings"
 
 	"github.com/kataras/iris/v12"
-	"tmossDev.github.com/eco-system/online-storefront/backend/domain/cart/service"
+	cartService "tmossDev.github.com/eco-system/online-storefront/backend/domain/cart/service"
+	orderService "tmossDev.github.com/eco-system/online-storefront/backend/domain/order/service"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/types"
 	userConstants "tmossDev.github.com/eco-system/shared-components/backend/package/user/constants"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/utils"
 )
 
 type CartController struct {
-	cartService service.CartService
+	cartService  cartService.CartService
+	orderService orderService.OrderService
 }
 
-func NewCartController(cartService service.CartService) *CartController {
-	return &CartController{cartService: cartService}
+func NewCartController(cartService cartService.CartService, orderService orderService.OrderService) *CartController {
+	return &CartController{cartService: cartService, orderService: orderService}
 }
 
 func (controller *CartController) Health() iris.Handler {
@@ -90,6 +92,27 @@ func (controller *CartController) Clear() iris.Handler {
 			return err
 		}
 		return ctx.JSON(cart)
+	})
+}
+
+func (controller *CartController) Checkout() iris.Handler {
+	return controller.withUser(func(ctx iris.Context, userID uint64) error {
+		order, err := controller.orderService.Checkout(userID)
+		if err != nil {
+			return err
+		}
+		ctx.StatusCode(iris.StatusCreated)
+		return ctx.JSON(order)
+	})
+}
+
+func (controller *CartController) ListOrders() iris.Handler {
+	return controller.withUser(func(ctx iris.Context, userID uint64) error {
+		orders, err := controller.orderService.ListOrders(userID)
+		if err != nil {
+			return err
+		}
+		return ctx.JSON(orders)
 	})
 }
 

@@ -1,6 +1,6 @@
 app:
-  nameOverride: admin-web-app
-  fullnameOverride: admin-web-app
+  nameOverride: user-admin-web-app
+  fullnameOverride: user-admin-web-app
   partOf: user-management
   component: frontend
   image:
@@ -34,7 +34,7 @@ app:
   volumes:
     - name: runtime-config
       configMap:
-        name: admin-web-app
+        name: user-admin-web-app
         items:
           - key: config.json
             path: config.json

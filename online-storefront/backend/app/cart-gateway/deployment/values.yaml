@@ -1,6 +1,6 @@
 app:
-  nameOverride: cart-gateway
-  fullnameOverride: cart-gateway
+  nameOverride: storefront-cart-gateway
+  fullnameOverride: storefront-cart-gateway
   partOf: online-storefront
   component: backend
   image:

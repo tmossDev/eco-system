@@ -354,7 +354,7 @@ deploy_application() {
     --set cartGatewayApiIngress.host="$STOREFRONT_WEB_APP_HOST" \
     --set cartGatewayApiIngress.path=/api/cart \
     --set cartGatewayApiIngress.pathType=Prefix \
-    --set cartGatewayApiIngress.serviceName=cart-gateway \
+    --set cartGatewayApiIngress.serviceName=storefront-cart-gateway \
     --set cartGatewayApiIngress.servicePortName=http \
     --set storefrontWebAppApiIngress.enabled=true \
     --set storefrontWebAppApiIngress.className="${INGRESS_CLASS_NAME:-traefik}" \

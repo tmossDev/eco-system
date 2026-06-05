@@ -3,9 +3,9 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: cart-gateway-api
+  name: storefront-cart-gateway-api
   labels:
-    app.kubernetes.io/name: cart-gateway-api
+    app.kubernetes.io/name: storefront-cart-gateway-api
     app.kubernetes.io/instance: {{ $.Release.Name }}
     app.kubernetes.io/version: {{ $.Chart.AppVersion | quote }}
     app.kubernetes.io/managed-by: {{ $.Release.Service }}
@@ -31,7 +31,7 @@ spec:
             pathType: {{ .pathType | default "Prefix" }}
             backend:
               service:
-                name: {{ .serviceName | default "cart-gateway" }}
+                name: {{ .serviceName | default "storefront-cart-gateway" }}
                 port:
                   name: {{ .servicePortName | default "http" }}
 {{- end }}

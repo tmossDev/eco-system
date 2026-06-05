@@ -55,7 +55,11 @@ func TestDeployedCartGatewayFunctional(t *testing.T) {
 		"product_id": productID,
 		"quantity":   1,
 	})
-	cartAssertTotals(t, cartDeployedRequest(t, client, http.MethodDelete, cartBaseURL+"/api/cart", http.StatusOK, token, nil), 0, 0)
+	orderPayload := cartDeployedRequest(t, client, http.MethodPost, cartBaseURL+"/api/cart/checkout", http.StatusCreated, token, nil)
+	cartAssertOrder(t, orderPayload, 1, priceCents)
+	orderHistoryPayload := cartDeployedRequest(t, client, http.MethodGet, cartBaseURL+"/api/orders", http.StatusOK, token, nil)
+	cartAssertOrderHistory(t, orderHistoryPayload)
+	cartAssertTotals(t, cartDeployedRequest(t, client, http.MethodGet, cartBaseURL+"/api/cart", http.StatusOK, token, nil), 0, 0)
 	cartDeployedRequest(t, client, http.MethodPost, storefrontBaseURL+"/api/auth/logout", http.StatusOK, token, nil)
 }
 
@@ -155,6 +159,30 @@ func cartAssertTotals(t *testing.T, payload any, expectedItemCount int64, expect
 	}
 	if actual := cartRequiredNumber(t, payload, "subtotal_cents"); actual != expectedSubtotalCents {
 		t.Fatalf("expected cart subtotal %d, got %d: %#v", expectedSubtotalCents, actual, payload)
+	}
+}
+
+func cartAssertOrder(t *testing.T, payload any, expectedItemCount int64, expectedSubtotalCents int64) {
+	t.Helper()
+	if actual := cartRequiredNumber(t, payload, "id"); actual == 0 {
+		t.Fatalf("expected order id, got %#v", payload)
+	}
+	if status := cartRequiredStringField(t, payload, "status"); status != "Created" {
+		t.Fatalf("expected Created order status, got %q: %#v", status, payload)
+	}
+	if actual := cartRequiredNumber(t, payload, "item_count"); actual != expectedItemCount {
+		t.Fatalf("expected order item count %d, got %d: %#v", expectedItemCount, actual, payload)
+	}
+	if actual := cartRequiredNumber(t, payload, "subtotal_cents"); actual != expectedSubtotalCents {
+		t.Fatalf("expected order subtotal %d, got %d: %#v", expectedSubtotalCents, actual, payload)
+	}
+}
+
+func cartAssertOrderHistory(t *testing.T, payload any) {
+	t.Helper()
+	orders := cartRequiredListResponse(t, payload)
+	if cartRequiredNumber(t, orders[0], "id") == 0 {
+		t.Fatalf("expected first order id, got %#v", payload)
 	}
 }
 

@@ -1,9 +1,17 @@
 # Project Change Log
 
-## v1.16.0 - (3 Changes)
+## v1.17.0 - (5 Changes)
+- Added order and order item persistence for storefront checkout with product snapshots and order totals.
+- Added a cart checkout API route that creates an order, reserves product inventory, and closes the active cart transactionally.
+- Added storefront checkout UI on the cart page with order confirmation feedback.
+- Added signed-in storefront order history for reviewing previous checkout orders.
+- Added checkout coverage to cart gateway route and deployed functional tests.
+
+## v1.16.0 - (4 Changes)
 - Added a storefront cart service with backend synchronization, authentication-aware state, and cart item counts.
 - Added cart navigation, add-to-cart actions, and a responsive cart page for quantity updates, removal, and clearing.
 - Updated storefront account messaging now that cart functionality is available.
+- Prefixed Kubernetes resource names for the user admin web app and storefront cart gateway so deployed workloads are easier to identify.
 
 ## v1.15.0 - (5 Changes)
 - Added the online storefront cart-gateway backend application with authenticated customer cart tracking.

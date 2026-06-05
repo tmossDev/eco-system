@@ -28,6 +28,7 @@ import { CartService } from '../services/cart.service';
           }
         </a>
         @if (authService.isAuthenticated()) {
+          <a class="orders" routerLink="/orders">Orders</a>
           <span class="welcome">Hi, {{ firstName() }}</span>
           <button type="button" [disabled]="isSigningOut()" (click)="logout()">
             {{ isSigningOut() ? 'Signing out...' : 'Sign out' }}
@@ -64,7 +65,7 @@ import { CartService } from '../services/cart.service';
     .brand span { display: grid; width: 2rem; height: 2rem; place-items: center; border-radius: 50%; background: #31543c; color: white; font-family: Georgia, serif; }
     .brand strong { font-family: Georgia, serif; font-size: 1.35rem; }
     nav { display: flex; gap: 1.5rem; margin-right: auto; }
-    nav a, .sign-in, .cart { color: #566459; font-weight: 700; text-decoration: none; }
+    nav a, .sign-in, .cart, .orders { color: #566459; font-weight: 700; text-decoration: none; }
     .account { display: flex; align-items: center; gap: .85rem; }
     .cart { display: inline-flex; align-items: center; gap: .35rem; }
     .cart span { display: grid; min-width: 1.35rem; height: 1.35rem; place-items: center; border-radius: 999px; background: #31543c; color: white; font-size: .72rem; }

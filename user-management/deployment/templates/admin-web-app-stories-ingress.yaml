@@ -3,9 +3,9 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: admin-web-app-stories
+  name: user-admin-web-app-stories
   labels:
-    app.kubernetes.io/name: admin-web-app-stories
+    app.kubernetes.io/name: user-admin-web-app-stories
     app.kubernetes.io/instance: {{ $.Release.Name }}
     app.kubernetes.io/version: {{ $.Chart.AppVersion | quote }}
     app.kubernetes.io/managed-by: {{ $.Release.Service }}
@@ -31,7 +31,7 @@ spec:
             pathType: {{ .pathType | default "Prefix" }}
             backend:
               service:
-                name: {{ .serviceName | default "admin-web-app" }}
+                name: {{ .serviceName | default "user-admin-web-app" }}
                 port:
                   name: {{ .servicePortName | default "http" }}
 {{- end }}

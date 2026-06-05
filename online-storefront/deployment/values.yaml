@@ -9,7 +9,7 @@ cartGatewayApiIngress:
   host: ""
   path: /api/cart
   pathType: Prefix
-  serviceName: cart-gateway
+  serviceName: storefront-cart-gateway
   servicePortName: http
   tls: []
 

@@ -117,6 +117,9 @@ func ensureCart(tx *sql.Tx, userID uint64) (*model.CartResponse, error) {
 func scanCart(row *sql.Row) (*model.CartResponse, error) {
 	var cart model.CartResponse
 	if err := row.Scan(&cart.ID, &cart.UserID, &cart.CreatedAt, &cart.UpdatedAt); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, err
+		}
 		return nil, internalError("load cart", err)
 	}
 	cart.Items = []model.CartItem{}

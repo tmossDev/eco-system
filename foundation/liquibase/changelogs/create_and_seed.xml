@@ -131,5 +131,21 @@
             relativeToChangelogFile="false"
             stripComments="true" />
     </changeSet>
+    <changeSet author="tannar.moss" id="create_order_tables">
+        <sqlFile dbms="postgresql"
+            encoding="UTF-8"
+            splitStatements="false"
+            path="v1.2.2_create_order_tables.sql"
+            relativeToChangelogFile="false"
+            stripComments="true" />
+    </changeSet>
+    <changeSet author="tannar.moss" id="grant_order_permissions">
+        <sqlFile dbms="postgresql"
+            encoding="UTF-8"
+            splitStatements="false"
+            path="v1.2.3_grant_order_permissions.sql"
+            relativeToChangelogFile="false"
+            stripComments="true" />
+    </changeSet>
 
 </databaseChangeLog>

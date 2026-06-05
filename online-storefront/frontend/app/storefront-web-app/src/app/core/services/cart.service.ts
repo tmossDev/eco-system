@@ -3,7 +3,7 @@ import { Injectable, computed, effect, inject, signal } from '@angular/core';
 import { Observable, tap } from 'rxjs';
 
 import { AuthService } from './auth.service';
-import { Cart } from './cart.models';
+import { Cart, Order } from './cart.models';
 
 @Injectable({ providedIn: 'root' })
 export class CartService {
@@ -55,5 +55,15 @@ export class CartService {
     return this.http
       .delete<Cart>('/api/cart')
       .pipe(tap((cart) => this.cartSignal.set(cart)));
+  }
+
+  checkout(): Observable<Order> {
+    return this.http
+      .post<Order>('/api/cart/checkout', {})
+      .pipe(tap(() => this.cartSignal.set(null)));
+  }
+
+  listOrders(): Observable<Order[]> {
+    return this.http.get<Order[]>('/api/orders');
   }
 }

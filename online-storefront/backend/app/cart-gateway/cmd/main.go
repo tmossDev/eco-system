@@ -10,8 +10,10 @@ import (
 	"github.com/kataras/iris/v12"
 	"github.com/kataras/iris/v12/middleware/accesslog"
 	"tmossDev.github.com/eco-system/online-storefront/backend/app/cart-gateway/routes"
-	"tmossDev.github.com/eco-system/online-storefront/backend/domain/cart/service"
-	"tmossDev.github.com/eco-system/online-storefront/backend/domain/cart/store/postgres"
+	cartDomainService "tmossDev.github.com/eco-system/online-storefront/backend/domain/cart/service"
+	cartPostgres "tmossDev.github.com/eco-system/online-storefront/backend/domain/cart/store/postgres"
+	orderDomainService "tmossDev.github.com/eco-system/online-storefront/backend/domain/order/service"
+	orderPostgres "tmossDev.github.com/eco-system/online-storefront/backend/domain/order/store/postgres"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/config/aws"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/config/local"
 	configTypes "tmossDev.github.com/eco-system/shared-components/backend/package/config/types"
@@ -68,9 +70,11 @@ func setup() error {
 	axxessLogs = middleware.MakeAccessLog()
 	irisApp.Use(axxessLogs.Handler, middleware.CaselessMatcherMiddleware, middleware.RequestIDMiddleware)
 
-	cartRepo := postgres.NewPostgresCartRepository(sqlStore)
-	cartService := service.NewCartService(validator.NewValidator(), cartRepo)
-	routes.Setup(irisApp, cartService)
+	cartRepo := cartPostgres.NewPostgresCartRepository(sqlStore)
+	orderRepo := orderPostgres.NewPostgresOrderRepository(sqlStore)
+	cartSvc := cartDomainService.NewCartService(validator.NewValidator(), cartRepo)
+	orderSvc := orderDomainService.NewOrderService(orderRepo)
+	routes.Setup(irisApp, cartSvc, orderSvc)
 
 	port = env.Getenv(envConstants.Port, envConstants.DefaultPort)
 	return nil

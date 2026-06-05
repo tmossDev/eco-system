@@ -97,5 +97,5 @@ adminWebAppStoriesIngress:
   className: traefik
   path: /stories/admin-web-app
   pathType: Prefix
-  serviceName: admin-web-app
+  serviceName: user-admin-web-app
   servicePortName: http

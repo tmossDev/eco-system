@@ -3,7 +3,7 @@ import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
 import { AuthService } from '../../core/services/auth.service';
-import { CartItem } from '../../core/services/cart.models';
+import { CartItem, Order } from '../../core/services/cart.models';
 import { CartService } from '../../core/services/cart.service';
 
 @Component({
@@ -27,6 +27,13 @@ import { CartService } from '../../core/services/cart.service';
         </div>
       } @else if (errorMessage()) {
         <p class="error">{{ errorMessage() }}</p>
+      } @else if (createdOrder()) {
+        <div class="empty">
+          <h2>Order #{{ createdOrder()!.id }} created</h2>
+          <p>{{ createdOrder()!.item_count }} item(s) are confirmed for {{ formatMoney(createdOrder()!.subtotal_cents, createdOrder()!.currency) }}.</p>
+          <a class="primary" routerLink="/orders">View order history</a>
+          <a class="primary" routerLink="/">Continue shopping</a>
+        </div>
       } @else if (!cartService.cart()) {
         <p class="loading">Loading your cart...</p>
       } @else if (!cartService.cart()!.items.length) {
@@ -66,7 +73,7 @@ import { CartService } from '../../core/services/cart.service';
             <p>Order summary</p>
             <div><span>Items</span><strong>{{ cartService.itemCount() }}</strong></div>
             <div><span>Subtotal</span><strong>{{ formatMoney(cartService.cart()!.subtotal_cents, cartService.cart()!.currency) }}</strong></div>
-            <small>Checkout will be added in a future update.</small>
+            <button class="checkout" type="button" [disabled]="isSaving()" (click)="checkout()">Checkout</button>
             <button class="clear" type="button" [disabled]="isSaving()" (click)="clear()">Clear cart</button>
           </aside>
         </div>
@@ -93,6 +100,7 @@ import { CartService } from '../../core/services/cart.service';
     button { border: 0; border-radius: 999px; background: #e8ede2; padding: .45rem .7rem; color: #31543c; cursor: pointer; font-weight: 700; }
     button:disabled { cursor: wait; opacity: .6; }
     .remove, .clear { background: transparent; color: #9b3f34; }
+    .checkout { justify-content: center; background: #31543c; padding: .8rem 1rem; color: white; }
     aside { display: grid; gap: .9rem; border-radius: 1rem; background: #e8ede2; padding: 1.2rem; color: #31543c; }
     aside p { margin: 0; font-family: Georgia, serif; font-size: 1.35rem; font-weight: 700; }
     aside div { justify-content: space-between; }
@@ -108,6 +116,7 @@ export class CartPage {
   protected readonly cartService = inject(CartService);
   protected readonly isSaving = signal(false);
   protected readonly errorMessage = signal('');
+  protected readonly createdOrder = signal<Order | null>(null);
 
   protected changeQuantity(item: CartItem, difference: number): void {
     const quantity = item.quantity + difference;
@@ -126,6 +135,18 @@ export class CartPage {
     this.save(this.cartService.clear());
   }
 
+  protected checkout(): void {
+    this.isSaving.set(true);
+    this.errorMessage.set('');
+    this.createdOrder.set(null);
+    this.cartService.checkout()
+      .pipe(finalize(() => this.isSaving.set(false)))
+      .subscribe({
+        next: (order) => this.createdOrder.set(order),
+        error: () => this.errorMessage.set('Unable to create your order. Please review your cart and try again.'),
+      });
+  }
+
   protected formatMoney(cents: number, currency: string): string {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -136,6 +157,7 @@ export class CartPage {
   private save(request: ReturnType<CartService['clear']>): void {
     this.isSaving.set(true);
     this.errorMessage.set('');
+    this.createdOrder.set(null);
     request
       .pipe(finalize(() => this.isSaving.set(false)))
       .subscribe({

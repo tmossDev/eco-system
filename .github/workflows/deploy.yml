@@ -691,7 +691,7 @@ jobs:
         run: |
           set -euo pipefail
           kubectl rollout status deployment/user-gateway -n "$NAMESPACE" --timeout=180s
-          kubectl rollout status deployment/admin-web-app -n "$NAMESPACE" --timeout=180s
+          kubectl rollout status deployment/user-admin-web-app -n "$NAMESPACE" --timeout=180s
 
       - name: Wait for product-management rollout
         shell: bash
@@ -736,7 +736,7 @@ jobs:
             --set cartGatewayApiIngress.host="$STOREFRONT_WEB_APP_HOST" \
             --set cartGatewayApiIngress.path=/api/cart \
             --set cartGatewayApiIngress.pathType=Prefix \
-            --set cartGatewayApiIngress.serviceName=cart-gateway \
+            --set cartGatewayApiIngress.serviceName=storefront-cart-gateway \
             --set cartGatewayApiIngress.servicePortName=http \
             --set storefrontWebAppApiIngress.enabled=true \
             --set storefrontWebAppApiIngress.className="$INGRESS_CLASS_NAME" \
@@ -751,7 +751,7 @@ jobs:
         run: |
           set -euo pipefail
           kubectl rollout status deployment/storefront-gateway -n "$NAMESPACE" --timeout=180s
-          kubectl rollout status deployment/cart-gateway -n "$NAMESPACE" --timeout=180s
+          kubectl rollout status deployment/storefront-cart-gateway -n "$NAMESPACE" --timeout=180s
           kubectl rollout status deployment/storefront-web-app -n "$NAMESPACE" --timeout=180s
 
       - name: Run deployed online storefront smoke test
@@ -825,14 +825,14 @@ jobs:
           set -euo pipefail
 
           show_gateway_logs() {
-            echo "::group::Recent cart-gateway logs"
-            kubectl logs -n "$NAMESPACE" deployment/cart-gateway --tail=120 || true
+            echo "::group::Recent storefront-cart-gateway logs"
+            kubectl logs -n "$NAMESPACE" deployment/storefront-cart-gateway --tail=120 || true
             echo "::endgroup::"
             echo "::group::Recent storefront-gateway logs"
             kubectl logs -n "$NAMESPACE" deployment/storefront-gateway --tail=120 || true
             echo "::endgroup::"
           }
-          kubectl port-forward -n "$NAMESPACE" service/cart-gateway 18084:8080 &
+          kubectl port-forward -n "$NAMESPACE" service/storefront-cart-gateway 18084:8080 &
           CART_PORT_FORWARD_PID="$!"
           kubectl port-forward -n "$NAMESPACE" service/storefront-gateway 18082:8080 &
           STOREFRONT_PORT_FORWARD_PID="$!"
