@@ -11,7 +11,15 @@ export interface Order {
   updated_at: string;
 }
 
-export type OrderStatus = 'Created' | 'Paid' | 'Cancelled' | 'Fulfilled';
+export type OrderStatus =
+  | 'Order Submitted'
+  | 'Order Confirmed'
+  | 'Order Fulfillment'
+  | 'Order Out For Delivery'
+  | 'Order Delivered'
+  | 'Order Complete'
+  | 'Order Returned'
+  | 'Order Cancelled';
 
 export interface OrderItem {
   product_id: number;

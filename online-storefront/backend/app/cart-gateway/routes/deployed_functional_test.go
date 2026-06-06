@@ -167,8 +167,8 @@ func cartAssertOrder(t *testing.T, payload any, expectedItemCount int64, expecte
 	if actual := cartRequiredNumber(t, payload, "id"); actual == 0 {
 		t.Fatalf("expected order id, got %#v", payload)
 	}
-	if status := cartRequiredStringField(t, payload, "status"); status != "Created" {
-		t.Fatalf("expected Created order status, got %q: %#v", status, payload)
+	if status := cartRequiredStringField(t, payload, "status"); status != "Order Submitted" {
+		t.Fatalf("expected Order Submitted order status, got %q: %#v", status, payload)
 	}
 	if actual := cartRequiredNumber(t, payload, "item_count"); actual != expectedItemCount {
 		t.Fatalf("expected order item count %d, got %d: %#v", expectedItemCount, actual, payload)

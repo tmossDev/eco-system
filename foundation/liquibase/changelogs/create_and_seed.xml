@@ -147,5 +147,13 @@
             relativeToChangelogFile="false"
             stripComments="true" />
     </changeSet>
+    <changeSet author="tannar.moss" id="update_order_status_lifecycle">
+        <sqlFile dbms="postgresql"
+            encoding="UTF-8"
+            splitStatements="false"
+            path="v1.2.4_update_order_status_lifecycle.sql"
+            relativeToChangelogFile="false"
+            stripComments="true" />
+    </changeSet>
 
 </databaseChangeLog>

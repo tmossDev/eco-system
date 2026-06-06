@@ -3,6 +3,9 @@ package service
 import (
 	"tmossDev.github.com/eco-system/order-management/backend/domain/order/model"
 	"tmossDev.github.com/eco-system/order-management/backend/domain/order/repository"
+	"tmossDev.github.com/eco-system/shared-components/backend/package/constants"
+	"tmossDev.github.com/eco-system/shared-components/backend/package/logger"
+	"tmossDev.github.com/eco-system/shared-components/backend/package/types"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/validator"
 )
 
@@ -33,6 +36,15 @@ func (service *OrderServiceImpl) UpdateStatus(orderID uint64, body string) (*mod
 	var request model.UpdateOrderStatusRequest
 	if err := service.validator.MarshalAndValidateREQ(body, &request); err != nil {
 		return nil, err
+	}
+
+	order, err := service.orderRepo.GetOrder(orderID)
+	if err != nil {
+		return nil, err
+	}
+	if err := model.ValidateOrderStatusTransition(order.Status, request.Status); err != nil {
+		logger.Infof(constants.DefaultRequestId, "Invalid order status transition for order %d: %s", orderID, err.Error())
+		return nil, types.NewInvalidInputError()
 	}
 
 	return service.orderRepo.UpdateStatus(orderID, request.Status)

@@ -2,14 +2,14 @@ create table if not exists orders (
   id bigserial primary key,
   user_id bigint not null references users,
   cart_id bigint not null references carts,
-  status varchar(20) not null default 'Created',
+  status varchar(40) not null default 'Order Submitted',
   item_count bigint not null default 0,
   subtotal_cents bigint not null default 0,
   currency varchar(3) not null default 'USD',
   created_at timestamp not null default now(),
   updated_at timestamp not null default now(),
   constraint uk_orders_cart unique (cart_id),
-  constraint ck_orders_status check (status in ('Created', 'Paid', 'Cancelled', 'Fulfilled')),
+  constraint ck_orders_status check (status in ('Order Submitted', 'Order Confirmed', 'Order Fulfillment', 'Order Out For Delivery', 'Order Delivered', 'Order Complete', 'Order Returned', 'Order Cancelled')),
   constraint ck_orders_item_count_non_negative check (item_count >= 0),
   constraint ck_orders_subtotal_non_negative check (subtotal_cents >= 0)
 );

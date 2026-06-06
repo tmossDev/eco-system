@@ -54,12 +54,12 @@ func (service *fakeCartService) Clear(userID uint64) (*model.CartResponse, error
 
 func (service *fakeOrderService) Checkout(userID uint64) (*orderModel.OrderResponse, error) {
 	service.action, service.userID = "checkout", userID
-	return &orderModel.OrderResponse{ID: 99, UserID: userID, CartID: 1, Status: "Created", Items: []orderModel.OrderItem{}}, nil
+	return &orderModel.OrderResponse{ID: 99, UserID: userID, CartID: 1, Status: "Order Submitted", Items: []orderModel.OrderItem{}}, nil
 }
 
 func (service *fakeOrderService) ListOrders(userID uint64) ([]orderModel.OrderResponse, error) {
 	service.action, service.userID = "orders", userID
-	return []orderModel.OrderResponse{{ID: 99, UserID: userID, CartID: 1, Status: "Created", Items: []orderModel.OrderItem{}}}, nil
+	return []orderModel.OrderResponse{{ID: 99, UserID: userID, CartID: 1, Status: "Order Submitted", Items: []orderModel.OrderItem{}}}, nil
 }
 
 func cartResponse(userID uint64) *model.CartResponse {

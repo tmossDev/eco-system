@@ -25,9 +25,9 @@ import { OrderService } from '../../core/services/order/order.service';
 
       <div class="stats-grid">
         <article><span>Total orders</span><strong>{{ orders().length }}</strong></article>
-        <article><span>Created</span><strong>{{ statusCount('Created') }}</strong></article>
-        <article><span>Paid</span><strong>{{ statusCount('Paid') }}</strong></article>
-        <article><span>Fulfilled</span><strong>{{ statusCount('Fulfilled') }}</strong></article>
+        <article><span>Submitted</span><strong>{{ statusCount('Order Submitted') }}</strong></article>
+        <article><span>Fulfillment</span><strong>{{ statusCount('Order Fulfillment') }}</strong></article>
+        <article><span>Out for delivery</span><strong>{{ statusCount('Order Out For Delivery') }}</strong></article>
       </div>
 
       <div class="panel">

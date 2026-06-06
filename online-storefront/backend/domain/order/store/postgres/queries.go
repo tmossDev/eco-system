@@ -26,7 +26,7 @@ SELECT COUNT(*) FROM updated`
 
 	createOrder = `
 INSERT INTO orders (user_id, cart_id, status, item_count, subtotal_cents, currency, created_at, updated_at)
-SELECT $2, $1, 'Created', SUM(ci.quantity), SUM(p.price_cents * ci.quantity), COALESCE(MIN(p.currency), 'USD'), now(), now()
+SELECT $2, $1, 'Order Submitted', SUM(ci.quantity), SUM(p.price_cents * ci.quantity), COALESCE(MIN(p.currency), 'USD'), now(), now()
 FROM cart_items ci
 JOIN products p ON p.id = ci.product_id
 WHERE ci.cart_id = $1

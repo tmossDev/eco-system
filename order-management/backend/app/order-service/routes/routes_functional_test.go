@@ -32,12 +32,12 @@ func (service *fakeOrderService) GetOrder(orderID uint64) (*model.OrderResponse,
 func (service *fakeOrderService) UpdateStatus(orderID uint64, body string) (*model.OrderResponse, error) {
 	service.action, service.orderID, service.body = "status", orderID, body
 	order := orderResponse(orderID)
-	order.Status = "Fulfilled"
+	order.Status = "Order Fulfillment"
 	return &order, nil
 }
 
 func orderResponse(orderID uint64) model.OrderResponse {
-	return model.OrderResponse{ID: orderID, UserID: 42, CartID: 7, Status: "Created", Items: []model.OrderItem{}}
+	return model.OrderResponse{ID: orderID, UserID: 42, CartID: 7, Status: "Order Submitted", Items: []model.OrderItem{}}
 }
 
 func newTestServer(t *testing.T) (*iris.Application, *fakeOrderService) {
@@ -80,7 +80,7 @@ func TestOrderDetails(t *testing.T) {
 
 func TestUpdateOrderStatus(t *testing.T) {
 	app, service := newTestServer(t)
-	response := doJSON(app, http.MethodPut, "/api/orders/9/status", map[string]any{"status": "Fulfilled"})
+	response := doJSON(app, http.MethodPut, "/api/orders/9/status", map[string]any{"status": "Order Fulfillment"})
 	if response.Code != http.StatusOK || service.action != "status" || service.orderID != 9 {
 		t.Fatalf("expected order status update, got status %d and service %#v", response.Code, service)
 	}

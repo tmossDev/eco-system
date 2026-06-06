@@ -1,5 +1,12 @@
 # Project Change Log
 
+## v1.19.0 - (5 Changes)
+- Added an order-domain finite state machine for lifecycle transitions from Order Submitted through confirmation, fulfillment, delivery, completion, return, and cancellation.
+- Changed storefront checkout to create new orders with the Order Submitted status.
+- Added Liquibase migration support for the expanded order lifecycle statuses and migration of legacy Created, Paid, Fulfilled, and Cancelled values.
+- Updated order admin status controls, dashboard counts, and Storybook copy to use the new order lifecycle statuses.
+- Added order lifecycle validation coverage for allowed and rejected status transitions across order-management and checkout route tests.
+
 ## v1.18.0 - (5 Changes)
 - Added shared backend order request and response contracts for reuse across storefront and order management.
 - Added the order-management backend use case with order-gateway and order-service applications.

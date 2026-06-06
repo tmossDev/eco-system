@@ -31,13 +31,13 @@ import { MainLayout } from './main-layout';
         </article>
 
         <article class="stat-card">
-          <span>Paid orders</span>
+          <span>Confirmed orders</span>
           <strong>96</strong>
           <small>Ready for fulfillment</small>
         </article>
 
         <article class="stat-card">
-          <span>Created orders</span>
+          <span>Submitted orders</span>
           <strong>8</strong>
           <small>Awaiting payment</small>
         </article>
@@ -46,8 +46,8 @@ import { MainLayout } from './main-layout';
       <article class="panel">
         <h2>Recent activity</h2>
         <ul>
-          <li>Order #128 moved to Fulfilled</li>
-          <li>Order #127 moved to Paid</li>
+          <li>Order #128 moved to Order Fulfillment</li>
+          <li>Order #127 moved to Order Confirmed</li>
           <li>Order #126 was cancelled</li>
         </ul>
       </article>
@@ -362,9 +362,9 @@ class MainLayoutStoryOrders {}
         <label>
           <span>Default status</span>
           <select>
-            <option>Created</option>
-            <option>Paid</option>
-            <option>Fulfilled</option>
+            <option>Order Submitted</option>
+            <option>Order Confirmed</option>
+            <option>Order Fulfillment</option>
           </select>
         </label>
 

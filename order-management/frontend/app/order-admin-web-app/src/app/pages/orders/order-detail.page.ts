@@ -5,7 +5,16 @@ import { finalize } from 'rxjs';
 import { Order, OrderStatus } from '../../core/services/order/order.models';
 import { OrderService } from '../../core/services/order/order.service';
 
-const STATUSES: OrderStatus[] = ['Created', 'Paid', 'Fulfilled', 'Cancelled'];
+const STATUS_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
+  'Order Submitted': ['Order Confirmed', 'Order Cancelled'],
+  'Order Confirmed': ['Order Fulfillment', 'Order Cancelled'],
+  'Order Fulfillment': ['Order Out For Delivery', 'Order Cancelled'],
+  'Order Out For Delivery': ['Order Delivered'],
+  'Order Delivered': ['Order Complete', 'Order Returned'],
+  'Order Complete': ['Order Returned'],
+  'Order Returned': [],
+  'Order Cancelled': [],
+};
 
 @Component({
   selector: 'app-order-detail-page',
@@ -26,10 +35,12 @@ const STATUSES: OrderStatus[] = ['Created', 'Paid', 'Fulfilled', 'Cancelled'];
           </div>
 
           <div class="status-actions">
-            @for (status of statuses; track status) {
-              <button type="button" [disabled]="isSaving() || order()!.status === status" (click)="setStatus(status)">
+            @for (status of nextStatuses(order()!.status); track status) {
+              <button type="button" [disabled]="isSaving()" (click)="setStatus(status)">
                 {{ status }}
               </button>
+            } @empty {
+              <span class="terminal-status">No further actions</span>
             }
           </div>
         </div>
@@ -62,6 +73,7 @@ const STATUSES: OrderStatus[] = ['Created', 'Paid', 'Fulfilled', 'Cancelled'];
     .status-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
     button { border: 0; border-radius: 999px; background: #2563eb; padding: .65rem .9rem; color: white; cursor: pointer; font-weight: 700; }
     button:disabled { cursor: default; opacity: .55; }
+    .terminal-status { display: inline-flex; border-radius: 999px; background: #e8eef8; padding: .65rem .9rem; color: #56657f; font-weight: 700; }
     .items { display: grid; gap: .75rem; }
     article { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 1rem; align-items: center; border: 1px solid #dbe3ef; border-radius: 8px; background: #fff; padding: 1rem; }
     article div { display: grid; gap: .25rem; }
@@ -72,7 +84,6 @@ const STATUSES: OrderStatus[] = ['Created', 'Paid', 'Fulfilled', 'Cancelled'];
 export class OrderDetailPage implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly orderService = inject(OrderService);
-  protected readonly statuses = STATUSES;
   protected readonly order = signal<Order | null>(null);
   protected readonly isLoading = signal(false);
   protected readonly isSaving = signal(false);
@@ -93,6 +104,10 @@ export class OrderDetailPage implements OnInit {
         next: (order) => this.order.set(order),
         error: () => this.errorMessage.set('Unable to update order status.'),
       });
+  }
+
+  protected nextStatuses(status: OrderStatus): OrderStatus[] {
+    return STATUS_TRANSITIONS[status] ?? [];
   }
 
   protected formatMoney(cents: number, currency: string): string {
