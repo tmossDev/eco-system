@@ -284,6 +284,14 @@ jobs:
           helm upgrade --install ci-cd ci-cd/deployment \
             --namespace "$CI_CD_NAMESPACE" \
             --wait \
+            --set nexus.app.service.ports[0].name=http \
+            --set nexus.app.service.ports[0].port=8081 \
+            --set nexus.app.service.ports[0].targetPort=http \
+            --set nexus.app.service.ports[0].protocol=TCP \
+            --set nexus.app.service.ports[1].name=docker \
+            --set nexus.app.service.ports[1].port=5000 \
+            --set nexus.app.service.ports[1].targetPort=docker \
+            --set nexus.app.service.ports[1].protocol=TCP \
             --set nexus.app.service.ports[1].nodePort="$NEXUS_DOCKER_NODE_PORT"
 
       - name: Configure Nexus Docker repository
