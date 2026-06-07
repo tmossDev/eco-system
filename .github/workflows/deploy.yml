@@ -345,9 +345,24 @@ jobs:
         run: |
           set -euo pipefail
 
-          kubectl port-forward -n "$CI_CD_NAMESPACE" service/nexus 18081:8081 &
+          show_nexus_status() {
+            echo "::group::Nexus resources"
+            kubectl get pods,deploy,svc,pvc -n "$CI_CD_NAMESPACE" -l app.kubernetes.io/name=nexus || true
+            echo "::endgroup::"
+            echo "::group::Recent Nexus logs"
+            kubectl logs -n "$CI_CD_NAMESPACE" deployment/nexus --tail=120 || true
+            echo "::endgroup::"
+          }
+
+          kubectl rollout status deployment/nexus -n "$CI_CD_NAMESPACE" --timeout=600s
+          kubectl wait --for=condition=Ready pod \
+            -n "$CI_CD_NAMESPACE" \
+            -l app.kubernetes.io/name=nexus,app.kubernetes.io/instance=ci-cd \
+            --timeout=600s
+
+          kubectl port-forward -n "$CI_CD_NAMESPACE" deployment/nexus 18081:8081 &
           PORT_FORWARD_PID="$!"
-          trap 'kill "$PORT_FORWARD_PID" 2>/dev/null || true' EXIT
+          trap 'kill "$PORT_FORWARD_PID" 2>/dev/null || true; show_nexus_status' EXIT
 
           for attempt in {1..90}; do
             if curl --silent --fail http://127.0.0.1:18081/service/rest/v1/status >/dev/null; then
