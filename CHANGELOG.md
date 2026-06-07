@@ -1,6 +1,6 @@
 # Project Change Log
 
-## v1.20.0 - (8 Changes)
+## v1.20.0 - (9 Changes)
 - Added Renovate configuration for pnpm frontend workspaces, Go backend modules, Dockerfiles, GitHub Actions, and Helm dependencies.
 - Added a manually runnable Renovate GitHub Actions workflow with dry-run and log-level inputs.
 - Added a CI/CD namespace layer that deploys Nexus Repository Manager as the platform container image registry.
@@ -8,6 +8,7 @@
 - Added multi-node registry configuration with node-reachable `NEXUS_DOCKER_REGISTRY` and configurable `NEXUS_DOCKER_NODE_PORT` values.
 - Added Docker insecure-registry setup for the GitHub runner and documented the matching k3s containerd registry configuration needed for HTTP Nexus pulls.
 - Changed Nexus deploy, repository configuration, Docker login, and image pull secret creation to use the `NEXUS_ADMIN_PASSWORD` GitHub secret when present.
+- Added automated Nexus EULA acceptance, Docker Bearer Token Realm activation, and k3d node registry mirror configuration to the CI/CD deploy job.
 - Reworked the root README into a high-level repository, technology, namespace, and deployment overview while preserving the previous detailed README under `docs/repo/README.md`.
 
 ## v1.19.0 - (5 Changes)

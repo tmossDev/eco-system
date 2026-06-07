@@ -83,7 +83,7 @@ address is configured in `config/hp-prodesk-homelab.txt`:
 
 ```sh
 CI_CD_NAMESPACE=eco-cicd
-NEXUS_DOCKER_REGISTRY=172.18.0.2:30500
+NEXUS_DOCKER_REGISTRY=172.18.0.4:30500
 NEXUS_DOCKER_NODE_PORT=30500
 IMAGE_NAMESPACE=eco-system
 ```
@@ -98,6 +98,10 @@ Kubernetes node also needs its container runtime configured to trust the same
 HTTP registry address, otherwise deployments can push successfully but pods will
 fail when pulling images.
 
+For k3d clusters, the deploy workflow configures each k3d node container with
+the matching containerd registry mirror and restarts the node containers so
+pulls use HTTP. Other Kubernetes runtimes should be preconfigured manually.
+
 The Nexus admin password can be supplied as a GitHub secret named
 `NEXUS_ADMIN_PASSWORD`. If the secret is not set, the workflow uses Nexus'
 initial local default of `admin123`. Any `sudo` password prompt comes from the
@@ -110,9 +114,9 @@ before deploying workloads:
 
 ```yaml
 mirrors:
-  "172.18.0.2:30500":
+  "172.18.0.4:30500":
     endpoint:
-      - "http://172.18.0.2:30500"
+      - "http://172.18.0.4:30500"
 ```
 
 Then restart k3s on each node so containerd picks up the registry settings.

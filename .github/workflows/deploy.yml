@@ -298,6 +298,43 @@ jobs:
             --set nexus.app.service.ports[1].protocol=TCP \
             --set nexus.app.service.ports[1].nodePort="$NEXUS_DOCKER_NODE_PORT"
 
+      - name: Configure k3d node registry mirrors
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if ! command -v docker >/dev/null 2>&1; then
+            echo "Docker is not available; skipping k3d registry mirror configuration"
+            exit 0
+          fi
+
+          K3D_CLUSTER_NAME="${K3D_CLUSTER:-eco-cluster}"
+          mapfile -t K3D_NODES < <(docker ps \
+            --filter "name=k3d-${K3D_CLUSTER_NAME}-" \
+            --format '{{.Names}}' \
+            | grep -E '^k3d-.+-(server|agent)-[0-9]+$' || true)
+
+          if [[ "${#K3D_NODES[@]}" -eq 0 ]]; then
+            echo "No k3d node containers found; skipping registry mirror configuration"
+            exit 0
+          fi
+
+          for node in "${K3D_NODES[@]}"; do
+            echo "Configuring registry mirror on $node"
+            docker exec "$node" sh -c "mkdir -p /etc/rancher/k3s && printf '%s\n' \
+              'mirrors:' \
+              '  \"$NEXUS_DOCKER_REGISTRY\":' \
+              '    endpoint:' \
+              '      - \"http://$NEXUS_DOCKER_REGISTRY\"' \
+              > /etc/rancher/k3s/registries.yaml"
+          done
+
+          for node in "${K3D_NODES[@]}"; do
+            docker restart "$node"
+          done
+
+          kubectl wait --for=condition=Ready nodes --all --timeout=180s
+
       - name: Configure Nexus Docker repository
         shell: bash
         run: |
@@ -319,6 +356,26 @@ jobs:
 
             sleep 2
           done
+
+          curl --silent --fail --user "admin:$NEXUS_ADMIN_PASSWORD" \
+            http://127.0.0.1:18081/service/rest/v1/system/eula \
+            | jq '.accepted = true' > nexus-eula-accepted.json
+
+          curl --silent --fail --user "admin:$NEXUS_ADMIN_PASSWORD" \
+            --request POST \
+            --header "Content-Type: application/json" \
+            --data-binary @nexus-eula-accepted.json \
+            http://127.0.0.1:18081/service/rest/v1/system/eula
+
+          curl --silent --fail --user "admin:$NEXUS_ADMIN_PASSWORD" \
+            http://127.0.0.1:18081/service/rest/v1/security/realms/active \
+            | jq 'if index("DockerToken") then . else . + ["DockerToken"] end' > nexus-active-realms.json
+
+          curl --silent --fail --user "admin:$NEXUS_ADMIN_PASSWORD" \
+            --request PUT \
+            --header "Content-Type: application/json" \
+            --data-binary @nexus-active-realms.json \
+            http://127.0.0.1:18081/service/rest/v1/security/realms/active
 
           if curl --silent --fail --user "admin:$NEXUS_ADMIN_PASSWORD" \
             http://127.0.0.1:18081/service/rest/v1/repositories/docker/hosted/eco-images >/dev/null; then
