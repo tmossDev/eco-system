@@ -149,14 +149,18 @@ jobs:
             case "$REQUESTED_LAYER" in
               ci-cd)
                 DEPLOY_CI_CD=true
+                DEPLOY_FOUNDATION=false
+                DEPLOY_APPLICATION=false
                 ;;
               foundation)
                 DEPLOY_FOUNDATION=true
-                DEPLOY_CI_CD=true
+                DEPLOY_CI_CD=false
+                DEPLOY_APPLICATION=false
                 ;;
               application)
                 DEPLOY_APPLICATION=true
-                DEPLOY_CI_CD=true
+                DEPLOY_CI_CD=false
+                DEPLOY_FOUNDATION=false
                 ;;
               all)
                 DEPLOY_CI_CD=true
@@ -230,6 +234,7 @@ jobs:
           NEXUS_ADMIN_PASSWORD="${NEXUS_ADMIN_PASSWORD:-${NEXUS_ADMIN_PASSWORD_SECRET:-admin123}}"
 
           echo "CI_CD_NAMESPACE=${{ needs.prepare.outputs.ci_cd_namespace }}" >> "$GITHUB_ENV"
+          echo "NEXUS_DOCKER_REGISTRY=$NEXUS_DOCKER_REGISTRY" >> "$GITHUB_ENV"
           echo "NEXUS_ADMIN_PASSWORD=$NEXUS_ADMIN_PASSWORD" >> "$GITHUB_ENV"
           echo "NEXUS_DOCKER_NODE_PORT=${NEXUS_DOCKER_NODE_PORT:-30500}" >> "$GITHUB_ENV"
         env:
@@ -323,9 +328,9 @@ jobs:
             echo "Configuring registry mirror on $node"
             docker exec "$node" sh -c "mkdir -p /etc/rancher/k3s && printf '%s\n' \
               'mirrors:' \
-              '  \"$NEXUS_DOCKER_REGISTRY\":' \
+              '  \"${NEXUS_DOCKER_REGISTRY}\":' \
               '    endpoint:' \
-              '      - \"http://$NEXUS_DOCKER_REGISTRY\"' \
+              '      - \"http://${NEXUS_DOCKER_REGISTRY}\"' \
               > /etc/rancher/k3s/registries.yaml"
           done
 
@@ -615,6 +620,41 @@ jobs:
             --set-string postgres.app.secret.stringData.APP_PASSWORD="$APP_PASSWORD" \
             --set-string liquibase.app.secret.stringData.LIQUIBASE_COMMAND_PASSWORD="$LIQUIBASE_PASSWORD" \
             --set-string liquibase.app.secret.stringData.LIQUIBASE_PASSWORD="$LIQUIBASE_PASSWORD"
+
+      - name: Run deployed foundation smoke tests
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          show_foundation_logs() {
+            echo "::group::Recent postgres logs"
+            kubectl logs -n "$FOUNDATION_NAMESPACE" deployment/postgres --tail=120 || true
+            echo "::endgroup::"
+            echo "::group::Recent minio logs"
+            kubectl logs -n "$FOUNDATION_NAMESPACE" deployment/minio --tail=120 || true
+            echo "::endgroup::"
+          }
+
+          kubectl rollout status deployment/postgres -n "$FOUNDATION_NAMESPACE" --timeout=180s
+          kubectl rollout status deployment/minio -n "$FOUNDATION_NAMESPACE" --timeout=180s
+
+          kubectl port-forward -n "$FOUNDATION_NAMESPACE" service/minio 19000:9000 &
+          MINIO_PORT_FORWARD_PID="$!"
+          trap 'kill "$MINIO_PORT_FORWARD_PID" 2>/dev/null || true; show_foundation_logs' EXIT
+
+          for attempt in {1..30}; do
+            if kubectl exec -n "$FOUNDATION_NAMESPACE" deployment/postgres -- pg_isready -U postgres >/dev/null 2>&1 \
+              && curl --silent --fail http://127.0.0.1:19000/minio/health/ready >/dev/null; then
+              break
+            fi
+
+            if [[ "$attempt" == "30" ]]; then
+              echo "Timed out waiting for port-forwarded foundation services" >&2
+              exit 1
+            fi
+
+            sleep 1
+          done
 
       - name: Show foundation rollout
         shell: bash
@@ -1414,6 +1454,42 @@ jobs:
             -run TestDeployedProductGatewayFunctional \
             -v
 
+      - name: Run deployed order gateway functional tests
+        shell: bash
+        env:
+          ORDER_GATEWAY_BASE_URL: http://127.0.0.1:18085
+          ORDER_FUNCTIONAL_TEST_EMAIL: admin@test.com
+          ORDER_FUNCTIONAL_TEST_PASSWORD: password
+        run: |
+          set -euo pipefail
+
+          show_gateway_logs() {
+            echo "::group::Recent order-gateway logs"
+            kubectl logs -n "$NAMESPACE" deployment/order-gateway --tail=120 || true
+            echo "::endgroup::"
+          }
+          kubectl port-forward -n "$NAMESPACE" service/order-gateway 18085:8080 &
+          PORT_FORWARD_PID="$!"
+          trap 'kill "$PORT_FORWARD_PID" 2>/dev/null || true; show_gateway_logs' EXIT
+
+          for attempt in {1..30}; do
+            if curl --silent --fail "$ORDER_GATEWAY_BASE_URL/health" >/dev/null; then
+              break
+            fi
+
+            if [[ "$attempt" == "30" ]]; then
+              echo "Timed out waiting for port-forwarded order-gateway service" >&2
+              exit 1
+            fi
+
+            sleep 1
+          done
+
+          go test ./order-management/backend/app/order-gateway/routes \
+            -tags integration \
+            -run TestDeployedOrderGatewayFunctional \
+            -v
+
       - name: Show application rollout
         shell: bash
         run: |
@@ -1435,6 +1511,10 @@ jobs:
               ['User service', 'http://${{ needs.prepare.outputs.user_service_host }}'],
               ['Product gateway', 'http://${{ needs.prepare.outputs.product_gateway_host }}'],
               ['Product service', 'http://${{ needs.prepare.outputs.product_service_host }}'],
+              ['Order admin web app', 'http://${{ needs.prepare.outputs.order_admin_web_app_host }}'],
+              ['Order admin web app Storybook', 'http://${{ needs.prepare.outputs.order_admin_web_app_host }}/storybook'],
+              ['Order gateway', 'http://${{ needs.prepare.outputs.order_gateway_host }}'],
+              ['Order service', 'http://${{ needs.prepare.outputs.order_service_host }}'],
               ['Online storefront', 'http://${{ needs.prepare.outputs.storefront_web_app_host }}'],
             ];
 
