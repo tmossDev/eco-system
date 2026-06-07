@@ -98,6 +98,13 @@ Kubernetes node also needs its container runtime configured to trust the same
 HTTP registry address, otherwise deployments can push successfully but pods will
 fail when pulling images.
 
+The Nexus admin password can be supplied as a GitHub secret named
+`NEXUS_ADMIN_PASSWORD`. If the secret is not set, the workflow uses Nexus'
+initial local default of `admin123`. Any `sudo` password prompt comes from the
+self-hosted runner operating system, not from Nexus. The runner either needs
+passwordless sudo for Docker daemon configuration or `/etc/docker/daemon.json`
+must already include the Nexus registry under `insecure-registries`.
+
 For k3s nodes, configure the registry in `/etc/rancher/k3s/registries.yaml`
 before deploying workloads:
 
