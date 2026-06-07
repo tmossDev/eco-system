@@ -92,6 +92,24 @@ IMAGE_NAMESPACE=eco-system
 Kubernetes node. For multi-node clusters, do not use `127.0.0.1` or
 `localhost`.
 
+Nexus is exposed as an HTTP Docker registry. The deploy workflow configures the
+GitHub runner Docker daemon as an insecure registry before pushing images. Each
+Kubernetes node also needs its container runtime configured to trust the same
+HTTP registry address, otherwise deployments can push successfully but pods will
+fail when pulling images.
+
+For k3s nodes, configure the registry in `/etc/rancher/k3s/registries.yaml`
+before deploying workloads:
+
+```yaml
+mirrors:
+  "172.18.0.2:30500":
+    endpoint:
+      - "http://172.18.0.2:30500"
+```
+
+Then restart k3s on each node so containerd picks up the registry settings.
+
 ### `eco-foundation`
 
 The foundation namespace is deployed after CI/CD. It runs shared infrastructure:

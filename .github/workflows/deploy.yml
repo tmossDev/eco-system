@@ -392,6 +392,41 @@ jobs:
           echo "LIQUIBASE_JDBC_URL=${LIQUIBASE_JDBC_URL:-jdbc:postgresql://postgres:5432/${POSTGRES_DB:-ecoDB}}" >> "$GITHUB_ENV"
           echo "POSTGRES_LIQUIBASE_USER=${POSTGRES_LIQUIBASE_USER:-liquibase}" >> "$GITHUB_ENV"
 
+      - name: Configure Docker insecure registry
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          sudo mkdir -p /etc/docker
+          if [[ -f /etc/docker/daemon.json ]]; then
+            sudo cp /etc/docker/daemon.json /tmp/docker-daemon.json
+          else
+            printf '{}\n' > /tmp/docker-daemon.json
+          fi
+
+          python3 - "$NEXUS_DOCKER_REGISTRY" /tmp/docker-daemon.json <<'PY'
+          import json
+          import sys
+
+          registry = sys.argv[1]
+          path = sys.argv[2]
+
+          with open(path, "r", encoding="utf-8") as fh:
+              config = json.load(fh)
+
+          registries = config.setdefault("insecure-registries", [])
+          if registry not in registries:
+              registries.append(registry)
+
+          with open(path, "w", encoding="utf-8") as fh:
+              json.dump(config, fh, indent=2)
+              fh.write("\n")
+          PY
+
+          sudo cp /tmp/docker-daemon.json /etc/docker/daemon.json
+          sudo systemctl restart docker || sudo service docker restart
+          docker info
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -636,6 +671,41 @@ jobs:
           pnpm --filter order-admin-web-app build-storybook
           pnpm --filter storefront-web-app build
           pnpm --filter storybook build-storybook
+
+      - name: Configure Docker insecure registry
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          sudo mkdir -p /etc/docker
+          if [[ -f /etc/docker/daemon.json ]]; then
+            sudo cp /etc/docker/daemon.json /tmp/docker-daemon.json
+          else
+            printf '{}\n' > /tmp/docker-daemon.json
+          fi
+
+          python3 - "$NEXUS_DOCKER_REGISTRY" /tmp/docker-daemon.json <<'PY'
+          import json
+          import sys
+
+          registry = sys.argv[1]
+          path = sys.argv[2]
+
+          with open(path, "r", encoding="utf-8") as fh:
+              config = json.load(fh)
+
+          registries = config.setdefault("insecure-registries", [])
+          if registry not in registries:
+              registries.append(registry)
+
+          with open(path, "w", encoding="utf-8") as fh:
+              json.dump(config, fh, indent=2)
+              fh.write("\n")
+          PY
+
+          sudo cp /tmp/docker-daemon.json /etc/docker/daemon.json
+          sudo systemctl restart docker || sudo service docker restart
+          docker info
 
       - name: Build local application images
         shell: bash
