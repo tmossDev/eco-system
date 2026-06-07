@@ -1,0 +1,74 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "dependencyDashboard": true,
+  "labels": [
+    "dependencies"
+  ],
+  "enabledManagers": [
+    "npm",
+    "gomod",
+    "dockerfile",
+    "github-actions",
+    "helmv3"
+  ],
+  "ignorePaths": [
+    "**/node_modules/**",
+    "**/.angular/cache/**",
+    "**/dist/**"
+  ],
+  "rangeStrategy": "bump",
+  "postUpdateOptions": [
+    "gomodTidy",
+    "pnpmDedupe"
+  ],
+  "packageRules": [
+    {
+      "description": "Group non-major frontend dependency updates",
+      "matchManagers": [
+        "npm"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
+      "groupName": "frontend dependencies"
+    },
+    {
+      "description": "Group non-major backend dependency updates",
+      "matchManagers": [
+        "gomod"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
+      "groupName": "backend dependencies"
+    },
+    {
+      "description": "Group non-major container image updates",
+      "matchManagers": [
+        "dockerfile"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
+      "groupName": "container images"
+    },
+    {
+      "description": "Group non-major deployment dependency updates",
+      "matchManagers": [
+        "github-actions",
+        "helmv3"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
+      "groupName": "deployment dependencies"
+    }
+  ]
+}

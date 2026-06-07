@@ -1,5 +1,13 @@
 # Project Change Log
 
+## v1.20.0 - (6 Changes)
+- Added Renovate configuration for pnpm frontend workspaces, Go backend modules, Dockerfiles, GitHub Actions, and Helm dependencies.
+- Added a manually runnable Renovate GitHub Actions workflow with dry-run and log-level inputs.
+- Added a CI/CD namespace layer that deploys Nexus Repository Manager as the platform container image registry.
+- Changed the deployment pipeline to push backend, frontend, Storybook, and Liquibase images to Nexus before Kubernetes pulls them into foundation and application namespaces.
+- Added multi-node registry configuration with node-reachable `NEXUS_DOCKER_REGISTRY` and configurable `NEXUS_DOCKER_NODE_PORT` values.
+- Reworked the root README into a high-level repository, technology, namespace, and deployment overview while preserving the previous detailed README under `docs/repo/README.md`.
+
 ## v1.19.0 - (5 Changes)
 - Added an order-domain finite state machine for lifecycle transitions from Order Submitted through confirmation, fulfillment, delivery, completion, return, and cancellation.
 - Changed storefront checkout to create new orders with the Order Submitted status.

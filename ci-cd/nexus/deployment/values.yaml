@@ -1,0 +1,59 @@
+app:
+  nameOverride: nexus
+  fullnameOverride: nexus
+  partOf: ci-cd
+  component: artifact-registry
+  image:
+    repository: sonatype/nexus3
+    tag: latest
+    pullPolicy: IfNotPresent
+  ports:
+    - name: http
+      containerPort: 8081
+      protocol: TCP
+    - name: docker
+      containerPort: 5000
+      protocol: TCP
+  env:
+    NEXUS_SECURITY_RANDOMPASSWORD: "false"
+  podSecurityContext:
+    fsGroup: 200
+  securityContext:
+    runAsUser: 200
+    runAsGroup: 200
+  service:
+    enabled: true
+    type: NodePort
+    ports:
+      - name: http
+        port: 8081
+        targetPort: http
+        protocol: TCP
+      - name: docker
+        port: 5000
+        targetPort: docker
+        protocol: TCP
+        nodePort: 30500
+  persistence:
+    enabled: true
+    size: 20Gi
+  volumeMounts:
+    - name: data
+      mountPath: /nexus-data
+  volumes:
+    - name: data
+      persistentVolumeClaim:
+        claimName: nexus
+  readinessProbe:
+    httpGet:
+      path: /service/rest/v1/status
+      port: http
+    initialDelaySeconds: 60
+    periodSeconds: 15
+    failureThreshold: 20
+  resources:
+    requests:
+      cpu: 500m
+      memory: 2Gi
+    limits:
+      memory: 4Gi

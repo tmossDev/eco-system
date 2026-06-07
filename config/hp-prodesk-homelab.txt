@@ -3,8 +3,14 @@
 
 ENVIRONMENT_NAME=hp-prodesk-homelab
 K3D_CLUSTER=eco-cluster
+CI_CD_NAMESPACE=eco-cicd
 FOUNDATION_NAMESPACE=eco-foundation
 DEFAULT_APPLICATION_NAMESPACE=eco-test
+# Nexus Docker registry address used by both the GitHub runner and all Kubernetes nodes.
+# Use a node-reachable IP/DNS name for multi-node clusters; do not use 127.0.0.1.
+NEXUS_DOCKER_REGISTRY=172.18.0.2:30500
+NEXUS_DOCKER_NODE_PORT=30500
+IMAGE_NAMESPACE=eco-system
 
 BASE_DOMAIN=com
 INGRESS_CLASS_NAME=traefik

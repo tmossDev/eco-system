@@ -1,0 +1,6 @@
+dependencies:
+- name: nexus
+  repository: file://../nexus/deployment
+  version: 0.1.0
+digest: sha256:bc4c7fff678d76b69cb12bd503ab2fea235b315a301c24193d46fa55276ea46b
+generated: "2026-06-07T11:17:18.307987357+02:00"

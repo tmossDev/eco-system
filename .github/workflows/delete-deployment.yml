@@ -9,6 +9,7 @@ on:
         default: application
         type: choice
         options:
+          - ci-cd
           - application
           - foundation
           - all
@@ -35,7 +36,7 @@ on:
         required: true
         default: hp-prodesk-homelab.txt
       confirmation:
-        description: Type delete for application deletes. Type delete-foundation when layer includes foundation.
+        description: Type delete for application deletes. Type delete-foundation when layer includes foundation or ci-cd.
         required: true
         default: ""
 
@@ -75,8 +76,12 @@ jobs:
 
           DELETE_FOUNDATION=false
           DELETE_APPLICATION=false
+          DELETE_CI_CD=false
 
           case "$LAYER" in
+            ci-cd)
+              DELETE_CI_CD=true
+              ;;
             foundation)
               DELETE_FOUNDATION=true
               ;;
@@ -84,6 +89,7 @@ jobs:
               DELETE_APPLICATION=true
               ;;
             all)
+              DELETE_CI_CD=true
               DELETE_FOUNDATION=true
               DELETE_APPLICATION=true
               ;;
@@ -93,9 +99,9 @@ jobs:
               ;;
           esac
 
-          if [[ "$DELETE_FOUNDATION" == "true" ]]; then
+          if [[ "$DELETE_FOUNDATION" == "true" || "$DELETE_CI_CD" == "true" ]]; then
             if [[ "$CONFIRMATION" != "delete-foundation" ]]; then
-              echo "Foundation deletes require confirmation: delete-foundation" >&2
+              echo "Foundation and CI/CD deletes require confirmation: delete-foundation" >&2
               exit 1
             fi
           elif [[ "$CONFIRMATION" != "delete" ]]; then
@@ -128,12 +134,15 @@ jobs:
           esac
 
           FOUNDATION_NAMESPACE="${FOUNDATION_NAMESPACE:-eco-foundation}"
+          CI_CD_NAMESPACE="${CI_CD_NAMESPACE:-eco-cicd}"
 
           {
             echo "DELETE_FOUNDATION=$DELETE_FOUNDATION"
             echo "DELETE_APPLICATION=$DELETE_APPLICATION"
+            echo "DELETE_CI_CD=$DELETE_CI_CD"
             echo "NAMESPACE=$NAMESPACE"
             echo "FOUNDATION_NAMESPACE=$FOUNDATION_NAMESPACE"
+            echo "CI_CD_NAMESPACE=$CI_CD_NAMESPACE"
           } >> "$GITHUB_ENV"
 
       - name: Set up Helm
@@ -180,6 +189,8 @@ jobs:
         shell: bash
         run: |
           helm uninstall product-management --namespace "$NAMESPACE" --ignore-not-found
+          helm uninstall order-management --namespace "$NAMESPACE" --ignore-not-found
+          helm uninstall online-storefront --namespace "$NAMESPACE" --ignore-not-found
           helm uninstall user-management --namespace "$NAMESPACE" --ignore-not-found
           helm uninstall shared-components --namespace "$NAMESPACE" --ignore-not-found
 
@@ -194,6 +205,13 @@ jobs:
         shell: bash
         run: |
           helm uninstall foundation --namespace "$FOUNDATION_NAMESPACE" --ignore-not-found
+
+      - name: Delete CI/CD release
+        if: env.DELETE_CI_CD == 'true'
+        shell: bash
+        run: |
+          helm uninstall ci-cd --namespace "$CI_CD_NAMESPACE" --ignore-not-found
+          kubectl delete namespace "$CI_CD_NAMESPACE" --ignore-not-found --wait=false
 
       - name: Show remaining namespaces
         shell: bash
