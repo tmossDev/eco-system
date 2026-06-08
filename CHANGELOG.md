@@ -1,7 +1,7 @@
 # Project Change Log
 
 ## v1.21.0 - (5 Changes)
-- Split deployment automation into a reusable `deploy-core.yml` workflow plus small manual, main, and feature deployment entrypoints.
+- Split deployment automation into three visible workflows for main, changed feature, and full feature deployments.
 - Added changed-use-case detection so feature deployments build and deploy only touched application domains by default.
 - Added full feature deployment support through the `deploy:full-feature` pull request label, deploying feature foundation plus all application use-cases.
 - Added separate build and deploy decisions so unchanged use-cases can reuse existing Nexus image tags while changed use-cases deploy the current commit image.

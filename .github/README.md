@@ -1,22 +1,20 @@
 # GitHub Automation
 
-This directory keeps the deployment entrypoints small and pushes the shared logic into `workflows/deploy-core.yml`.
+This directory keeps the deployment workflows focused around the three ways the platform is deployed.
 
 ## Deployment Workflows
 
 | Workflow | Trigger | Purpose |
 | --- | --- | --- |
-| `deploy.yml` | Manual | Deploy `all`, `ci-cd`, `foundation`, or `application`. |
-| `deploy-main.yml` | Push to `main` | Build and deploy changed application use-cases; deploy foundation only when it changed. |
+| `deploy-main.yml` | Manual or push to `main` | Manual deploys can target `all`, `ci-cd`, `foundation`, or `application`; main pushes deploy only changed layers/use-cases. |
 | `deploy-feature-changed.yml` | Pull request | Deploy only changed application use-cases into the feature namespace. |
 | `deploy-feature-full.yml` | Pull request with `deploy:full-feature` label | Deploy feature foundation plus all application use-cases. |
-| `deploy-core.yml` | Reusable workflow | Shared build, image push, Helm deploy, rollout, and smoke-test logic. |
 
 Feature branches must match `feature/<10 lowercase alphanumeric chars>`. The namespace is the suffix after `feature/`.
 
 ## Build vs Deploy
 
-`deploy-core.yml` separates two decisions:
+Each deploy workflow separates two decisions:
 
 - `build_*`: changed use-cases that need new images for the current commit.
 - `deploy_*`: use-cases that should be installed or upgraded in Kubernetes.
@@ -27,14 +25,14 @@ For full feature deployments, changed use-cases use the current commit image tag
 
 ```mermaid
 flowchart TD
-  manual[Manual Deploy] --> core[deploy-core.yml]
-  main[Push to main] --> core
-  prChanged[Pull Request] --> changed[Feature Deploy Changed]
-  prFull[PR label: deploy:full-feature] --> full[Feature Deploy Full]
-  changed --> core
-  full --> core
+  manual[Manual Deploy Main] --> main[Deploy Main]
+  push[Push to main] --> main
+  prChanged[Pull Request] --> changed[Deploy Feature]
+  prFull[PR label: deploy:full-feature] --> full[Deploy Full Feature]
 
-  core --> detect[Detect changed paths]
+  main --> detect[Detect changed paths]
+  changed --> detect
+  full --> detect
   detect --> build{Build images?}
   detect --> deploy{Deploy releases?}
 
@@ -56,4 +54,4 @@ flowchart TD
 
 - Changed feature deploy: open or update a PR from a valid feature branch.
 - Full feature deploy: add the `deploy:full-feature` label to the PR.
-- Operational deploy: run `Deploy` from the Actions tab and choose the layer.
+- Operational deploy: run `Deploy Main` from the Actions tab and choose the layer.
