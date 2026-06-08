@@ -10,7 +10,7 @@ This directory keeps the deployment workflows focused around the three ways the 
 | `deploy-feature-changed.yml` | Pull request | Deploy only changed application use-cases into the feature namespace. |
 | `deploy-feature-full.yml` | Pull request with `deploy:full-feature` label | Deploy feature foundation plus all application use-cases. |
 
-Feature branches must match `feature/<10 lowercase alphanumeric chars>`. The namespace is the suffix after `feature/`.
+Feature branches must match `feature/<1-10 lowercase alphanumeric chars>`. The namespace is the suffix after `feature/`.
 
 ## Build vs Deploy
 

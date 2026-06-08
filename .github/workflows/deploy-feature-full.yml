@@ -221,8 +221,8 @@ jobs:
 
           if [[ "$DEPLOYMENT_MODE" == "feature-changed" || "$DEPLOYMENT_MODE" == "feature-full" ]]; then
             HEAD_REF="${{ github.head_ref }}"
-            if [[ ! "$HEAD_REF" =~ ^feature/[a-z0-9]{10}$ ]]; then
-              echo "Feature deploy branches must match feature/<10 lowercase alphanumeric chars>. Received: $HEAD_REF" >&2
+            if [[ ! "$HEAD_REF" =~ ^feature/[a-z0-9]{1,10}$ ]]; then
+              echo "Feature deploy branches must match feature/<1-10 lowercase alphanumeric chars>. Received: $HEAD_REF" >&2
               exit 1
             fi
 
