@@ -23,3 +23,4 @@ POSTGRES_LIQUIBASE_USER=liquibase
 LIQUIBASE_JDBC_URL=jdbc:postgresql://postgres.eco-foundation.svc.cluster.local:5432/ecoDB
 
 USER_SERVICE_INTERNAL_URL=http://user-service:8080
+FEATURE_DEPENDENCY_NAMESPACE=eco-test

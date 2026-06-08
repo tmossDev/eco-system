@@ -1,7 +1,14 @@
 # Project Change Log
 
+## v1.21.1 - (5 Changes)
+- Changed feature deployments to reuse stable cross-namespace application dependencies by default for unchanged use-cases.
+- Added feature dependency service URL configuration using Kubernetes service DNS, with `FEATURE_DEPENDENCY_NAMESPACE` and per-service override support.
+- Updated feature Helm deploys to pass gateway service URLs through both ConfigMaps and explicit pod environment values.
+- Changed feature useful-links pull request comments to be non-blocking when GitHub token permissions prevent comment writes.
+- Added pull request write permissions to feature deployment workflows for PR comment decoration.
+
 ## v1.21.0 - (5 Changes)
-- Split deployment automation into a reusable `deploy-core.yml` workflow plus small manual, main, and feature deployment entrypoints.
+- Split deployment automation into three visible workflows for main, changed feature, and full feature deployments.
 - Added changed-use-case detection so feature deployments build and deploy only touched application domains by default.
 - Added full feature deployment support through the `deploy:full-feature` pull request label, deploying feature foundation plus all application use-cases.
 - Added separate build and deploy decisions so unchanged use-cases can reuse existing Nexus image tags while changed use-cases deploy the current commit image.

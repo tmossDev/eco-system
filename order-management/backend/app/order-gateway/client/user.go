@@ -19,7 +19,7 @@ const defaultUserServiceURL = "http://user-service:8080"
 type AuthClient interface {
 	Login(requestID string, body []byte) (*userModel.LoginResponse, error)
 	Logout(requestID string, jwt string) error
-	Shutdown()
+	Shutdown() // testing feature deployment
 }
 
 type HTTPAuthClient struct {
