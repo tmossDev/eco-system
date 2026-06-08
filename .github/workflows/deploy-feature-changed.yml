@@ -243,6 +243,15 @@ jobs:
               DEPLOY_ORDER_MANAGEMENT="$BUILD_ORDER_MANAGEMENT"
               DEPLOY_ONLINE_STOREFRONT="$BUILD_ONLINE_STOREFRONT"
               DEPLOY_STORYBOOK="$BUILD_STORYBOOK"
+
+              # Feature namespaces are fresh, so deploy runtime dependencies too.
+              # These dependency use-cases reuse the unchanged application image tag.
+              if [[ "$BUILD_PRODUCT_MANAGEMENT" == "true" || "$BUILD_ORDER_MANAGEMENT" == "true" || "$BUILD_ONLINE_STOREFRONT" == "true" ]]; then
+                DEPLOY_USER_MANAGEMENT=true
+              fi
+              if [[ "$BUILD_ONLINE_STOREFRONT" == "true" ]]; then
+                DEPLOY_PRODUCT_MANAGEMENT=true
+              fi
             fi
           elif [[ "$DEPLOYMENT_MODE" == "main" ]]; then
             NAMESPACE="${DEFAULT_APPLICATION_NAMESPACE:-eco-test}"
