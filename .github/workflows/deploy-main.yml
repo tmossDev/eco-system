@@ -1,0 +1,23 @@
+name: Deploy Main
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  deploy:
+    uses: ./.github/workflows/deploy-core.yml
+    with:
+      deployment_mode: main
+      layer: all
+      namespace: eco-test
+      environment_file: hp-prodesk-homelab.txt
+      application_deploy_scope: changed
+      unchanged_application_image_tag: latest
+      base_ref: main
+    secrets: inherit

@@ -1,0 +1,26 @@
+name: Feature Deploy Changed
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  deploy:
+    uses: ./.github/workflows/deploy-core.yml
+    with:
+      deployment_mode: feature-changed
+      layer: application
+      namespace: ""
+      environment_file: hp-prodesk-homelab.txt
+      application_deploy_scope: changed
+      unchanged_application_image_tag: latest
+      base_ref: ${{ github.base_ref }}
+    secrets: inherit

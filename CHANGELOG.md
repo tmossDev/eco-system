@@ -1,5 +1,12 @@
 # Project Change Log
 
+## v1.21.0 - (5 Changes)
+- Split deployment automation into a reusable `deploy-core.yml` workflow plus small manual, main, and feature deployment entrypoints.
+- Added changed-use-case detection so feature deployments build and deploy only touched application domains by default.
+- Added full feature deployment support through the `deploy:full-feature` pull request label, deploying feature foundation plus all application use-cases.
+- Added separate build and deploy decisions so unchanged use-cases can reuse existing Nexus image tags while changed use-cases deploy the current commit image.
+- Added main-branch fallback image tagging with `latest` for rebuilt application images.
+
 ## v1.20.0 - (9 Changes)
 - Added Renovate configuration for pnpm frontend workspaces, Go backend modules, Dockerfiles, GitHub Actions, and Helm dependencies.
 - Added a manually runnable Renovate GitHub Actions workflow with dry-run and log-level inputs.

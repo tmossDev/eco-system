@@ -1,0 +1,27 @@
+name: Feature Deploy Full
+
+on:
+  pull_request:
+    types:
+      - labeled
+      - synchronize
+      - reopened
+      - ready_for_review
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  deploy:
+    if: contains(github.event.pull_request.labels.*.name, 'deploy:full-feature')
+    uses: ./.github/workflows/deploy-core.yml
+    with:
+      deployment_mode: feature-full
+      layer: application
+      namespace: ""
+      environment_file: hp-prodesk-homelab.txt
+      application_deploy_scope: all
+      unchanged_application_image_tag: latest
+      base_ref: ${{ github.base_ref }}
+    secrets: inherit
