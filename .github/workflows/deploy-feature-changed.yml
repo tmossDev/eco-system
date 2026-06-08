@@ -11,6 +11,7 @@ on:
 permissions:
   contents: read
   issues: write
+  pull-requests: write
 
 env:
   IMAGE_TAG: ${{ github.sha }}
@@ -1809,6 +1810,7 @@ jobs:
 
       - name: Comment useful links on pull request
         if: github.event_name == 'pull_request'
+        continue-on-error: true
         uses: actions/github-script@v7
         with:
           script: |
