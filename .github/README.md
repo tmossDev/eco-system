@@ -7,7 +7,7 @@ This directory keeps the deployment workflows focused around the three ways the 
 | Workflow | Trigger | Purpose |
 | --- | --- | --- |
 | `deploy-main.yml` | Manual or push to `main` | Manual deploys can target `all`, `ci-cd`, `foundation`, or `application`; main pushes deploy only changed layers/use-cases. |
-| `deploy-feature-changed.yml` | Pull request | Build changed use-cases and deploy them with required runtime dependencies into the feature namespace. |
+| `deploy-feature-changed.yml` | Pull request | Build and deploy changed use-cases into the feature namespace, reusing stable dependencies from `eco-test`. |
 | `deploy-feature-full.yml` | Pull request with `deploy:full-feature` label | Deploy feature foundation plus all application use-cases. |
 
 Feature branches must match `feature/<1-10 lowercase alphanumeric chars>`. The namespace is the suffix after `feature/`.
@@ -19,7 +19,7 @@ Each deploy workflow separates two decisions:
 - `build_*`: changed use-cases that need new images for the current commit.
 - `deploy_*`: use-cases that should be installed or upgraded in Kubernetes.
 
-Changed feature deployments add runtime dependencies for fresh namespaces. For example, order-management deploys user-management because `order-gateway` calls `user-service`.
+Changed feature deployments keep the namespace small. For example, order-management deploys into the feature namespace while `order-gateway` calls `user-service` through the stable `eco-test` service DNS.
 
 For full feature deployments, changed use-cases use the current commit image tag. Unchanged use-cases reuse `latest` unless a different fallback tag is supplied.
 

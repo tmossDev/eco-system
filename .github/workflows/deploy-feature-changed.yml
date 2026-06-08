@@ -243,15 +243,6 @@ jobs:
               DEPLOY_ORDER_MANAGEMENT="$BUILD_ORDER_MANAGEMENT"
               DEPLOY_ONLINE_STOREFRONT="$BUILD_ONLINE_STOREFRONT"
               DEPLOY_STORYBOOK="$BUILD_STORYBOOK"
-
-              # Feature namespaces are fresh, so deploy runtime dependencies too.
-              # These dependency use-cases reuse the unchanged application image tag.
-              if [[ "$BUILD_PRODUCT_MANAGEMENT" == "true" || "$BUILD_ORDER_MANAGEMENT" == "true" || "$BUILD_ONLINE_STOREFRONT" == "true" ]]; then
-                DEPLOY_USER_MANAGEMENT=true
-              fi
-              if [[ "$BUILD_ONLINE_STOREFRONT" == "true" ]]; then
-                DEPLOY_PRODUCT_MANAGEMENT=true
-              fi
             fi
           elif [[ "$DEPLOYMENT_MODE" == "main" ]]; then
             NAMESPACE="${DEFAULT_APPLICATION_NAMESPACE:-eco-test}"
@@ -875,6 +866,10 @@ jobs:
           IMAGE_PREFIX="${IMAGE_PREFIX:-$NEXUS_DOCKER_REGISTRY/$IMAGE_NAMESPACE}"
           NEXUS_ADMIN_PASSWORD="${NEXUS_ADMIN_PASSWORD:-${NEXUS_ADMIN_PASSWORD_SECRET:-admin123}}"
           UNCHANGED_APPLICATION_IMAGE_TAG="latest"
+          DEPENDENCY_NAMESPACE="${DEFAULT_APPLICATION_NAMESPACE:-eco-test}"
+          USER_SERVICE_DEPENDENCY_URL="http://user-service.${DEPENDENCY_NAMESPACE}.svc.cluster.local:8080"
+          PRODUCT_SERVICE_DEPENDENCY_URL="http://product-service.${DEPENDENCY_NAMESPACE}.svc.cluster.local:8080"
+          PRODUCT_GATEWAY_DEPENDENCY_URL="http://product-gateway.${DEPENDENCY_NAMESPACE}.svc.cluster.local:8080"
 
           USER_MANAGEMENT_IMAGE_TAG="$UNCHANGED_APPLICATION_IMAGE_TAG"
           PRODUCT_MANAGEMENT_IMAGE_TAG="$UNCHANGED_APPLICATION_IMAGE_TAG"
@@ -884,9 +879,12 @@ jobs:
 
           if [[ "${{ needs.prepare.outputs.build_user_management }}" == "true" ]]; then
             USER_MANAGEMENT_IMAGE_TAG="$IMAGE_TAG"
+            USER_SERVICE_DEPENDENCY_URL="http://user-service:8080"
           fi
           if [[ "${{ needs.prepare.outputs.build_product_management }}" == "true" ]]; then
             PRODUCT_MANAGEMENT_IMAGE_TAG="$IMAGE_TAG"
+            PRODUCT_SERVICE_DEPENDENCY_URL="http://product-service:8080"
+            PRODUCT_GATEWAY_DEPENDENCY_URL="http://product-gateway:8080"
           fi
           if [[ "${{ needs.prepare.outputs.build_order_management }}" == "true" ]]; then
             ORDER_MANAGEMENT_IMAGE_TAG="$IMAGE_TAG"
@@ -919,9 +917,9 @@ jobs:
           echo "POSTGRES_PORT=${POSTGRES_PORT:-5432}" >> "$GITHUB_ENV"
           echo "POSTGRES_APP_USER=${POSTGRES_APP_USER:-app_user}" >> "$GITHUB_ENV"
           echo "APP_PASSWORD=$APP_PASSWORD" >> "$GITHUB_ENV"
-          echo "USER_SERVICE_INTERNAL_URL=${USER_SERVICE_INTERNAL_URL:-http://user-service:8080}" >> "$GITHUB_ENV"
-          echo "PRODUCT_SERVICE_INTERNAL_URL=${PRODUCT_SERVICE_INTERNAL_URL:-http://product-service:8080}" >> "$GITHUB_ENV"
-          echo "PRODUCT_GATEWAY_INTERNAL_URL=${PRODUCT_GATEWAY_INTERNAL_URL:-http://product-gateway:8080}" >> "$GITHUB_ENV"
+          echo "USER_SERVICE_INTERNAL_URL=${USER_SERVICE_INTERNAL_URL:-$USER_SERVICE_DEPENDENCY_URL}" >> "$GITHUB_ENV"
+          echo "PRODUCT_SERVICE_INTERNAL_URL=${PRODUCT_SERVICE_INTERNAL_URL:-$PRODUCT_SERVICE_DEPENDENCY_URL}" >> "$GITHUB_ENV"
+          echo "PRODUCT_GATEWAY_INTERNAL_URL=${PRODUCT_GATEWAY_INTERNAL_URL:-$PRODUCT_GATEWAY_DEPENDENCY_URL}" >> "$GITHUB_ENV"
           echo "INGRESS_CLASS_NAME=${INGRESS_CLASS_NAME:-traefik}" >> "$GITHUB_ENV"
           echo "ADMIN_WEB_APP_HOST=${{ needs.prepare.outputs.admin_web_app_host }}" >> "$GITHUB_ENV"
           echo "USER_GATEWAY_HOST=${{ needs.prepare.outputs.user_gateway_host }}" >> "$GITHUB_ENV"
