@@ -866,10 +866,10 @@ jobs:
           IMAGE_PREFIX="${IMAGE_PREFIX:-$NEXUS_DOCKER_REGISTRY/$IMAGE_NAMESPACE}"
           NEXUS_ADMIN_PASSWORD="${NEXUS_ADMIN_PASSWORD:-${NEXUS_ADMIN_PASSWORD_SECRET:-admin123}}"
           UNCHANGED_APPLICATION_IMAGE_TAG="latest"
-          DEPENDENCY_NAMESPACE="${DEFAULT_APPLICATION_NAMESPACE:-eco-test}"
-          USER_SERVICE_DEPENDENCY_URL="http://user-service.${DEPENDENCY_NAMESPACE}.svc.cluster.local:8080"
-          PRODUCT_SERVICE_DEPENDENCY_URL="http://product-service.${DEPENDENCY_NAMESPACE}.svc.cluster.local:8080"
-          PRODUCT_GATEWAY_DEPENDENCY_URL="http://product-gateway.${DEPENDENCY_NAMESPACE}.svc.cluster.local:8080"
+          DEPENDENCY_NAMESPACE="${FEATURE_DEPENDENCY_NAMESPACE:-${DEFAULT_APPLICATION_NAMESPACE:-eco-test}}"
+          USER_SERVICE_DEPENDENCY_URL="${FEATURE_USER_SERVICE_INTERNAL_URL:-http://user-service.${DEPENDENCY_NAMESPACE}.svc.cluster.local:8080}"
+          PRODUCT_SERVICE_DEPENDENCY_URL="${FEATURE_PRODUCT_SERVICE_INTERNAL_URL:-http://product-service.${DEPENDENCY_NAMESPACE}.svc.cluster.local:8080}"
+          PRODUCT_GATEWAY_DEPENDENCY_URL="${FEATURE_PRODUCT_GATEWAY_INTERNAL_URL:-http://product-gateway.${DEPENDENCY_NAMESPACE}.svc.cluster.local:8080}"
 
           USER_MANAGEMENT_IMAGE_TAG="$UNCHANGED_APPLICATION_IMAGE_TAG"
           PRODUCT_MANAGEMENT_IMAGE_TAG="$UNCHANGED_APPLICATION_IMAGE_TAG"
@@ -917,9 +917,9 @@ jobs:
           echo "POSTGRES_PORT=${POSTGRES_PORT:-5432}" >> "$GITHUB_ENV"
           echo "POSTGRES_APP_USER=${POSTGRES_APP_USER:-app_user}" >> "$GITHUB_ENV"
           echo "APP_PASSWORD=$APP_PASSWORD" >> "$GITHUB_ENV"
-          echo "USER_SERVICE_INTERNAL_URL=${USER_SERVICE_INTERNAL_URL:-$USER_SERVICE_DEPENDENCY_URL}" >> "$GITHUB_ENV"
-          echo "PRODUCT_SERVICE_INTERNAL_URL=${PRODUCT_SERVICE_INTERNAL_URL:-$PRODUCT_SERVICE_DEPENDENCY_URL}" >> "$GITHUB_ENV"
-          echo "PRODUCT_GATEWAY_INTERNAL_URL=${PRODUCT_GATEWAY_INTERNAL_URL:-$PRODUCT_GATEWAY_DEPENDENCY_URL}" >> "$GITHUB_ENV"
+          echo "USER_SERVICE_INTERNAL_URL=$USER_SERVICE_DEPENDENCY_URL" >> "$GITHUB_ENV"
+          echo "PRODUCT_SERVICE_INTERNAL_URL=$PRODUCT_SERVICE_DEPENDENCY_URL" >> "$GITHUB_ENV"
+          echo "PRODUCT_GATEWAY_INTERNAL_URL=$PRODUCT_GATEWAY_DEPENDENCY_URL" >> "$GITHUB_ENV"
           echo "INGRESS_CLASS_NAME=${INGRESS_CLASS_NAME:-traefik}" >> "$GITHUB_ENV"
           echo "ADMIN_WEB_APP_HOST=${{ needs.prepare.outputs.admin_web_app_host }}" >> "$GITHUB_ENV"
           echo "USER_GATEWAY_HOST=${{ needs.prepare.outputs.user_gateway_host }}" >> "$GITHUB_ENV"
@@ -1343,6 +1343,8 @@ jobs:
             --set-string user-gateway.app.configMap.data.DB_USER="$POSTGRES_APP_USER" \
             --set-string user-gateway.app.configMap.data.USER_SERVICE_URL="$USER_SERVICE_INTERNAL_URL" \
             --set-string user-gateway.app.configMap.data.FRONTEND_ORIGIN="$FRONTEND_ORIGIN" \
+            --set-string user-gateway.app.env.USER_SERVICE_URL="$USER_SERVICE_INTERNAL_URL" \
+            --set-string user-gateway.app.env.FRONTEND_ORIGIN="$FRONTEND_ORIGIN" \
             --set user-gateway.app.secret.enabled=true \
             --set-string user-gateway.app.secret.stringData.DB_PASSWORD="$APP_PASSWORD" \
             --set user-gateway.app.ingress.enabled=true \
@@ -1401,6 +1403,9 @@ jobs:
             --set-string product-gateway.app.configMap.data.PRODUCT_SERVICE_URL="$PRODUCT_SERVICE_INTERNAL_URL" \
             --set-string product-gateway.app.configMap.data.USER_SERVICE_URL="$USER_SERVICE_INTERNAL_URL" \
             --set-string product-gateway.app.configMap.data.FRONTEND_ORIGIN="$PRODUCT_FRONTEND_ORIGIN" \
+            --set-string product-gateway.app.env.PRODUCT_SERVICE_URL="$PRODUCT_SERVICE_INTERNAL_URL" \
+            --set-string product-gateway.app.env.USER_SERVICE_URL="$USER_SERVICE_INTERNAL_URL" \
+            --set-string product-gateway.app.env.FRONTEND_ORIGIN="$PRODUCT_FRONTEND_ORIGIN" \
             --set product-gateway.app.secret.enabled=true \
             --set-string product-gateway.app.secret.stringData.DB_PASSWORD="$APP_PASSWORD" \
             --set product-gateway.app.ingress.enabled=true \
@@ -1465,6 +1470,8 @@ jobs:
             --set-string order-gateway.app.configMap.data.DB_USER="$POSTGRES_APP_USER" \
             --set-string order-gateway.app.configMap.data.USER_SERVICE_URL="$USER_SERVICE_INTERNAL_URL" \
             --set-string order-gateway.app.configMap.data.FRONTEND_ORIGIN="$ORDER_FRONTEND_ORIGIN" \
+            --set-string order-gateway.app.env.USER_SERVICE_URL="$USER_SERVICE_INTERNAL_URL" \
+            --set-string order-gateway.app.env.FRONTEND_ORIGIN="$ORDER_FRONTEND_ORIGIN" \
             --set order-gateway.app.secret.enabled=true \
             --set-string order-gateway.app.secret.stringData.DB_PASSWORD="$APP_PASSWORD" \
             --set order-gateway.app.ingress.enabled=true \

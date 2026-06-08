@@ -20,6 +20,7 @@ Each deploy workflow separates two decisions:
 - `deploy_*`: use-cases that should be installed or upgraded in Kubernetes.
 
 Changed feature deployments keep the namespace small. For example, order-management deploys into the feature namespace while `order-gateway` calls `user-service` through the stable `eco-test` service DNS.
+Set `FEATURE_DEPENDENCY_NAMESPACE` in the environment config to change that stable namespace. Specific URLs can be overridden with `FEATURE_USER_SERVICE_INTERNAL_URL`, `FEATURE_PRODUCT_SERVICE_INTERNAL_URL`, or `FEATURE_PRODUCT_GATEWAY_INTERNAL_URL`.
 
 For full feature deployments, changed use-cases use the current commit image tag. Unchanged use-cases reuse `latest` unless a different fallback tag is supplied.
 
