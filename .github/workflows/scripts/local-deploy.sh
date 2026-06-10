@@ -95,7 +95,7 @@ fi
 
 if [[ -z "${POSTGRES_PASSWORD:-}" || -z "${LIQUIBASE_PASSWORD:-}" || -z "${APP_PASSWORD:-}" ]]; then
   echo "Environment variables POSTGRES_PASSWORD, LIQUIBASE_PASSWORD, and APP_PASSWORD are required." >&2
-  echo "Example: POSTGRES_PASSWORD=... LIQUIBASE_PASSWORD=... APP_PASSWORD=... ./scripts/local-deploy.sh" >&2
+  echo "Example: POSTGRES_PASSWORD=... LIQUIBASE_PASSWORD=... APP_PASSWORD=... ./.github/workflows/scripts/local-deploy.sh" >&2
   exit 1
 fi
 

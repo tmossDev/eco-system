@@ -24,6 +24,12 @@ Set `FEATURE_DEPENDENCY_NAMESPACE` in the environment config to change that stab
 
 For full feature deployments, changed use-cases use the current commit image tag. Unchanged use-cases reuse `latest` unless a different fallback tag is supplied.
 
+## Frontend Build Reuse
+
+Frontend application and Storybook outputs are stored in the Nexus raw repository `eco-node-builds`.
+The deployment workflows call `.github/workflows/scripts/frontend-build-artifacts.sh` with only the frontend artifacts in scope for the changed use-cases.
+The script hashes tracked source files plus the pnpm workspace and lockfile, restores a matching tarball from Nexus when available, and only runs the pnpm build commands when that hash has not been published yet.
+
 ## Flow
 
 ```mermaid
