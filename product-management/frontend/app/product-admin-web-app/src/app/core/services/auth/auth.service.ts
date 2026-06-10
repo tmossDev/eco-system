@@ -17,6 +17,8 @@ export class AuthService {
 
   private readonly accessTokenKey = 'product_admin_access_token';
   private readonly userKey = 'product_admin_user';
+  private readonly handoffTokenParam = 'eco_access_token';
+  private readonly handoffUserParam = 'eco_user';
 
   private readonly accessTokenSignal = signal<string | null>(
     localStorage.getItem(this.accessTokenKey) ??
@@ -30,6 +32,10 @@ export class AuthService {
   public readonly isAuthenticated = computed(() =>
     Boolean(this.accessTokenSignal()),
   );
+
+  public constructor() {
+    this.consumeSessionHandoff();
+  }
 
   public login(request: LoginRequest): Observable<LoginResponse> {
     return this.http.post<LoginResponse>('/api/auth/login', request).pipe(
@@ -66,6 +72,28 @@ export class AuthService {
 
     this.accessTokenSignal.set(response.accessToken);
     this.userSignal.set(response.user);
+  }
+
+  private consumeSessionHandoff(): void {
+    const params = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+    const accessToken = params.get(this.handoffTokenParam);
+    const userValue = params.get(this.handoffUserParam);
+
+    if (!accessToken || !userValue) {
+      return;
+    }
+
+    try {
+      const user = JSON.parse(userValue) as AuthUser;
+      this.storeSession({ accessToken, user }, true);
+      params.delete(this.handoffTokenParam);
+      params.delete(this.handoffUserParam);
+      const nextHash = params.toString();
+      const nextUrl = `${window.location.pathname}${window.location.search}${nextHash ? `#${nextHash}` : ''}`;
+      window.history.replaceState(null, '', nextUrl);
+    } catch {
+      return;
+    }
   }
 
   private getStoredUser(): AuthUser | null {
