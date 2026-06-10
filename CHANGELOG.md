@@ -1,5 +1,15 @@
 # Project Change Log
 
+## v1.22.0 - (8 Changes)
+- Added Nexus-backed frontend build artifact reuse for deployment workflows.
+- Added `.github/workflows/scripts/frontend-build-artifacts.sh` to restore or publish frontend build outputs by source hash.
+- Added Nexus raw repository provisioning for `eco-node-builds`.
+- Added workflow-local Renovate config under `.github/workflows/configs/renovate.json`.
+- Updated main and feature deployment workflows to restore existing frontend build artifacts before running pnpm builds.
+- Updated Renovate workflow to load its config from `.github/workflows/configs/renovate.json`.
+- Moved workflow helper scripts under `.github/workflows/scripts`.
+- Documented frontend build reuse in `.github/README.md`.
+
 ## v1.21.1 - (5 Changes)
 - Changed feature deployments to reuse stable cross-namespace application dependencies by default for unchanged use-cases.
 - Added feature dependency service URL configuration using Kubernetes service DNS, with `FEATURE_DEPENDENCY_NAMESPACE` and per-service override support.

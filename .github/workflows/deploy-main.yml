@@ -577,33 +577,60 @@ jobs:
           if curl --silent --fail --user "admin:$NEXUS_ADMIN_PASSWORD" \
             http://127.0.0.1:18081/service/rest/v1/repositories/docker/hosted/eco-images >/dev/null; then
             echo "Nexus Docker repository eco-images already exists"
-            exit 0
+          else
+            curl --silent --fail --user "admin:$NEXUS_ADMIN_PASSWORD" \
+              --request POST \
+              --header "Content-Type: application/json" \
+              --data '{
+                "name": "eco-images",
+                "online": true,
+                "storage": {
+                  "blobStoreName": "default",
+                  "strictContentTypeValidation": true,
+                  "writePolicy": "ALLOW"
+                },
+                "cleanup": {
+                  "policyNames": []
+                },
+                "docker": {
+                  "v1Enabled": false,
+                  "forceBasicAuth": true,
+                  "httpPort": 5000
+                },
+                "component": {
+                  "proprietaryComponents": false
+                }
+              }' \
+              http://127.0.0.1:18081/service/rest/v1/repositories/docker/hosted
           fi
 
-          curl --silent --fail --user "admin:$NEXUS_ADMIN_PASSWORD" \
-            --request POST \
-            --header "Content-Type: application/json" \
-            --data '{
-              "name": "eco-images",
-              "online": true,
-              "storage": {
-                "blobStoreName": "default",
-                "strictContentTypeValidation": true,
-                "writePolicy": "ALLOW"
-              },
-              "cleanup": {
-                "policyNames": []
-              },
-              "docker": {
-                "v1Enabled": false,
-                "forceBasicAuth": true,
-                "httpPort": 5000
-              },
-              "component": {
-                "proprietaryComponents": false
-              }
-            }' \
-            http://127.0.0.1:18081/service/rest/v1/repositories/docker/hosted
+          if curl --silent --fail --user "admin:$NEXUS_ADMIN_PASSWORD" \
+            http://127.0.0.1:18081/service/rest/v1/repositories/raw/hosted/eco-node-builds >/dev/null; then
+            echo "Nexus raw repository eco-node-builds already exists"
+          else
+            curl --silent --fail --user "admin:$NEXUS_ADMIN_PASSWORD" \
+              --request POST \
+              --header "Content-Type: application/json" \
+              --data '{
+                "name": "eco-node-builds",
+                "online": true,
+                "storage": {
+                  "blobStoreName": "default",
+                  "strictContentTypeValidation": false,
+                  "writePolicy": "ALLOW"
+                },
+                "cleanup": {
+                  "policyNames": []
+                },
+                "component": {
+                  "proprietaryComponents": false
+                },
+                "raw": {
+                  "contentDisposition": "ATTACHMENT"
+                }
+              }' \
+              http://127.0.0.1:18081/service/rest/v1/repositories/raw/hosted
+          fi
 
       - name: Show CI/CD rollout
         shell: bash
@@ -917,7 +944,9 @@ jobs:
           fi
 
           echo "NAMESPACE=${{ needs.prepare.outputs.namespace }}" >> "$GITHUB_ENV"
+          echo "CI_CD_NAMESPACE=${{ needs.prepare.outputs.ci_cd_namespace }}" >> "$GITHUB_ENV"
           echo "FOUNDATION_NAMESPACE=${{ needs.prepare.outputs.foundation_namespace }}" >> "$GITHUB_ENV"
+          echo "K3D_CLUSTER=${K3D_CLUSTER:-eco-cluster}" >> "$GITHUB_ENV"
           echo "NEXUS_DOCKER_REGISTRY=$NEXUS_DOCKER_REGISTRY" >> "$GITHUB_ENV"
           echo "IMAGE_PREFIX=$IMAGE_PREFIX" >> "$GITHUB_ENV"
           echo "NEXUS_ADMIN_PASSWORD=$NEXUS_ADMIN_PASSWORD" >> "$GITHUB_ENV"
@@ -946,7 +975,7 @@ jobs:
           echo "ORDER_SERVICE_HOST=${{ needs.prepare.outputs.order_service_host }}" >> "$GITHUB_ENV"
           echo "STOREFRONT_WEB_APP_HOST=${{ needs.prepare.outputs.storefront_web_app_host }}" >> "$GITHUB_ENV"
           echo "STORYBOOK_HOST=${{ needs.prepare.outputs.storybook_host }}" >> "$GITHUB_ENV"
-          echo "BACKEND_API_URL=http://${{ needs.prepare.outputs.user_gateway_host }}" >> "$GITHUB_ENV"
+          echo "BACKEND_API_URL=" >> "$GITHUB_ENV"
           echo "PRODUCT_BACKEND_API_URL=" >> "$GITHUB_ENV"
           echo "ORDER_BACKEND_API_URL=" >> "$GITHUB_ENV"
           echo "FRONTEND_ORIGIN=http://${{ needs.prepare.outputs.admin_web_app_host }}" >> "$GITHUB_ENV"
@@ -993,6 +1022,34 @@ jobs:
         with:
           version: 11.0.9
 
+      - name: Set up kubectl for Nexus artifacts
+        if: needs.prepare.outputs.build_user_management == 'true' || needs.prepare.outputs.build_product_management == 'true' || needs.prepare.outputs.build_order_management == 'true' || needs.prepare.outputs.build_online_storefront == 'true' || needs.prepare.outputs.build_storybook == 'true'
+        uses: azure/setup-kubectl@v4
+
+      - name: Configure kubeconfig for Nexus artifacts
+        if: needs.prepare.outputs.build_user_management == 'true' || needs.prepare.outputs.build_product_management == 'true' || needs.prepare.outputs.build_order_management == 'true' || needs.prepare.outputs.build_online_storefront == 'true' || needs.prepare.outputs.build_storybook == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.kube"
+          if [[ -f "$HOME/.kube/config" ]] && kubectl config current-context >/dev/null 2>&1; then
+            echo "Using existing runner kubeconfig at $HOME/.kube/config"
+          elif [[ -f "$HOME/.config/k3d/kubeconfig-${K3D_CLUSTER:-eco-cluster}.yaml" ]]; then
+            cp "$HOME/.config/k3d/kubeconfig-${K3D_CLUSTER:-eco-cluster}.yaml" "$HOME/.kube/config"
+          elif command -v k3d >/dev/null 2>&1 && k3d cluster list "${K3D_CLUSTER:-eco-cluster}" >/dev/null 2>&1; then
+            k3d kubeconfig get "${K3D_CLUSTER:-eco-cluster}" > "$HOME/.kube/config"
+          elif [[ -f /etc/rancher/k3s/k3s.yaml ]]; then
+            sudo cat /etc/rancher/k3s/k3s.yaml > "$HOME/.kube/config"
+          elif [[ -n "${KUBE_CONFIG_B64:-}" ]]; then
+            echo "$KUBE_CONFIG_B64" | base64 --decode > "$HOME/.kube/config"
+          else
+            echo "No usable kubeconfig found. Add one at $HOME/.kube/config on the runner, install k3s config at /etc/rancher/k3s/k3s.yaml, or set KUBE_CONFIG_B64." >&2
+            exit 1
+          fi
+          chmod 600 "$HOME/.kube/config"
+        env:
+          KUBE_CONFIG_B64: ${{ secrets.KUBE_CONFIG_B64 }}
+
       - name: Build backend binaries
         if: needs.prepare.outputs.build_user_management == 'true' || needs.prepare.outputs.build_product_management == 'true' || needs.prepare.outputs.build_order_management == 'true' || needs.prepare.outputs.build_online_storefront == 'true'
         shell: bash
@@ -1028,24 +1085,23 @@ jobs:
         run: |
           set -euo pipefail
           pnpm install --frozen-lockfile
+          artifacts=()
           if [[ "${{ needs.prepare.outputs.build_user_management }}" == "true" ]]; then
-            pnpm --filter admin-web-app build
-            pnpm --filter admin-web-app build-storybook
+            artifacts+=(admin-web-app)
           fi
           if [[ "${{ needs.prepare.outputs.build_product_management }}" == "true" ]]; then
-            pnpm --filter product-admin-web-app build
-            pnpm --filter product-admin-web-app build-storybook
+            artifacts+=(product-admin-web-app)
           fi
           if [[ "${{ needs.prepare.outputs.build_order_management }}" == "true" ]]; then
-            pnpm --filter order-admin-web-app build
-            pnpm --filter order-admin-web-app build-storybook
+            artifacts+=(order-admin-web-app)
           fi
           if [[ "${{ needs.prepare.outputs.build_online_storefront }}" == "true" ]]; then
-            pnpm --filter storefront-web-app build
+            artifacts+=(storefront-web-app)
           fi
           if [[ "${{ needs.prepare.outputs.build_storybook }}" == "true" ]]; then
-            pnpm --filter storybook build-storybook
+            artifacts+=(storybook)
           fi
+          .github/workflows/scripts/frontend-build-artifacts.sh "${artifacts[@]}"
 
       - name: Configure Docker insecure registry
         if: needs.prepare.outputs.build_user_management == 'true' || needs.prepare.outputs.build_product_management == 'true' || needs.prepare.outputs.build_order_management == 'true' || needs.prepare.outputs.build_online_storefront == 'true' || needs.prepare.outputs.build_storybook == 'true'
@@ -1375,7 +1431,14 @@ jobs:
             --set admin-web-app.app.ingress.className="$INGRESS_CLASS_NAME" \
             --set admin-web-app.app.ingress.hosts[0].host="$ADMIN_WEB_APP_HOST" \
             --set admin-web-app.app.ingress.hosts[0].paths[0].path=/ \
-            --set admin-web-app.app.ingress.hosts[0].paths[0].pathType=Prefix
+            --set admin-web-app.app.ingress.hosts[0].paths[0].pathType=Prefix \
+            --set adminWebAppApiIngress.enabled=true \
+            --set adminWebAppApiIngress.className="$INGRESS_CLASS_NAME" \
+            --set adminWebAppApiIngress.host="$ADMIN_WEB_APP_HOST" \
+            --set adminWebAppApiIngress.path=/api \
+            --set adminWebAppApiIngress.pathType=Prefix \
+            --set adminWebAppApiIngress.serviceName=user-gateway \
+            --set adminWebAppApiIngress.servicePortName=http
 
       - name: Deploy product-management
         if: needs.prepare.outputs.deploy_product_management == 'true'

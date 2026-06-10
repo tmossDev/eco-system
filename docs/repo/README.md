@@ -147,7 +147,7 @@ export KUBE_CONTEXT="$(kubectl config current-context)"
 export K3D_CLUSTER="${K3D_CLUSTER:-${KUBE_CONTEXT#k3d-}}"
 export FOUNDATION_NAMESPACE="${FOUNDATION_NAMESPACE:-eco-foundation}"
 export NAMESPACE="${DEFAULT_APPLICATION_NAMESPACE:-eco-test}"
-export BACKEND_API_URL="http://${NAMESPACE}.user-gateway.${BASE_DOMAIN:-com}"
+export BACKEND_API_URL=""
 export FRONTEND_ORIGIN="http://${NAMESPACE}.admin-web-app.${BASE_DOMAIN:-com}"
 export ADMIN_WEB_APP_HOST="${NAMESPACE}.admin-web-app.${BASE_DOMAIN:-com}"
 export USER_GATEWAY_HOST="${NAMESPACE}.user-gateway.${BASE_DOMAIN:-com}"
@@ -482,6 +482,18 @@ http://eco-test.admin-web-app.com
 http://eco-test.storybook.com
 ```
 
+As an alternative to editing `/etc/hosts`, run the local ingress proxy:
+
+```sh
+scripts/local-ingress-proxy.py --namespace "$NAMESPACE"
+```
+
+Then set your browser or operating system HTTP proxy to `127.0.0.1:18080`.
+The proxy discovers the namespace's ingress hosts and forwards requests to the
+ingress address while preserving the original `Host` header. It refreshes the
+ingress list while it runs, so newly deployed ingress hosts are picked up
+without editing `/etc/hosts`.
+
 If `getent hosts "$STORYBOOK_HOST"` returns nothing, the browser cannot resolve
 the hostname; re-run the `/etc/hosts` command above. If the hostname resolves
 but the browser still cannot connect, the k3d cluster may not expose Traefik on
@@ -492,7 +504,14 @@ echo "127.0.0.1 $ADMIN_WEB_APP_HOST $STORYBOOK_HOST $USER_GATEWAY_HOST $USER_SER
 kubectl port-forward -n kube-system svc/traefik 8080:80
 ```
 
-With the port-forward running, open:
+For the proxy with a port-forward, run:
+
+```sh
+scripts/local-ingress-proxy.py --namespace "$NAMESPACE" --target-host 127.0.0.1 --http-port 8080
+```
+
+With the proxy configured, keep using the normal ingress URLs. Without the
+proxy, open the port-forwarded URL directly:
 
 ```text
 http://eco-test.storybook.com:8080

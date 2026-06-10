@@ -95,7 +95,7 @@ fi
 
 if [[ -z "${POSTGRES_PASSWORD:-}" || -z "${LIQUIBASE_PASSWORD:-}" || -z "${APP_PASSWORD:-}" ]]; then
   echo "Environment variables POSTGRES_PASSWORD, LIQUIBASE_PASSWORD, and APP_PASSWORD are required." >&2
-  echo "Example: POSTGRES_PASSWORD=... LIQUIBASE_PASSWORD=... APP_PASSWORD=... ./scripts/local-deploy.sh" >&2
+  echo "Example: POSTGRES_PASSWORD=... LIQUIBASE_PASSWORD=... APP_PASSWORD=... ./.github/workflows/scripts/local-deploy.sh" >&2
   exit 1
 fi
 
@@ -215,7 +215,7 @@ deploy_application() {
 
   create_namespace "$NAMESPACE"
 
-  printf '{"BACKEND_API_URL":"%s","ENABLE_MOCK_API":false}\n' "http://${USER_SERVICE_INTERNAL_URL:-user-service:8080}" > runtime-config.json
+  printf '{"BACKEND_API_URL":"","ENABLE_MOCK_API":false}\n' > runtime-config.json
 
   helm upgrade --install shared-components shared-components/deployment \
     --namespace "$NAMESPACE" \
@@ -274,7 +274,14 @@ deploy_application() {
     --set admin-web-app.app.ingress.className="${INGRESS_CLASS_NAME:-traefik}" \
     --set admin-web-app.app.ingress.hosts[0].host="${ADMIN_WEB_APP_HOST:-$NAMESPACE.admin-web-app.${BASE_DOMAIN:-com}}" \
     --set admin-web-app.app.ingress.hosts[0].paths[0].path=/ \
-    --set admin-web-app.app.ingress.hosts[0].paths[0].pathType=Prefix
+    --set admin-web-app.app.ingress.hosts[0].paths[0].pathType=Prefix \
+    --set adminWebAppApiIngress.enabled=true \
+    --set adminWebAppApiIngress.className="${INGRESS_CLASS_NAME:-traefik}" \
+    --set adminWebAppApiIngress.host="${ADMIN_WEB_APP_HOST:-$NAMESPACE.admin-web-app.${BASE_DOMAIN:-com}}" \
+    --set adminWebAppApiIngress.path=/api \
+    --set adminWebAppApiIngress.pathType=Prefix \
+    --set adminWebAppApiIngress.serviceName=user-gateway \
+    --set adminWebAppApiIngress.servicePortName=http
 
   printf '{"BACKEND_API_URL":"%s","ENABLE_MOCK_API":false}\n' "http://${PRODUCT_SERVICE_INTERNAL_URL:-product-service:8080}" > product-runtime-config.json
 

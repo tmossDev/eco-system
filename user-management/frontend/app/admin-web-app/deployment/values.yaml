@@ -24,7 +24,7 @@ app:
     data:
       config.json: |
         {
-          "BACKEND_API_URL": "http://user-gateway:8080",
+          "BACKEND_API_URL": "",
           "ENABLE_MOCK_API": false
         }
   volumeMounts:

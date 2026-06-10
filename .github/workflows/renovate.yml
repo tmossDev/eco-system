@@ -41,3 +41,4 @@ jobs:
           RENOVATE_DRY_RUN: ${{ inputs.dry_run }}
           RENOVATE_PLATFORM: github
           RENOVATE_REPOSITORIES: ${{ github.repository }}
+          RENOVATE_CONFIG_FILE: .github/workflows/configs/renovate.json
