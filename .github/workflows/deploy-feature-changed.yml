@@ -962,7 +962,7 @@ jobs:
           echo "ORDER_SERVICE_HOST=${{ needs.prepare.outputs.order_service_host }}" >> "$GITHUB_ENV"
           echo "STOREFRONT_WEB_APP_HOST=${{ needs.prepare.outputs.storefront_web_app_host }}" >> "$GITHUB_ENV"
           echo "STORYBOOK_HOST=${{ needs.prepare.outputs.storybook_host }}" >> "$GITHUB_ENV"
-          echo "BACKEND_API_URL=http://${{ needs.prepare.outputs.user_gateway_host }}" >> "$GITHUB_ENV"
+          echo "BACKEND_API_URL=" >> "$GITHUB_ENV"
           echo "PRODUCT_BACKEND_API_URL=" >> "$GITHUB_ENV"
           echo "ORDER_BACKEND_API_URL=" >> "$GITHUB_ENV"
           echo "FRONTEND_ORIGIN=http://${{ needs.prepare.outputs.admin_web_app_host }}" >> "$GITHUB_ENV"
@@ -1420,7 +1420,14 @@ jobs:
             --set admin-web-app.app.ingress.className="$INGRESS_CLASS_NAME" \
             --set admin-web-app.app.ingress.hosts[0].host="$ADMIN_WEB_APP_HOST" \
             --set admin-web-app.app.ingress.hosts[0].paths[0].path=/ \
-            --set admin-web-app.app.ingress.hosts[0].paths[0].pathType=Prefix
+            --set admin-web-app.app.ingress.hosts[0].paths[0].pathType=Prefix \
+            --set adminWebAppApiIngress.enabled=true \
+            --set adminWebAppApiIngress.className="$INGRESS_CLASS_NAME" \
+            --set adminWebAppApiIngress.host="$ADMIN_WEB_APP_HOST" \
+            --set adminWebAppApiIngress.path=/api \
+            --set adminWebAppApiIngress.pathType=Prefix \
+            --set adminWebAppApiIngress.serviceName=user-gateway \
+            --set adminWebAppApiIngress.servicePortName=http
 
       - name: Deploy product-management
         if: needs.prepare.outputs.deploy_product_management == 'true'

@@ -168,13 +168,13 @@ and waits for Kubernetes rollouts before running deployed smoke tests.
 
 - [config/hp-prodesk-homelab.txt](config/hp-prodesk-homelab.txt) contains
   namespace, host, database, and registry settings.
-- [.github/workflows/deploy.yml](.github/workflows/deploy.yml) builds and
+- [.github/workflows/deploy-main.yml](.github/workflows/deploy-main.yml) builds and
   deploys the platform.
 - [.github/workflows/delete-deployment.yml](.github/workflows/delete-deployment.yml)
   removes application, foundation, or CI/CD releases.
 - [.github/workflows/renovate.yml](.github/workflows/renovate.yml) runs
   Renovate manually from GitHub Actions.
-- [renovate.json](renovate.json) configures dependency update behavior.
+- [.github/workflows/configs/renovate.json](.github/workflows/configs/renovate.json) configures dependency update behavior.
 
 ## Local Notes
 

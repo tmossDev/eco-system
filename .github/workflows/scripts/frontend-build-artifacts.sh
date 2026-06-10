@@ -11,6 +11,11 @@ Artifacts:
   order-admin-web-app
   storefront-web-app
   storybook
+  ds-tokens
+  ds-button
+  ds-icon
+  ds-navigation-bar
+  ds-login-form
 USAGE
 }
 
@@ -24,6 +29,7 @@ NEXUS_ARTIFACT_URL="${NEXUS_ARTIFACT_URL:-http://127.0.0.1:18081/repository/$NEX
 NEXUS_USERNAME="${NEXUS_USERNAME:-admin}"
 NEXUS_PASSWORD="${NEXUS_PASSWORD:-${NEXUS_ADMIN_PASSWORD:-}}"
 CI_CD_NAMESPACE="${CI_CD_NAMESPACE:-eco-cicd}"
+PNPM_CMD="${PNPM_CMD:-corepack pnpm}"
 
 if [[ -z "$NEXUS_PASSWORD" ]]; then
   echo "Missing NEXUS_PASSWORD or NEXUS_ADMIN_PASSWORD for Nexus artifact access." >&2
@@ -36,14 +42,24 @@ declare -A PACKAGE_DIRS=(
   [order-admin-web-app]="order-management/frontend/app/order-admin-web-app"
   [storefront-web-app]="online-storefront/frontend/app/storefront-web-app"
   [storybook]="shared-components/frontend/app/storybook"
+  [ds-tokens]="shared-components/frontend/package/design-system/ds/tokens"
+  [ds-button]="shared-components/frontend/package/design-system/ds/button"
+  [ds-icon]="shared-components/frontend/package/design-system/ds/icon"
+  [ds-navigation-bar]="shared-components/frontend/package/design-system/ds/navigation-bar"
+  [ds-login-form]="shared-components/frontend/package/design-system/ds/login-form"
 )
 
 declare -A BUILD_COMMANDS=(
-  [admin-web-app]="pnpm --filter admin-web-app build && pnpm --filter admin-web-app build-storybook"
-  [product-admin-web-app]="pnpm --filter product-admin-web-app build && pnpm --filter product-admin-web-app build-storybook"
-  [order-admin-web-app]="pnpm --filter order-admin-web-app build && pnpm --filter order-admin-web-app build-storybook"
-  [storefront-web-app]="pnpm --filter storefront-web-app build"
-  [storybook]="pnpm --filter storybook build-storybook"
+  [admin-web-app]="$PNPM_CMD --filter admin-web-app build && $PNPM_CMD --filter admin-web-app build-storybook"
+  [product-admin-web-app]="$PNPM_CMD --filter product-admin-web-app build && $PNPM_CMD --filter product-admin-web-app build-storybook"
+  [order-admin-web-app]="$PNPM_CMD --filter order-admin-web-app build && $PNPM_CMD --filter order-admin-web-app build-storybook"
+  [storefront-web-app]="$PNPM_CMD --filter storefront-web-app build"
+  [storybook]="$PNPM_CMD --filter storybook build-storybook"
+  [ds-tokens]="$PNPM_CMD --filter @ds/tokens build"
+  [ds-button]="$PNPM_CMD --filter design-system build:button"
+  [ds-icon]="$PNPM_CMD --filter design-system build:icon"
+  [ds-navigation-bar]="$PNPM_CMD --filter design-system build:navigation-bar"
+  [ds-login-form]="$PNPM_CMD --filter design-system build:login-form"
 )
 
 declare -A OUTPUTS=(
@@ -52,6 +68,15 @@ declare -A OUTPUTS=(
   [order-admin-web-app]="order-management/frontend/app/order-admin-web-app/dist order-management/frontend/app/order-admin-web-app/storybook-static"
   [storefront-web-app]="online-storefront/frontend/app/storefront-web-app/dist"
   [storybook]="shared-components/frontend/app/storybook/storybook-static"
+  [ds-tokens]="shared-components/frontend/package/design-system/ds/tokens/package.json shared-components/frontend/package/design-system/ds/tokens/style-dictionary.config.json shared-components/frontend/package/design-system/ds/tokens/tokens shared-components/frontend/package/design-system/ds/tokens/src/scss"
+  [ds-button]="shared-components/frontend/package/design-system/dist/button"
+  [ds-icon]="shared-components/frontend/package/design-system/dist/icon"
+  [ds-navigation-bar]="shared-components/frontend/package/design-system/dist/navigation-bar"
+  [ds-login-form]="shared-components/frontend/package/design-system/dist/login-form"
+)
+
+declare -A CLEAN_OUTPUTS=(
+  [ds-tokens]="shared-components/frontend/package/design-system/ds/tokens/src/scss/_variables.scss shared-components/frontend/package/design-system/ds/tokens/src/scss/_map.scss shared-components/frontend/package/design-system/ds/tokens/src/scss/_css-variables.scss"
 )
 
 start_nexus_tunnel() {
@@ -125,9 +150,15 @@ artifact_hash() {
     admin-web-app|product-admin-web-app|order-admin-web-app|storybook)
       paths+=(shared-components/frontend/package/design-system)
       ;;
+    ds-button|ds-navigation-bar|ds-login-form)
+      paths+=(shared-components/frontend/package/design-system/ds/tokens)
+      ;;
   esac
 
   git ls-files -z -- "${paths[@]}" \
+    | while IFS= read -r -d '' file; do
+        [[ -f "$file" ]] && printf '%s\0' "$file"
+      done \
     | sort -z \
     | xargs -0 sha256sum \
     | sha256sum \
@@ -143,7 +174,7 @@ artifact_url() {
 clean_outputs() {
   local artifact="$1"
   local path
-  for path in ${OUTPUTS[$artifact]}; do
+  for path in ${CLEAN_OUTPUTS[$artifact]:-${OUTPUTS[$artifact]}}; do
     rm -rf "$path"
   done
 }
@@ -204,7 +235,9 @@ for artifact in "$@"; do
   fi
 
   hash="$(artifact_hash "$artifact")"
-  if ! restore_artifact "$artifact" "$hash"; then
+  if [[ "${FORCE_FRONTEND_ARTIFACT_BUILD:-false}" == "true" ]]; then
+    build_and_publish "$artifact" "$hash"
+  elif ! restore_artifact "$artifact" "$hash"; then
     build_and_publish "$artifact" "$hash"
   fi
 done
