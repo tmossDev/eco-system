@@ -17,6 +17,8 @@ export class AuthService {
 
   private readonly accessTokenKey = 'admin_access_token';
   private readonly userKey = 'admin_user';
+  private readonly handoffTokenParam = 'eco_access_token';
+  private readonly handoffUserParam = 'eco_user';
 
   private readonly accessTokenSignal = signal<string | null>(
     localStorage.getItem(this.accessTokenKey) ?? sessionStorage.getItem(this.accessTokenKey),
@@ -48,6 +50,20 @@ export class AuthService {
 
     this.accessTokenSignal.set(null);
     this.userSignal.set(null);
+  }
+
+  public appendSessionHandoff(url: URL): void {
+    const accessToken = this.accessTokenSignal();
+    const user = this.userSignal();
+
+    if (!accessToken || !user) {
+      return;
+    }
+
+    const params = new URLSearchParams(url.hash.replace(/^#/, ''));
+    params.set(this.handoffTokenParam, accessToken);
+    params.set(this.handoffUserParam, JSON.stringify(user));
+    url.hash = params.toString();
   }
 
   private storeSession(response: LoginResponse, rememberMe: boolean): void {

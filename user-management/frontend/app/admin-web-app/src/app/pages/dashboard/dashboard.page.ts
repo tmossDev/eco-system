@@ -1,9 +1,10 @@
-import {Component, OnInit, inject, signal} from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { finalize } from 'rxjs';
 
 import { DashboardService } from '../../core/services/dashboard/dashboard.service';
 import { DashboardStat } from '../../core/services/dashboard/dashboard.models';
-import {finalize} from 'rxjs';
+import { AuthService } from '../../core/services/auth/auth.service';
 
 @Component({
   selector: 'app-dashboard-page',
@@ -53,12 +54,27 @@ import {finalize} from 'rxjs';
         </article>
 
         <article class="panel">
-          <h2>Quick actions</h2>
+          <h2>Quick links</h2>
 
           <div class="quick-actions">
             <a routerLink="/users" class="action-card">
               <strong>Users</strong>
               <span>View and manage user accounts</span>
+            </a>
+
+            <a [href]="storefrontUrl()" class="action-card">
+              <strong>Storefront</strong>
+              <span>Open the customer storefront with your current session</span>
+            </a>
+
+            <a [href]="productManagementUrl()" class="action-card">
+              <strong>Product management</strong>
+              <span>Review catalog, pricing, and promotions</span>
+            </a>
+
+            <a [href]="orderManagementUrl()" class="action-card">
+              <strong>Order management</strong>
+              <span>Track orders and fulfillment status</span>
             </a>
 
             <a routerLink="/settings" class="action-card">
@@ -242,11 +258,21 @@ import {finalize} from 'rxjs';
 
 export class DashboardPage implements OnInit {
   private readonly dashboardService = inject(DashboardService);
+  private readonly authService = inject(AuthService);
 
   protected readonly isLoading = signal(true);
   protected readonly errorMessage = signal('');
   protected readonly stats = signal<DashboardStat[]>([]);
   protected readonly recentActivity = signal<string[]>([]);
+  protected readonly storefrontUrl = computed(() =>
+    this.buildCrossAppUrl('storefront-web-app'),
+  );
+  protected readonly productManagementUrl = computed(() =>
+    this.buildCrossAppUrl('product-admin-web-app'),
+  );
+  protected readonly orderManagementUrl = computed(() =>
+    this.buildCrossAppUrl('order-admin-web-app'),
+  );
 
   public ngOnInit(): void {
     this.dashboardService
@@ -265,5 +291,17 @@ export class DashboardPage implements OnInit {
           this.errorMessage.set('Unable to load dashboard summary.');
         },
       });
+  }
+
+  private buildCrossAppUrl(appHostSegment: string): string {
+    const currentLocation = window.location;
+    const host = currentLocation.hostname.includes('admin-web-app')
+      ? currentLocation.hostname.replace('admin-web-app', appHostSegment)
+      : `eco-test.${appHostSegment}.com`;
+    const url = new URL('/', `${currentLocation.protocol}//${host}`);
+
+    this.authService.appendSessionHandoff(url);
+
+    return url.toString();
   }
 }
