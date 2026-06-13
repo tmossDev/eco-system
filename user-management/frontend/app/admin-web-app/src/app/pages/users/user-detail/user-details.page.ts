@@ -2,6 +2,7 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
+import { CrossAppNavigationService } from '../../../core/services/navigation/cross-app-navigation.service';
 import { UserDetails } from '../../../core/services/user/user.model';
 import { UserService } from '../../../core/services/user/user.service';
 
@@ -46,9 +47,14 @@ import { UserService } from '../../../core/services/user/user.service';
               </div>
             </dl>
 
-            <a [routerLink]="['/users', user()!.id, 'edit']" class="primary-action">
-              Edit user
-            </a>
+            <div class="actions">
+              <a [routerLink]="['/users', user()!.id, 'edit']" class="primary-action">
+                Edit user
+              </a>
+              <a [href]="storefrontUrl()" class="secondary-action">
+                View storefront as user
+              </a>
+            </div>
           </div>
         </div>
       }
@@ -152,15 +158,30 @@ import { UserService } from '../../../core/services/user/user.service';
       font-weight: 700;
     }
 
-    .primary-action {
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+
+    .primary-action,
+    .secondary-action {
       display: inline-flex;
       width: fit-content;
       border-radius: 999px;
-      background: #2563eb;
-      color: #ffffff;
       padding: 0.75rem 1rem;
       font-weight: 700;
       text-decoration: none;
+    }
+
+    .primary-action {
+      background: #2563eb;
+      color: #ffffff;
+    }
+
+    .secondary-action {
+      background: #e8eef8;
+      color: #172033;
     }
 
     @media (max-width: 640px) {
@@ -177,6 +198,7 @@ import { UserService } from '../../../core/services/user/user.service';
 export class UserDetailPage implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly userService = inject(UserService);
+  private readonly crossAppNavigation = inject(CrossAppNavigationService);
 
   protected readonly isLoading = signal(true);
   protected readonly errorMessage = signal('');
@@ -214,5 +236,15 @@ export class UserDetailPage implements OnInit {
           this.errorMessage.set('Unable to load user.');
         },
       });
+  }
+
+  protected storefrontUrl(): string {
+    const user = this.user();
+
+    return this.crossAppNavigation.buildUrl(
+      'storefront-web-app',
+      '/',
+      user ?? undefined,
+    );
   }
 }

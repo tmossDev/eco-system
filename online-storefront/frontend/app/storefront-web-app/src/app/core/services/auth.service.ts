@@ -14,6 +14,8 @@ export class AuthService {
   private readonly http = inject(HttpClient);
   private readonly tokenKey = 'storefront_access_token';
   private readonly userKey = 'storefront_user';
+  private readonly handoffTokenParam = 'eco_access_token';
+  private readonly handoffUserParam = 'eco_user';
 
   private readonly tokenSignal = signal<string | null>(
     localStorage.getItem(this.tokenKey),
@@ -23,6 +25,10 @@ export class AuthService {
   readonly accessToken = computed(() => this.tokenSignal());
   readonly currentUser = computed(() => this.userSignal());
   readonly isAuthenticated = computed(() => Boolean(this.tokenSignal()));
+
+  constructor() {
+    this.consumeSessionHandoff();
+  }
 
   login(request: LoginRequest): Observable<LoginResponse> {
     return this.http
@@ -47,6 +53,28 @@ export class AuthService {
     localStorage.setItem(this.userKey, JSON.stringify(response.user));
     this.tokenSignal.set(response.accessToken);
     this.userSignal.set(response.user);
+  }
+
+  private consumeSessionHandoff(): void {
+    const params = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+    const accessToken = params.get(this.handoffTokenParam);
+    const userValue = params.get(this.handoffUserParam);
+
+    if (!accessToken || !userValue) {
+      return;
+    }
+
+    try {
+      const user = JSON.parse(userValue) as AuthUser;
+      this.storeSession({ accessToken, user });
+      params.delete(this.handoffTokenParam);
+      params.delete(this.handoffUserParam);
+      const nextHash = params.toString();
+      const nextUrl = `${window.location.pathname}${window.location.search}${nextHash ? `#${nextHash}` : ''}`;
+      window.history.replaceState(null, '', nextUrl);
+    } catch {
+      return;
+    }
   }
 
   private clearSession(): void {

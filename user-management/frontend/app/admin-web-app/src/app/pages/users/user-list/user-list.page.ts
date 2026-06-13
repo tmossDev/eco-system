@@ -2,6 +2,7 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
+import { CrossAppNavigationService } from '../../../core/services/navigation/cross-app-navigation.service';
 import { UserSummary } from '../../../core/services/user/user.model';
 import { UserService } from '../../../core/services/user/user.service';
 
@@ -65,6 +66,7 @@ import { UserService } from '../../../core/services/user/user.service';
                   <td class="actions">
                     <a [routerLink]="['/users', user.id]">View</a>
                     <a [routerLink]="['/users', user.id, 'edit']">Edit</a>
+                    <a [href]="storefrontUrl(user)">Storefront</a>
                   </td>
                 </tr>
               }
@@ -221,7 +223,7 @@ import { UserService } from '../../../core/services/user/user.service';
     }
 
     .actions-column {
-      width: 10rem;
+      width: 16rem;
     }
 
     .actions {
@@ -248,6 +250,7 @@ import { UserService } from '../../../core/services/user/user.service';
 })
 export class UserListPage implements OnInit {
   private readonly userService = inject(UserService);
+  private readonly crossAppNavigation = inject(CrossAppNavigationService);
 
   protected readonly isLoading = signal(true);
   protected readonly errorMessage = signal('');
@@ -269,5 +272,9 @@ export class UserListPage implements OnInit {
           this.errorMessage.set('Unable to load users.');
         },
       });
+  }
+
+  protected storefrontUrl(user: UserSummary): string {
+    return this.crossAppNavigation.buildUrl('storefront-web-app', '/', user);
   }
 }

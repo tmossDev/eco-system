@@ -494,6 +494,18 @@ ingress address while preserving the original `Host` header. It refreshes the
 ingress list while it runs, so newly deployed ingress hosts are picked up
 without editing `/etc/hosts`.
 
+For feature namespaces, point the proxy at that namespace as well:
+
+```sh
+scripts/local-ingress-proxy.py --namespace eco-test --namespace ssoadm2026
+```
+
+Or discover ingress hosts from every namespace:
+
+```sh
+scripts/local-ingress-proxy.py --all-namespaces
+```
+
 If `getent hosts "$STORYBOOK_HOST"` returns nothing, the browser cannot resolve
 the hostname; re-run the `/etc/hosts` command above. If the hostname resolves
 but the browser still cannot connect, the k3d cluster may not expose Traefik on

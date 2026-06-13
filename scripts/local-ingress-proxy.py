@@ -52,8 +52,16 @@ def run_kubectl(args: list[str]) -> str:
     return completed.stdout
 
 
-def ingress_data(namespace: str) -> tuple[set[str], str | None]:
-    raw = run_kubectl(["get", "ingress", "-n", namespace, "-o", "json"])
+def ingress_data(namespaces: list[str], all_namespaces: bool) -> tuple[set[str], str | None]:
+    if all_namespaces:
+        raw = run_kubectl(["get", "ingress", "-A", "-o", "json"])
+    else:
+        items: list[dict] = []
+        for namespace in namespaces:
+            namespace_raw = run_kubectl(["get", "ingress", "-n", namespace, "-o", "json"])
+            items.extend(json.loads(namespace_raw).get("items", []))
+        raw = json.dumps({"items": items})
+
     payload = json.loads(raw)
     hosts: set[str] = set()
     addresses: list[str] = []
@@ -223,7 +231,8 @@ def tunnel(client: socket.socket, upstream: socket.socket) -> None:
 
 
 def refresh_ingress_state(
-    namespace: str,
+    namespaces: list[str],
+    all_namespaces: bool,
     extra_hosts: list[str],
     target_host_override: str | None,
     interval: int,
@@ -234,7 +243,7 @@ def refresh_ingress_state(
     while True:
         time.sleep(interval)
         try:
-            hosts, discovered_target = ingress_data(namespace)
+            hosts, discovered_target = ingress_data(namespaces, all_namespaces)
             hosts.update(extra_hosts)
             target_host = target_host_override or discovered_target
             if not hosts or not target_host:
@@ -257,7 +266,20 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Proxy local browser traffic to Kubernetes ingress hosts.",
     )
-    parser.add_argument("-n", "--namespace", default="eco-test")
+    parser.add_argument(
+        "-n",
+        "--namespace",
+        action="append",
+        dest="namespaces",
+        default=[],
+        help="Kubernetes namespace to read ingresses from. Can be passed more than once.",
+    )
+    parser.add_argument(
+        "-A",
+        "--all-namespaces",
+        action="store_true",
+        help="Read ingress hosts from every namespace.",
+    )
     parser.add_argument("--listen-host", default="127.0.0.1")
     parser.add_argument("--listen-port", type=int, default=18080)
     parser.add_argument("--target-host", help="Override discovered ingress IP/hostname")
@@ -281,8 +303,10 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
+    namespaces = args.namespaces or ["eco-test"]
+
     try:
-        hosts, discovered_target = ingress_data(args.namespace)
+        hosts, discovered_target = ingress_data(namespaces, args.all_namespaces)
     except (RuntimeError, json.JSONDecodeError) as exc:
         raise SystemExit(str(exc))
 
@@ -290,7 +314,8 @@ def main() -> None:
     target_host = args.target_host or discovered_target
 
     if not hosts:
-        raise SystemExit(f"No ingress hosts found in namespace {args.namespace}")
+        scope = "any namespace" if args.all_namespaces else ", ".join(namespaces)
+        raise SystemExit(f"No ingress hosts found in {scope}")
     if not target_host:
         raise SystemExit(
             "No ingress address found. Pass --target-host, or port-forward Traefik "
@@ -313,7 +338,8 @@ def main() -> None:
         threading.Thread(
             target=refresh_ingress_state,
             args=(
-                args.namespace,
+                namespaces,
+                args.all_namespaces,
                 args.extra_hosts,
                 args.target_host,
                 args.refresh_interval,
