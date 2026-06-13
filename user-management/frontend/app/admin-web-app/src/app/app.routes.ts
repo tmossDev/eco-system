@@ -52,6 +52,30 @@ export const routes: Routes = [
           import('./pages/users/user.routes').then((m) => m.USERS_ROUTES),
       },
       {
+        path: 'products',
+        loadComponent: () =>
+          import('./pages/integrations/external-app-redirect.page').then(
+            (m) => m.ExternalAppRedirectPage,
+          ),
+        data: {
+          appHostSegment: 'product-admin-web-app',
+          path: '/products',
+          title: 'Product management',
+        },
+      },
+      {
+        path: 'orders',
+        loadComponent: () =>
+          import('./pages/integrations/external-app-redirect.page').then(
+            (m) => m.ExternalAppRedirectPage,
+          ),
+        data: {
+          appHostSegment: 'order-admin-web-app',
+          path: '/orders',
+          title: 'Order management',
+        },
+      },
+      {
         path: 'settings',
         loadComponent: () =>
           import('./pages/settings/settings.page').then((m) => m.SettingsPage),

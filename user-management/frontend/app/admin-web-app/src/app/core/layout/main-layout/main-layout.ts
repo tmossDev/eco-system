@@ -35,6 +35,16 @@ export class MainLayout {
       icon: 'user',
     },
     {
+      text: 'Products',
+      route: '/products',
+      icon: 'box',
+    },
+    {
+      text: 'Orders',
+      route: '/orders',
+      icon: 'calendar',
+    },
+    {
       text: 'Settings',
       route: '/settings',
       icon: 'settings',

@@ -52,9 +52,9 @@ export class AuthService {
     this.userSignal.set(null);
   }
 
-  public appendSessionHandoff(url: URL): void {
+  public appendSessionHandoff(url: URL, userOverride?: AuthUser): void {
     const accessToken = this.accessTokenSignal();
-    const user = this.userSignal();
+    const user = userOverride ?? this.userSignal();
 
     if (!accessToken || !user) {
       return;

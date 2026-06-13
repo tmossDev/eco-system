@@ -4,7 +4,7 @@ import { finalize } from 'rxjs';
 
 import { DashboardService } from '../../core/services/dashboard/dashboard.service';
 import { DashboardStat } from '../../core/services/dashboard/dashboard.models';
-import { AuthService } from '../../core/services/auth/auth.service';
+import { CrossAppNavigationService } from '../../core/services/navigation/cross-app-navigation.service';
 
 @Component({
   selector: 'app-dashboard-page',
@@ -258,20 +258,20 @@ import { AuthService } from '../../core/services/auth/auth.service';
 
 export class DashboardPage implements OnInit {
   private readonly dashboardService = inject(DashboardService);
-  private readonly authService = inject(AuthService);
+  private readonly crossAppNavigation = inject(CrossAppNavigationService);
 
   protected readonly isLoading = signal(true);
   protected readonly errorMessage = signal('');
   protected readonly stats = signal<DashboardStat[]>([]);
   protected readonly recentActivity = signal<string[]>([]);
   protected readonly storefrontUrl = computed(() =>
-    this.buildCrossAppUrl('storefront-web-app'),
+    this.crossAppNavigation.buildUrl('storefront-web-app'),
   );
   protected readonly productManagementUrl = computed(() =>
-    this.buildCrossAppUrl('product-admin-web-app'),
+    this.crossAppNavigation.buildUrl('product-admin-web-app'),
   );
   protected readonly orderManagementUrl = computed(() =>
-    this.buildCrossAppUrl('order-admin-web-app'),
+    this.crossAppNavigation.buildUrl('order-admin-web-app'),
   );
 
   public ngOnInit(): void {
@@ -293,15 +293,4 @@ export class DashboardPage implements OnInit {
       });
   }
 
-  private buildCrossAppUrl(appHostSegment: string): string {
-    const currentLocation = window.location;
-    const host = currentLocation.hostname.includes('admin-web-app')
-      ? currentLocation.hostname.replace('admin-web-app', appHostSegment)
-      : `eco-test.${appHostSegment}.com`;
-    const url = new URL('/', `${currentLocation.protocol}//${host}`);
-
-    this.authService.appendSessionHandoff(url);
-
-    return url.toString();
-  }
 }
