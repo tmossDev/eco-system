@@ -152,6 +152,40 @@ Feature pull requests use a namespace derived from the branch name. Branches
 must match `feature/<10 lowercase alphanumeric chars>`, and that suffix becomes
 the namespace.
 
+### Local ingress HTTPS
+
+Local ingress hostnames are built as:
+
+```text
+<namespace>.<app>.<base-domain>
+```
+
+The homelab config uses `BASE_DOMAIN=eco.test`, `INGRESS_SCHEME=https`, and a
+Kubernetes TLS secret named `eco-local-ingress-tls`. The deploy workflows create
+or update that secret in the application namespace, patch deployed ingresses to
+use it, and the delete workflow removes it during application deletes.
+
+For browser-trusted HTTPS, provide a trusted wildcard certificate through GitHub
+Actions secrets:
+
+```text
+INGRESS_TLS_CERT_B64
+INGRESS_TLS_KEY_B64
+```
+
+Those values should be base64-encoded PEM certificate and key data. If the
+secrets are not set, the pipeline uses `mkcert` when available on the runner, or
+falls back to an OpenSSL self-signed certificate. The fallback is enough for
+Kubernetes TLS wiring, but browsers will warn unless they already trust the
+issuing CA.
+
+If you are using the browser proxy, point it at all namespaces you want to
+browse:
+
+```sh
+scripts/local-ingress-proxy.py --namespace eco-test --namespace checkout
+```
+
 ## Deployment Flow
 
 The GitHub Actions `Build and Deploy` workflow can deploy a single layer or all

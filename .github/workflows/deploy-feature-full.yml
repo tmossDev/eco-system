@@ -946,6 +946,13 @@ jobs:
           echo "PRODUCT_SERVICE_INTERNAL_URL=${PRODUCT_SERVICE_INTERNAL_URL:-http://product-service:8080}" >> "$GITHUB_ENV"
           echo "PRODUCT_GATEWAY_INTERNAL_URL=${PRODUCT_GATEWAY_INTERNAL_URL:-http://product-gateway:8080}" >> "$GITHUB_ENV"
           echo "INGRESS_CLASS_NAME=${INGRESS_CLASS_NAME:-traefik}" >> "$GITHUB_ENV"
+          INGRESS_SCHEME="${INGRESS_SCHEME:-http}"
+          if [[ -n "${INGRESS_TLS_SECRET_NAME:-}" && "$INGRESS_SCHEME" == "http" ]]; then
+            INGRESS_SCHEME=https
+          fi
+          echo "INGRESS_TLS_SECRET_NAME=${INGRESS_TLS_SECRET_NAME:-}" >> "$GITHUB_ENV"
+          echo "INGRESS_SCHEME=$INGRESS_SCHEME" >> "$GITHUB_ENV"
+          echo "DEFAULT_APPLICATION_NAMESPACE=${DEFAULT_APPLICATION_NAMESPACE:-eco-test}" >> "$GITHUB_ENV"
           echo "ADMIN_WEB_APP_HOST=${{ needs.prepare.outputs.admin_web_app_host }}" >> "$GITHUB_ENV"
           echo "USER_GATEWAY_HOST=${{ needs.prepare.outputs.user_gateway_host }}" >> "$GITHUB_ENV"
           echo "USER_SERVICE_HOST=${{ needs.prepare.outputs.user_service_host }}" >> "$GITHUB_ENV"
@@ -960,10 +967,10 @@ jobs:
           echo "BACKEND_API_URL=" >> "$GITHUB_ENV"
           echo "PRODUCT_BACKEND_API_URL=" >> "$GITHUB_ENV"
           echo "ORDER_BACKEND_API_URL=" >> "$GITHUB_ENV"
-          echo "FRONTEND_ORIGIN=http://${{ needs.prepare.outputs.admin_web_app_host }}" >> "$GITHUB_ENV"
-          echo "PRODUCT_FRONTEND_ORIGIN=http://${{ needs.prepare.outputs.product_admin_web_app_host }}" >> "$GITHUB_ENV"
-          echo "ORDER_FRONTEND_ORIGIN=http://${{ needs.prepare.outputs.order_admin_web_app_host }}" >> "$GITHUB_ENV"
-          echo "STOREFRONT_FRONTEND_ORIGIN=http://${{ needs.prepare.outputs.storefront_web_app_host }}" >> "$GITHUB_ENV"
+          echo "FRONTEND_ORIGIN=$INGRESS_SCHEME://${{ needs.prepare.outputs.admin_web_app_host }}" >> "$GITHUB_ENV"
+          echo "PRODUCT_FRONTEND_ORIGIN=$INGRESS_SCHEME://${{ needs.prepare.outputs.product_admin_web_app_host }}" >> "$GITHUB_ENV"
+          echo "ORDER_FRONTEND_ORIGIN=$INGRESS_SCHEME://${{ needs.prepare.outputs.order_admin_web_app_host }}" >> "$GITHUB_ENV"
+          echo "STOREFRONT_FRONTEND_ORIGIN=$INGRESS_SCHEME://${{ needs.prepare.outputs.storefront_web_app_host }}" >> "$GITHUB_ENV"
         env:
           NEXUS_ADMIN_PASSWORD_SECRET: ${{ secrets.NEXUS_ADMIN_PASSWORD }}
 
@@ -1297,6 +1304,22 @@ jobs:
               exit 1
             fi
           fi
+
+      - name: Create ingress TLS secret
+        shell: bash
+        env:
+          INGRESS_TLS_CERT_B64: ${{ secrets.INGRESS_TLS_CERT_B64 }}
+          INGRESS_TLS_KEY_B64: ${{ secrets.INGRESS_TLS_KEY_B64 }}
+        run: |
+          if [[ -z "${INGRESS_TLS_SECRET_NAME:-}" ]]; then
+            echo "INGRESS_TLS_SECRET_NAME is empty; no ingress TLS secret to create."
+            exit 0
+          fi
+
+          scripts/ensure-ingress-tls-secret.sh \
+            --namespace "$NAMESPACE" \
+            --environment-file "$ENVIRONMENT_FILE" \
+            --secret-name "$INGRESS_TLS_SECRET_NAME"
 
       - name: Create Nexus image pull secret
         shell: bash
@@ -1854,6 +1877,46 @@ jobs:
             -run TestDeployedOrderGatewayFunctional \
             -v
 
+      - name: Enable ingress TLS
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "${INGRESS_TLS_SECRET_NAME:-}" ]]; then
+            echo "INGRESS_TLS_SECRET_NAME is empty; leaving ingresses on HTTP."
+            exit 0
+          fi
+
+          if ! kubectl get secret "$INGRESS_TLS_SECRET_NAME" -n "$NAMESPACE" >/dev/null 2>&1; then
+            echo "Missing TLS secret $INGRESS_TLS_SECRET_NAME in namespace $NAMESPACE." >&2
+            echo "The Create ingress TLS secret step should create this automatically." >&2
+            exit 1
+          fi
+
+          mapfile -t ingress_names < <(kubectl get ingress -n "$NAMESPACE" -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}')
+          for ingress_name in "${ingress_names[@]}"; do
+            mapfile -t ingress_hosts < <(
+              kubectl get ingress "$ingress_name" -n "$NAMESPACE" -o jsonpath='{range .spec.rules[*]}{.host}{"\n"}{end}' \
+                | sed '/^$/d'
+            )
+
+            if [[ "${#ingress_hosts[@]}" -eq 0 ]]; then
+              continue
+            fi
+
+            hosts_json=""
+            for host in "${ingress_hosts[@]}"; do
+              if [[ -n "$hosts_json" ]]; then
+                hosts_json+=","
+              fi
+              hosts_json+="\"$host\""
+            done
+
+            kubectl patch ingress "$ingress_name" \
+              -n "$NAMESPACE" \
+              --type merge \
+              -p "{\"spec\":{\"tls\":[{\"secretName\":\"$INGRESS_TLS_SECRET_NAME\",\"hosts\":[$hosts_json]}]}}"
+          done
+
       - name: Show application rollout
         shell: bash
         run: |
@@ -1866,41 +1929,42 @@ jobs:
         with:
           script: |
             const marker = '<!-- deployment-useful-links -->';
+            const scheme = process.env.INGRESS_SCHEME || 'http';
             const links = [];
 
             if ('${{ needs.prepare.outputs.deploy_user_management }}' === 'true') {
               links.push(
-                ['Admin web app', 'http://${{ needs.prepare.outputs.admin_web_app_host }}'],
-                ['Admin web app Storybook', 'http://${{ needs.prepare.outputs.admin_web_app_host }}/storybook'],
-                ['User gateway', 'http://${{ needs.prepare.outputs.user_gateway_host }}'],
-                ['User service', 'http://${{ needs.prepare.outputs.user_service_host }}'],
+                ['Admin web app', `${scheme}://${{ needs.prepare.outputs.admin_web_app_host }}`],
+                ['Admin web app Storybook', `${scheme}://${{ needs.prepare.outputs.admin_web_app_host }}/storybook`],
+                ['User gateway', `${scheme}://${{ needs.prepare.outputs.user_gateway_host }}`],
+                ['User service', `${scheme}://${{ needs.prepare.outputs.user_service_host }}`],
               );
             }
 
             if ('${{ needs.prepare.outputs.deploy_product_management }}' === 'true') {
               links.push(
-                ['Product admin web app', 'http://${{ needs.prepare.outputs.product_admin_web_app_host }}'],
-                ['Product admin web app Storybook', 'http://${{ needs.prepare.outputs.product_admin_web_app_host }}/storybook'],
-                ['Product gateway', 'http://${{ needs.prepare.outputs.product_gateway_host }}'],
-                ['Product service', 'http://${{ needs.prepare.outputs.product_service_host }}'],
+                ['Product admin web app', `${scheme}://${{ needs.prepare.outputs.product_admin_web_app_host }}`],
+                ['Product admin web app Storybook', `${scheme}://${{ needs.prepare.outputs.product_admin_web_app_host }}/storybook`],
+                ['Product gateway', `${scheme}://${{ needs.prepare.outputs.product_gateway_host }}`],
+                ['Product service', `${scheme}://${{ needs.prepare.outputs.product_service_host }}`],
               );
             }
 
             if ('${{ needs.prepare.outputs.deploy_order_management }}' === 'true') {
               links.push(
-                ['Order admin web app', 'http://${{ needs.prepare.outputs.order_admin_web_app_host }}'],
-                ['Order admin web app Storybook', 'http://${{ needs.prepare.outputs.order_admin_web_app_host }}/storybook'],
-                ['Order gateway', 'http://${{ needs.prepare.outputs.order_gateway_host }}'],
-                ['Order service', 'http://${{ needs.prepare.outputs.order_service_host }}'],
+                ['Order admin web app', `${scheme}://${{ needs.prepare.outputs.order_admin_web_app_host }}`],
+                ['Order admin web app Storybook', `${scheme}://${{ needs.prepare.outputs.order_admin_web_app_host }}/storybook`],
+                ['Order gateway', `${scheme}://${{ needs.prepare.outputs.order_gateway_host }}`],
+                ['Order service', `${scheme}://${{ needs.prepare.outputs.order_service_host }}`],
               );
             }
 
             if ('${{ needs.prepare.outputs.deploy_online_storefront }}' === 'true') {
-              links.push(['Online storefront', 'http://${{ needs.prepare.outputs.storefront_web_app_host }}']);
+              links.push(['Online storefront', `${scheme}://${{ needs.prepare.outputs.storefront_web_app_host }}`]);
             }
 
             if ('${{ needs.prepare.outputs.deploy_storybook }}' === 'true') {
-              links.push(['Design system Storybook', 'http://${{ needs.prepare.outputs.storybook_host }}']);
+              links.push(['Design system Storybook', `${scheme}://${{ needs.prepare.outputs.storybook_host }}`]);
             }
 
             const decoratorBox = `

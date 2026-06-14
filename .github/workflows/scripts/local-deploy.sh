@@ -87,6 +87,7 @@ ORDER_SERVICE_HOST="${ORDER_SERVICE_HOST:-$NAMESPACE.order-service.${BASE_DOMAIN
 STOREFRONT_WEB_APP_HOST="${STOREFRONT_WEB_APP_HOST:-$NAMESPACE.storefront-web-app.${BASE_DOMAIN:-com}}"
 STORYBOOK_HOST="${STORYBOOK_HOST:-$NAMESPACE.storybook.${BASE_DOMAIN:-com}}"
 PRODUCT_BACKEND_API_URL="${PRODUCT_BACKEND_API_URL:-http://product-service:8080}"
+INGRESS_SCHEME="${INGRESS_SCHEME:-http}"
 
 if [[ "$LAYER" != "foundation" && "$LAYER" != "application" && "$LAYER" != "all" ]]; then
   echo "Invalid layer: $LAYER" >&2
@@ -129,6 +130,39 @@ create_namespace() {
   else
     echo "Namespace $namespace already exists"
   fi
+}
+
+enable_ingress_tls() {
+  if [[ -z "${INGRESS_TLS_SECRET_NAME:-}" ]]; then
+    return
+  fi
+
+  echo "Enabling TLS on ingresses in namespace $NAMESPACE with secret $INGRESS_TLS_SECRET_NAME"
+  mapfile -t ingress_names < <(kubectl get ingress -n "$NAMESPACE" -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}')
+
+  for ingress_name in "${ingress_names[@]}"; do
+    mapfile -t ingress_hosts < <(
+      kubectl get ingress "$ingress_name" -n "$NAMESPACE" -o jsonpath='{range .spec.rules[*]}{.host}{"\n"}{end}' \
+        | sed '/^$/d'
+    )
+
+    if [[ "${#ingress_hosts[@]}" -eq 0 ]]; then
+      continue
+    fi
+
+    hosts_json=""
+    for host in "${ingress_hosts[@]}"; do
+      if [[ -n "$hosts_json" ]]; then
+        hosts_json+=","
+      fi
+      hosts_json+="\"$host\""
+    done
+
+    kubectl patch ingress "$ingress_name" \
+      -n "$NAMESPACE" \
+      --type merge \
+      -p "{\"spec\":{\"tls\":[{\"secretName\":\"$INGRESS_TLS_SECRET_NAME\",\"hosts\":[$hosts_json]}]}}"
+  done
 }
 
 build_liquibase_image() {
@@ -215,6 +249,13 @@ deploy_application() {
 
   create_namespace "$NAMESPACE"
 
+  if [[ -n "${INGRESS_TLS_SECRET_NAME:-}" ]]; then
+    scripts/ensure-ingress-tls-secret.sh \
+      --namespace "$NAMESPACE" \
+      --environment-file "$ENVIRONMENT_FILE" \
+      --secret-name "$INGRESS_TLS_SECRET_NAME"
+  fi
+
   printf '{"BACKEND_API_URL":"","ENABLE_MOCK_API":false}\n' > runtime-config.json
 
   helm upgrade --install shared-components shared-components/deployment \
@@ -256,7 +297,7 @@ deploy_application() {
     --set-string user-gateway.app.configMap.data.DB_PORT="${POSTGRES_PORT:-5432}" \
     --set-string user-gateway.app.configMap.data.DB_USER="${POSTGRES_APP_USER:-app_user}" \
     --set-string user-gateway.app.configMap.data.USER_SERVICE_URL="${USER_SERVICE_INTERNAL_URL:-http://user-service:8080}" \
-    --set-string user-gateway.app.configMap.data.FRONTEND_ORIGIN="http://${ADMIN_WEB_APP_HOST:-$NAMESPACE.admin-web-app.${BASE_DOMAIN:-com}}" \
+    --set-string user-gateway.app.configMap.data.FRONTEND_ORIGIN="${INGRESS_SCHEME}://${ADMIN_WEB_APP_HOST:-$NAMESPACE.admin-web-app.${BASE_DOMAIN:-com}}" \
     --set user-gateway.app.secret.enabled=true \
     --set-string user-gateway.app.secret.stringData.DB_PASSWORD="$APP_PASSWORD" \
     --set user-gateway.app.ingress.enabled=true \
@@ -314,7 +355,7 @@ deploy_application() {
     --set-string product-gateway.app.configMap.data.DB_USER="${POSTGRES_APP_USER:-app_user}" \
     --set-string product-gateway.app.configMap.data.PRODUCT_SERVICE_URL="${PRODUCT_SERVICE_INTERNAL_URL:-http://product-service:8080}" \
     --set-string product-gateway.app.configMap.data.USER_SERVICE_URL="${USER_SERVICE_INTERNAL_URL:-http://user-service:8080}" \
-    --set-string product-gateway.app.configMap.data.FRONTEND_ORIGIN="http://${PRODUCT_ADMIN_WEB_APP_HOST}" \
+    --set-string product-gateway.app.configMap.data.FRONTEND_ORIGIN="${INGRESS_SCHEME}://${PRODUCT_ADMIN_WEB_APP_HOST}" \
     --set product-gateway.app.secret.enabled=true \
     --set-string product-gateway.app.secret.stringData.DB_PASSWORD="$APP_PASSWORD" \
     --set product-gateway.app.ingress.enabled=true \
@@ -371,7 +412,7 @@ deploy_application() {
     --set-string order-gateway.app.configMap.data.DB_PORT="${POSTGRES_PORT:-5432}" \
     --set-string order-gateway.app.configMap.data.DB_USER="${POSTGRES_APP_USER:-app_user}" \
     --set-string order-gateway.app.configMap.data.USER_SERVICE_URL="${USER_SERVICE_INTERNAL_URL:-http://user-service:8080}" \
-    --set-string order-gateway.app.configMap.data.FRONTEND_ORIGIN="http://${ORDER_ADMIN_WEB_APP_HOST}" \
+    --set-string order-gateway.app.configMap.data.FRONTEND_ORIGIN="${INGRESS_SCHEME}://${ORDER_ADMIN_WEB_APP_HOST}" \
     --set order-gateway.app.secret.enabled=true \
     --set-string order-gateway.app.secret.stringData.DB_PASSWORD="$APP_PASSWORD" \
     --set order-gateway.app.ingress.enabled=true \
@@ -417,7 +458,7 @@ deploy_application() {
     --set-string storefront-gateway.app.env.USER_SERVICE_URL="${USER_SERVICE_INTERNAL_URL:-http://user-service:8080}" \
     --set-string storefront-gateway.app.env.PRODUCT_SERVICE_URL="${PRODUCT_SERVICE_INTERNAL_URL:-http://product-service:8080}" \
     --set-string storefront-gateway.app.env.PRODUCT_GATEWAY_URL="${PRODUCT_GATEWAY_INTERNAL_URL:-http://product-gateway:8080}" \
-    --set-string storefront-gateway.app.env.FRONTEND_ORIGIN="http://${STOREFRONT_WEB_APP_HOST}" \
+    --set-string storefront-gateway.app.env.FRONTEND_ORIGIN="${INGRESS_SCHEME}://${STOREFRONT_WEB_APP_HOST}" \
     --set storefront-web-app.app.image.repository="$IMAGE_PREFIX/storefront-web-app" \
     --set storefront-web-app.app.image.tag="$IMAGE_TAG" \
     --set storefront-web-app.app.image.pullPolicy=Never \
@@ -442,6 +483,8 @@ deploy_application() {
     --set storefrontWebAppApiIngress.pathType=Prefix \
     --set storefrontWebAppApiIngress.serviceName=storefront-gateway \
     --set storefrontWebAppApiIngress.servicePortName=http
+
+  enable_ingress_tls
 }
 
 main() {
