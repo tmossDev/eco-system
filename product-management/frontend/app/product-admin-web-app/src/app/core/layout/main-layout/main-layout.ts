@@ -5,8 +5,7 @@ import {
   NavigationBarVariant,
   NavigationItem,
 } from '@ds/navigation-bar';
-
-import { AuthService } from '../../services/auth/auth.service';
+import { AuthService } from '@eco/auth-features';
 
 @Component({
   selector: 'app-main-layout',

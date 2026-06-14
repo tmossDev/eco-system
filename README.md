@@ -84,6 +84,7 @@ address is configured in `config/hp-prodesk-homelab.txt`:
 ```sh
 CI_CD_NAMESPACE=eco-cicd
 NEXUS_DOCKER_REGISTRY=172.18.0.4:30500
+NEXUS_HTTP_NODE_PORT=31328
 NEXUS_DOCKER_NODE_PORT=30500
 IMAGE_NAMESPACE=eco-system
 ```
@@ -91,6 +92,10 @@ IMAGE_NAMESPACE=eco-system
 `NEXUS_DOCKER_REGISTRY` must be reachable by the GitHub runner and every
 Kubernetes node. For multi-node clusters, do not use `127.0.0.1` or
 `localhost`.
+
+`NEXUS_HTTP_NODE_PORT` exposes the Nexus REST API for deployment automation.
+Workflows use this direct NodePort instead of `kubectl port-forward`, so Nexus
+setup does not depend on API-server-to-kubelet connection upgrades.
 
 Nexus is exposed as an HTTP Docker registry. The deploy workflow configures the
 GitHub runner Docker daemon as an insecure registry before pushing images. Each
@@ -146,6 +151,44 @@ DEFAULT_APPLICATION_NAMESPACE=eco-test
 Feature pull requests use a namespace derived from the branch name. Branches
 must match `feature/<10 lowercase alphanumeric chars>`, and that suffix becomes
 the namespace.
+
+### Local ingress HTTPS
+
+Local ingress hostnames are built as:
+
+```text
+<namespace>.<app>.<base-domain>
+```
+
+The homelab config uses `BASE_DOMAIN=eco.test`, `INGRESS_SCHEME=https`, and a
+Kubernetes TLS secret named `eco-local-ingress-tls`. The deploy workflows create
+or update that secret in the application namespace, patch deployed ingresses to
+use it, and the delete workflow removes it during application deletes.
+
+For browser-trusted HTTPS, provide a trusted wildcard certificate through GitHub
+Actions secrets:
+
+```text
+INGRESS_TLS_CERT_B64
+INGRESS_TLS_KEY_B64
+```
+
+Those values should be base64-encoded PEM certificate and key data. If the
+secrets are not set, the pipeline uses `mkcert` when available on the runner, or
+falls back to an OpenSSL self-signed certificate. The fallback is enough for
+Kubernetes TLS wiring, but browsers will warn unless they already trust the
+issuing CA.
+
+If you are using the browser proxy, start it from the repository root. By
+default it watches ingresses in every namespace, so it will pick up `eco-test`,
+feature namespaces, and custom namespaces such as `admin`:
+
+```sh
+scripts/local-ingress-proxy.py
+```
+
+Then configure Firefox to use `127.0.0.1:18080` for both HTTP and HTTPS proxy
+traffic.
 
 ## Deployment Flow
 

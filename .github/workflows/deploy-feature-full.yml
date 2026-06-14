@@ -394,6 +394,7 @@ jobs:
           echo "CI_CD_NAMESPACE=${{ needs.prepare.outputs.ci_cd_namespace }}" >> "$GITHUB_ENV"
           echo "NEXUS_DOCKER_REGISTRY=$NEXUS_DOCKER_REGISTRY" >> "$GITHUB_ENV"
           echo "NEXUS_ADMIN_PASSWORD=$NEXUS_ADMIN_PASSWORD" >> "$GITHUB_ENV"
+          echo "NEXUS_HTTP_NODE_PORT=${NEXUS_HTTP_NODE_PORT:-31328}" >> "$GITHUB_ENV"
           echo "NEXUS_DOCKER_NODE_PORT=${NEXUS_DOCKER_NODE_PORT:-30500}" >> "$GITHUB_ENV"
         env:
           NEXUS_ADMIN_PASSWORD_SECRET: ${{ secrets.NEXUS_ADMIN_PASSWORD }}
@@ -455,6 +456,7 @@ jobs:
             --set nexus.app.service.ports[0].port=8081 \
             --set nexus.app.service.ports[0].targetPort=http \
             --set nexus.app.service.ports[0].protocol=TCP \
+            --set nexus.app.service.ports[0].nodePort="$NEXUS_HTTP_NODE_PORT" \
             --set nexus.app.service.ports[1].name=docker \
             --set nexus.app.service.ports[1].port=5000 \
             --set nexus.app.service.ports[1].targetPort=docker \
@@ -518,12 +520,11 @@ jobs:
             -l app.kubernetes.io/name=nexus,app.kubernetes.io/instance=ci-cd \
             --timeout=600s
 
-          kubectl port-forward -n "$CI_CD_NAMESPACE" deployment/nexus 18081:8081 &
-          PORT_FORWARD_PID="$!"
-          trap 'kill "$PORT_FORWARD_PID" 2>/dev/null || true; show_nexus_status' EXIT
+          NEXUS_HTTP_URL="${NEXUS_HTTP_URL:-http://${NEXUS_DOCKER_REGISTRY%:*}:${NEXUS_HTTP_NODE_PORT:-31328}}"
+          trap 'show_nexus_status' EXIT
 
           for attempt in {1..90}; do
-            if curl --silent --fail http://127.0.0.1:18081/service/rest/v1/status >/dev/null; then
+            if curl --silent --fail "$NEXUS_HTTP_URL/service/rest/v1/status" >/dev/null; then
               break
             fi
 
@@ -536,27 +537,27 @@ jobs:
           done
 
           curl --silent --fail --user "admin:$NEXUS_ADMIN_PASSWORD" \
-            http://127.0.0.1:18081/service/rest/v1/system/eula \
+            "$NEXUS_HTTP_URL/service/rest/v1/system/eula" \
             | jq '.accepted = true' > nexus-eula-accepted.json
 
           curl --silent --fail --user "admin:$NEXUS_ADMIN_PASSWORD" \
             --request POST \
             --header "Content-Type: application/json" \
             --data-binary @nexus-eula-accepted.json \
-            http://127.0.0.1:18081/service/rest/v1/system/eula
+            "$NEXUS_HTTP_URL/service/rest/v1/system/eula"
 
           curl --silent --fail --user "admin:$NEXUS_ADMIN_PASSWORD" \
-            http://127.0.0.1:18081/service/rest/v1/security/realms/active \
+            "$NEXUS_HTTP_URL/service/rest/v1/security/realms/active" \
             | jq 'if index("DockerToken") then . else . + ["DockerToken"] end' > nexus-active-realms.json
 
           curl --silent --fail --user "admin:$NEXUS_ADMIN_PASSWORD" \
             --request PUT \
             --header "Content-Type: application/json" \
             --data-binary @nexus-active-realms.json \
-            http://127.0.0.1:18081/service/rest/v1/security/realms/active
+            "$NEXUS_HTTP_URL/service/rest/v1/security/realms/active"
 
           if curl --silent --fail --user "admin:$NEXUS_ADMIN_PASSWORD" \
-            http://127.0.0.1:18081/service/rest/v1/repositories/docker/hosted/eco-images >/dev/null; then
+            "$NEXUS_HTTP_URL/service/rest/v1/repositories/docker/hosted/eco-images" >/dev/null; then
             echo "Nexus Docker repository eco-images already exists"
           else
             curl --silent --fail --user "admin:$NEXUS_ADMIN_PASSWORD" \
@@ -582,11 +583,11 @@ jobs:
                   "proprietaryComponents": false
                 }
               }' \
-              http://127.0.0.1:18081/service/rest/v1/repositories/docker/hosted
+              "$NEXUS_HTTP_URL/service/rest/v1/repositories/docker/hosted"
           fi
 
           if curl --silent --fail --user "admin:$NEXUS_ADMIN_PASSWORD" \
-            http://127.0.0.1:18081/service/rest/v1/repositories/raw/hosted/eco-node-builds >/dev/null; then
+            "$NEXUS_HTTP_URL/service/rest/v1/repositories/raw/hosted/eco-node-builds" >/dev/null; then
             echo "Nexus raw repository eco-node-builds already exists"
           else
             curl --silent --fail --user "admin:$NEXUS_ADMIN_PASSWORD" \
@@ -610,7 +611,7 @@ jobs:
                   "contentDisposition": "ATTACHMENT"
                 }
               }' \
-              http://127.0.0.1:18081/service/rest/v1/repositories/raw/hosted
+              "$NEXUS_HTTP_URL/service/rest/v1/repositories/raw/hosted"
           fi
 
       - name: Show CI/CD rollout
@@ -945,6 +946,13 @@ jobs:
           echo "PRODUCT_SERVICE_INTERNAL_URL=${PRODUCT_SERVICE_INTERNAL_URL:-http://product-service:8080}" >> "$GITHUB_ENV"
           echo "PRODUCT_GATEWAY_INTERNAL_URL=${PRODUCT_GATEWAY_INTERNAL_URL:-http://product-gateway:8080}" >> "$GITHUB_ENV"
           echo "INGRESS_CLASS_NAME=${INGRESS_CLASS_NAME:-traefik}" >> "$GITHUB_ENV"
+          INGRESS_SCHEME="${INGRESS_SCHEME:-http}"
+          if [[ -n "${INGRESS_TLS_SECRET_NAME:-}" && "$INGRESS_SCHEME" == "http" ]]; then
+            INGRESS_SCHEME=https
+          fi
+          echo "INGRESS_TLS_SECRET_NAME=${INGRESS_TLS_SECRET_NAME:-}" >> "$GITHUB_ENV"
+          echo "INGRESS_SCHEME=$INGRESS_SCHEME" >> "$GITHUB_ENV"
+          echo "DEFAULT_APPLICATION_NAMESPACE=${DEFAULT_APPLICATION_NAMESPACE:-eco-test}" >> "$GITHUB_ENV"
           echo "ADMIN_WEB_APP_HOST=${{ needs.prepare.outputs.admin_web_app_host }}" >> "$GITHUB_ENV"
           echo "USER_GATEWAY_HOST=${{ needs.prepare.outputs.user_gateway_host }}" >> "$GITHUB_ENV"
           echo "USER_SERVICE_HOST=${{ needs.prepare.outputs.user_service_host }}" >> "$GITHUB_ENV"
@@ -959,10 +967,10 @@ jobs:
           echo "BACKEND_API_URL=" >> "$GITHUB_ENV"
           echo "PRODUCT_BACKEND_API_URL=" >> "$GITHUB_ENV"
           echo "ORDER_BACKEND_API_URL=" >> "$GITHUB_ENV"
-          echo "FRONTEND_ORIGIN=http://${{ needs.prepare.outputs.admin_web_app_host }}" >> "$GITHUB_ENV"
-          echo "PRODUCT_FRONTEND_ORIGIN=http://${{ needs.prepare.outputs.product_admin_web_app_host }}" >> "$GITHUB_ENV"
-          echo "ORDER_FRONTEND_ORIGIN=http://${{ needs.prepare.outputs.order_admin_web_app_host }}" >> "$GITHUB_ENV"
-          echo "STOREFRONT_FRONTEND_ORIGIN=http://${{ needs.prepare.outputs.storefront_web_app_host }}" >> "$GITHUB_ENV"
+          echo "FRONTEND_ORIGIN=$INGRESS_SCHEME://${{ needs.prepare.outputs.admin_web_app_host }}" >> "$GITHUB_ENV"
+          echo "PRODUCT_FRONTEND_ORIGIN=$INGRESS_SCHEME://${{ needs.prepare.outputs.product_admin_web_app_host }}" >> "$GITHUB_ENV"
+          echo "ORDER_FRONTEND_ORIGIN=$INGRESS_SCHEME://${{ needs.prepare.outputs.order_admin_web_app_host }}" >> "$GITHUB_ENV"
+          echo "STOREFRONT_FRONTEND_ORIGIN=$INGRESS_SCHEME://${{ needs.prepare.outputs.storefront_web_app_host }}" >> "$GITHUB_ENV"
         env:
           NEXUS_ADMIN_PASSWORD_SECRET: ${{ secrets.NEXUS_ADMIN_PASSWORD }}
 
@@ -1297,6 +1305,22 @@ jobs:
             fi
           fi
 
+      - name: Create ingress TLS secret
+        shell: bash
+        env:
+          INGRESS_TLS_CERT_B64: ${{ secrets.INGRESS_TLS_CERT_B64 }}
+          INGRESS_TLS_KEY_B64: ${{ secrets.INGRESS_TLS_KEY_B64 }}
+        run: |
+          if [[ -z "${INGRESS_TLS_SECRET_NAME:-}" ]]; then
+            echo "INGRESS_TLS_SECRET_NAME is empty; no ingress TLS secret to create."
+            exit 0
+          fi
+
+          scripts/ensure-ingress-tls-secret.sh \
+            --namespace "$NAMESPACE" \
+            --environment-file "$ENVIRONMENT_FILE" \
+            --secret-name "$INGRESS_TLS_SECRET_NAME"
+
       - name: Create Nexus image pull secret
         shell: bash
         run: |
@@ -1416,6 +1440,26 @@ jobs:
             --set adminWebAppApiIngress.enabled=true \
             --set adminWebAppApiIngress.className="$INGRESS_CLASS_NAME" \
             --set adminWebAppApiIngress.host="$ADMIN_WEB_APP_HOST" \
+            --set adminWebAppApiIngress.paths[0].path=/api/orders \
+            --set adminWebAppApiIngress.paths[0].pathType=Prefix \
+            --set adminWebAppApiIngress.paths[0].serviceName=order-gateway \
+            --set adminWebAppApiIngress.paths[0].servicePortName=http \
+            --set adminWebAppApiIngress.paths[1].path=/api/products \
+            --set adminWebAppApiIngress.paths[1].pathType=Prefix \
+            --set adminWebAppApiIngress.paths[1].serviceName=product-gateway \
+            --set adminWebAppApiIngress.paths[1].servicePortName=http \
+            --set adminWebAppApiIngress.paths[2].path=/api/discounts \
+            --set adminWebAppApiIngress.paths[2].pathType=Prefix \
+            --set adminWebAppApiIngress.paths[2].serviceName=product-gateway \
+            --set adminWebAppApiIngress.paths[2].servicePortName=http \
+            --set adminWebAppApiIngress.paths[3].path=/api/promotions \
+            --set adminWebAppApiIngress.paths[3].pathType=Prefix \
+            --set adminWebAppApiIngress.paths[3].serviceName=product-gateway \
+            --set adminWebAppApiIngress.paths[3].servicePortName=http \
+            --set adminWebAppApiIngress.paths[4].path=/api \
+            --set adminWebAppApiIngress.paths[4].pathType=Prefix \
+            --set adminWebAppApiIngress.paths[4].serviceName=user-gateway \
+            --set adminWebAppApiIngress.paths[4].servicePortName=http \
             --set adminWebAppApiIngress.path=/api \
             --set adminWebAppApiIngress.pathType=Prefix \
             --set adminWebAppApiIngress.serviceName=user-gateway \
@@ -1746,7 +1790,7 @@ jobs:
         if: needs.prepare.outputs.deploy_user_management == 'true'
         shell: bash
         env:
-          GATEWAY_BASE_URL: http://127.0.0.1:18080
+          GATEWAY_BASE_URL: http://127.0.0.1:18180
           FUNCTIONAL_TEST_EMAIL: admin@test.com
           FUNCTIONAL_TEST_PASSWORD: password
         run: |
@@ -1757,7 +1801,7 @@ jobs:
             kubectl logs -n "$NAMESPACE" deployment/user-gateway --tail=120 || true
             echo "::endgroup::"
           }
-          kubectl port-forward -n "$NAMESPACE" service/user-gateway 18080:8080 &
+          kubectl port-forward -n "$NAMESPACE" service/user-gateway 18180:8080 &
           PORT_FORWARD_PID="$!"
           trap 'kill "$PORT_FORWARD_PID" 2>/dev/null || true; show_gateway_logs' EXIT
 
@@ -1853,6 +1897,46 @@ jobs:
             -run TestDeployedOrderGatewayFunctional \
             -v
 
+      - name: Enable ingress TLS
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "${INGRESS_TLS_SECRET_NAME:-}" ]]; then
+            echo "INGRESS_TLS_SECRET_NAME is empty; leaving ingresses on HTTP."
+            exit 0
+          fi
+
+          if ! kubectl get secret "$INGRESS_TLS_SECRET_NAME" -n "$NAMESPACE" >/dev/null 2>&1; then
+            echo "Missing TLS secret $INGRESS_TLS_SECRET_NAME in namespace $NAMESPACE." >&2
+            echo "The Create ingress TLS secret step should create this automatically." >&2
+            exit 1
+          fi
+
+          mapfile -t ingress_names < <(kubectl get ingress -n "$NAMESPACE" -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}')
+          for ingress_name in "${ingress_names[@]}"; do
+            mapfile -t ingress_hosts < <(
+              kubectl get ingress "$ingress_name" -n "$NAMESPACE" -o jsonpath='{range .spec.rules[*]}{.host}{"\n"}{end}' \
+                | sed '/^$/d'
+            )
+
+            if [[ "${#ingress_hosts[@]}" -eq 0 ]]; then
+              continue
+            fi
+
+            hosts_json=""
+            for host in "${ingress_hosts[@]}"; do
+              if [[ -n "$hosts_json" ]]; then
+                hosts_json+=","
+              fi
+              hosts_json+="\"$host\""
+            done
+
+            kubectl patch ingress "$ingress_name" \
+              -n "$NAMESPACE" \
+              --type merge \
+              -p "{\"spec\":{\"tls\":[{\"secretName\":\"$INGRESS_TLS_SECRET_NAME\",\"hosts\":[$hosts_json]}]}}"
+          done
+
       - name: Show application rollout
         shell: bash
         run: |
@@ -1865,41 +1949,42 @@ jobs:
         with:
           script: |
             const marker = '<!-- deployment-useful-links -->';
+            const scheme = process.env.INGRESS_SCHEME || 'http';
             const links = [];
 
             if ('${{ needs.prepare.outputs.deploy_user_management }}' === 'true') {
               links.push(
-                ['Admin web app', 'http://${{ needs.prepare.outputs.admin_web_app_host }}'],
-                ['Admin web app Storybook', 'http://${{ needs.prepare.outputs.admin_web_app_host }}/storybook'],
-                ['User gateway', 'http://${{ needs.prepare.outputs.user_gateway_host }}'],
-                ['User service', 'http://${{ needs.prepare.outputs.user_service_host }}'],
+                ['Admin web app', `${scheme}://${{ needs.prepare.outputs.admin_web_app_host }}`],
+                ['Admin web app Storybook', `${scheme}://${{ needs.prepare.outputs.admin_web_app_host }}/storybook`],
+                ['User gateway', `${scheme}://${{ needs.prepare.outputs.user_gateway_host }}`],
+                ['User service', `${scheme}://${{ needs.prepare.outputs.user_service_host }}`],
               );
             }
 
             if ('${{ needs.prepare.outputs.deploy_product_management }}' === 'true') {
               links.push(
-                ['Product admin web app', 'http://${{ needs.prepare.outputs.product_admin_web_app_host }}'],
-                ['Product admin web app Storybook', 'http://${{ needs.prepare.outputs.product_admin_web_app_host }}/storybook'],
-                ['Product gateway', 'http://${{ needs.prepare.outputs.product_gateway_host }}'],
-                ['Product service', 'http://${{ needs.prepare.outputs.product_service_host }}'],
+                ['Product admin web app', `${scheme}://${{ needs.prepare.outputs.product_admin_web_app_host }}`],
+                ['Product admin web app Storybook', `${scheme}://${{ needs.prepare.outputs.product_admin_web_app_host }}/storybook`],
+                ['Product gateway', `${scheme}://${{ needs.prepare.outputs.product_gateway_host }}`],
+                ['Product service', `${scheme}://${{ needs.prepare.outputs.product_service_host }}`],
               );
             }
 
             if ('${{ needs.prepare.outputs.deploy_order_management }}' === 'true') {
               links.push(
-                ['Order admin web app', 'http://${{ needs.prepare.outputs.order_admin_web_app_host }}'],
-                ['Order admin web app Storybook', 'http://${{ needs.prepare.outputs.order_admin_web_app_host }}/storybook'],
-                ['Order gateway', 'http://${{ needs.prepare.outputs.order_gateway_host }}'],
-                ['Order service', 'http://${{ needs.prepare.outputs.order_service_host }}'],
+                ['Order admin web app', `${scheme}://${{ needs.prepare.outputs.order_admin_web_app_host }}`],
+                ['Order admin web app Storybook', `${scheme}://${{ needs.prepare.outputs.order_admin_web_app_host }}/storybook`],
+                ['Order gateway', `${scheme}://${{ needs.prepare.outputs.order_gateway_host }}`],
+                ['Order service', `${scheme}://${{ needs.prepare.outputs.order_service_host }}`],
               );
             }
 
             if ('${{ needs.prepare.outputs.deploy_online_storefront }}' === 'true') {
-              links.push(['Online storefront', 'http://${{ needs.prepare.outputs.storefront_web_app_host }}']);
+              links.push(['Online storefront', `${scheme}://${{ needs.prepare.outputs.storefront_web_app_host }}`]);
             }
 
             if ('${{ needs.prepare.outputs.deploy_storybook }}' === 'true') {
-              links.push(['Design system Storybook', 'http://${{ needs.prepare.outputs.storybook_host }}']);
+              links.push(['Design system Storybook', `${scheme}://${{ needs.prepare.outputs.storybook_host }}`]);
             }
 
             const decoratorBox = `

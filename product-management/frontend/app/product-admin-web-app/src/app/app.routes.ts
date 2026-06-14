@@ -1,28 +1,40 @@
 import { Routes } from '@angular/router';
-
-import { authGuard } from './core/guards/auth/auth.guard';
-import { guestGuard } from './core/guards/guest/guest.guard';
+import { authGuard, guestGuard } from '@eco/auth-features';
 
 export const routes: Routes = [
   {
     path: 'auth',
     canActivate: [guestGuard],
     loadComponent: () =>
-      import('./core/layout/auth-layout/auth-layout').then(
-        (m) => m.AuthLayout,
-      ),
+      import('@eco/auth-features').then((m) => m.AuthLayout),
+    data: {
+      authLayout: {
+        appName: 'Product Admin Web App',
+        appInitial: 'A',
+        eyebrow: 'Product management',
+        heading: 'Manage products with confidence.',
+        description:
+          'Securely access your admin tools, review catalog items, and keep your workspace organised.',
+        features: [
+          'Centralised user administration',
+          'Role and access management',
+          'Secure admin experience',
+        ],
+      },
+    },
     children: [
       {
         path: 'login',
         loadComponent: () =>
-          import('./pages/auth/login/login.page').then((m) => m.LoginPage),
+          import('@eco/auth-features').then((m) => m.LoginPage),
+        data: {
+          loginEmailPlaceholder: 'admin@test.com',
+        },
       },
       {
         path: 'forgot-password',
         loadComponent: () =>
-          import('./pages/auth/forgot-password/forgot-password.page').then(
-            (m) => m.ForgotPasswordPage,
-          ),
+          import('@eco/auth-features').then((m) => m.ForgotPasswordPage),
       },
       {
         path: '',
@@ -49,7 +61,7 @@ export const routes: Routes = [
       {
         path: 'products',
         loadChildren: () =>
-          import('./pages/products/product.routes').then(
+          import('@eco/admin-features/product').then(
             (m) => m.PRODUCTS_ROUTES,
           ),
       },

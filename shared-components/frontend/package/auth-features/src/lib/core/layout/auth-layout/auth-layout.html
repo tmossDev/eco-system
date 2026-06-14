@@ -1,0 +1,31 @@
+<main class="auth-layout">
+  <section class="brand-panel" aria-label="Application information">
+    <div class="brand-content">
+      <a href="/" class="brand-mark" [attr.aria-label]="content().appName + ' home'">
+        <span class="brand-icon">{{ content().appInitial }}</span>
+        <span>{{ content().appName }}</span>
+      </a>
+
+      <div class="brand-message">
+        <p class="eyebrow">{{ content().eyebrow }}</p>
+        <h1>{{ content().heading }}</h1>
+        <p>{{ content().description }}</p>
+      </div>
+
+      <div class="feature-list">
+        @for (feature of content().features; track feature) {
+        <div class="feature-item">
+          <span>✓</span>
+          <p>{{ feature }}</p>
+        </div>
+        }
+      </div>
+    </div>
+  </section>
+
+  <section class="auth-panel" aria-label="Authentication form">
+    <div class="auth-card">
+      <router-outlet />
+    </div>
+  </section>
+</main>

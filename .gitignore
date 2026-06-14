@@ -7,3 +7,5 @@ build/
 **/.angular/
 runtime-config.json
 **/deployment/charts/*.tgz
+.frontend-artifacts/
+.local/

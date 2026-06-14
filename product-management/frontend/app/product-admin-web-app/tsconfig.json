@@ -4,7 +4,11 @@
   "compileOnSave": false,
   "compilerOptions": {
     "paths": {
-      "@ds/*": ["./../../../../shared-components/frontend/package/design-system/ds/*/src/public-api.ts"]
+      "@ds/*": ["./../../../../shared-components/frontend/package/design-system/ds/*/src/public-api.ts"],
+      "@eco/auth-features": ["./../../../../shared-components/frontend/package/auth-features/src/public-api.ts"],
+      "@eco/admin-features": ["./../../../../shared-components/frontend/package/admin-features/src/public-api.ts"],
+      "@eco/admin-features/order": ["./../../../../shared-components/frontend/package/admin-features/src/lib/order/pages/orders/order.routes.ts"],
+      "@eco/admin-features/product": ["./../../../../shared-components/frontend/package/admin-features/src/lib/product/pages/products/product.routes.ts"]
     },
     "strict": true,
     "noImplicitOverride": true,
@@ -34,6 +38,12 @@
     },
     {
       "path": "./../../../../shared-components/frontend/package/design-system/tsconfig.json"
+    },
+    {
+      "path": "./../../../../shared-components/frontend/package/admin-features/tsconfig.lib.json"
+    },
+    {
+      "path": "./../../../../shared-components/frontend/package/auth-features/tsconfig.lib.json"
     }
   ]
 }

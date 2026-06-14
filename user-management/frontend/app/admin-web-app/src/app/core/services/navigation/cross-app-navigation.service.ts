@@ -1,7 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-
-import { AuthUser } from '../auth/auth.models';
-import { AuthService } from '../auth/auth.service';
+import { AuthService, AuthUser } from '@eco/auth-features';
 
 @Injectable({
   providedIn: 'root',

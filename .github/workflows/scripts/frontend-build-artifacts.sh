@@ -25,7 +25,12 @@ if [[ "$#" -eq 0 ]]; then
 fi
 
 NEXUS_ARTIFACT_REPOSITORY="${NEXUS_ARTIFACT_REPOSITORY:-eco-node-builds}"
-NEXUS_ARTIFACT_URL="${NEXUS_ARTIFACT_URL:-http://127.0.0.1:18081/repository/$NEXUS_ARTIFACT_REPOSITORY}"
+NEXUS_HTTP_NODE_PORT="${NEXUS_HTTP_NODE_PORT:-31328}"
+if [[ -z "${NEXUS_HTTP_URL:-}" && -n "${NEXUS_DOCKER_REGISTRY:-}" ]]; then
+  NEXUS_HTTP_URL="http://${NEXUS_DOCKER_REGISTRY%:*}:$NEXUS_HTTP_NODE_PORT"
+fi
+NEXUS_HTTP_URL="${NEXUS_HTTP_URL:-http://127.0.0.1:18081}"
+NEXUS_ARTIFACT_URL="${NEXUS_ARTIFACT_URL:-${NEXUS_HTTP_URL%/}/repository/$NEXUS_ARTIFACT_REPOSITORY}"
 NEXUS_USERNAME="${NEXUS_USERNAME:-admin}"
 NEXUS_PASSWORD="${NEXUS_PASSWORD:-${NEXUS_ADMIN_PASSWORD:-}}"
 CI_CD_NAMESPACE="${CI_CD_NAMESPACE:-eco-cicd}"
@@ -80,7 +85,7 @@ declare -A CLEAN_OUTPUTS=(
 )
 
 start_nexus_tunnel() {
-  if [[ "$NEXUS_ARTIFACT_URL" != http://127.0.0.1:* && "$NEXUS_ARTIFACT_URL" != http://localhost:* ]]; then
+  if [[ "$NEXUS_HTTP_URL" != http://127.0.0.1:* && "$NEXUS_HTTP_URL" != http://localhost:* ]]; then
     return
   fi
 
@@ -90,7 +95,7 @@ start_nexus_tunnel() {
   trap 'kill "$NEXUS_PORT_FORWARD_PID" 2>/dev/null || true' EXIT
 
   for attempt in {1..90}; do
-    if curl --silent --fail http://127.0.0.1:18081/service/rest/v1/status >/dev/null; then
+    if curl --silent --fail "${NEXUS_HTTP_URL%/}/service/rest/v1/status" >/dev/null; then
       return
     fi
     sleep 2
@@ -101,12 +106,8 @@ start_nexus_tunnel() {
 }
 
 ensure_raw_repository() {
-  local repository_api="http://127.0.0.1:18081/service/rest/v1/repositories/raw/hosted/$NEXUS_ARTIFACT_REPOSITORY"
-  local repositories_api="http://127.0.0.1:18081/service/rest/v1/repositories/raw/hosted"
-
-  if [[ "$NEXUS_ARTIFACT_URL" != http://127.0.0.1:* && "$NEXUS_ARTIFACT_URL" != http://localhost:* ]]; then
-    return
-  fi
+  local repository_api="${NEXUS_HTTP_URL%/}/service/rest/v1/repositories/raw/hosted/$NEXUS_ARTIFACT_REPOSITORY"
+  local repositories_api="${NEXUS_HTTP_URL%/}/service/rest/v1/repositories/raw/hosted"
 
   if curl --silent --fail --user "$NEXUS_USERNAME:$NEXUS_PASSWORD" "$repository_api" >/dev/null; then
     return
@@ -150,6 +151,18 @@ artifact_hash() {
     admin-web-app|product-admin-web-app|order-admin-web-app|storybook)
       paths+=(shared-components/frontend/package/design-system)
       ;;
+  esac
+
+  case "$artifact" in
+    admin-web-app|product-admin-web-app|order-admin-web-app)
+      paths+=(
+        shared-components/frontend/package/admin-features
+        shared-components/frontend/package/auth-features
+      )
+      ;;
+  esac
+
+  case "$artifact" in
     ds-button|ds-navigation-bar|ds-login-form)
       paths+=(shared-components/frontend/package/design-system/ds/tokens)
       ;;

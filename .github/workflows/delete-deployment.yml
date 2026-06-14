@@ -114,8 +114,8 @@ jobs:
               NAMESPACE="${DEFAULT_APPLICATION_NAMESPACE:-eco-test}"
               ;;
             feature)
-              if [[ ! "$REQUESTED_NAMESPACE" =~ ^[a-z0-9]{10}$ ]]; then
-                echo "Feature deletes require namespace to be the 10-character feature suffix, for example abc123def4" >&2
+              if [[ ! "$REQUESTED_NAMESPACE" =~ ^[a-z0-9]{1,10}$ ]]; then
+                echo "Feature deletes require namespace to be the 1-10 character feature suffix, for example checkout" >&2
                 exit 1
               fi
               NAMESPACE="$REQUESTED_NAMESPACE"
@@ -143,6 +143,7 @@ jobs:
             echo "NAMESPACE=$NAMESPACE"
             echo "FOUNDATION_NAMESPACE=$FOUNDATION_NAMESPACE"
             echo "CI_CD_NAMESPACE=$CI_CD_NAMESPACE"
+            echo "INGRESS_TLS_SECRET_NAME=${INGRESS_TLS_SECRET_NAME:-}"
           } >> "$GITHUB_ENV"
 
       - name: Set up Helm
@@ -193,6 +194,19 @@ jobs:
           helm uninstall online-storefront --namespace "$NAMESPACE" --ignore-not-found
           helm uninstall user-management --namespace "$NAMESPACE" --ignore-not-found
           helm uninstall shared-components --namespace "$NAMESPACE" --ignore-not-found
+
+      - name: Delete application ingress TLS secret
+        if: env.DELETE_APPLICATION == 'true'
+        shell: bash
+        run: |
+          if [[ -z "${INGRESS_TLS_SECRET_NAME:-}" ]]; then
+            echo "INGRESS_TLS_SECRET_NAME is empty; no ingress TLS secret to delete."
+            exit 0
+          fi
+
+          kubectl delete secret "$INGRESS_TLS_SECRET_NAME" \
+            --namespace "$NAMESPACE" \
+            --ignore-not-found
 
       - name: Delete application namespace
         if: env.DELETE_APPLICATION == 'true' && inputs.delete_namespace

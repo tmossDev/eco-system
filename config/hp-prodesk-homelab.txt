@@ -9,11 +9,17 @@ DEFAULT_APPLICATION_NAMESPACE=eco-test
 # Nexus Docker registry address used by both the GitHub runner and all Kubernetes nodes.
 # Use a node-reachable IP/DNS name for multi-node clusters; do not use 127.0.0.1.
 NEXUS_DOCKER_REGISTRY=172.18.0.4:30500
+NEXUS_HTTP_NODE_PORT=31328
 NEXUS_DOCKER_NODE_PORT=30500
 IMAGE_NAMESPACE=eco-system
 
-BASE_DOMAIN=com
+# Local ingress hostnames are built as <namespace>.<app>.<base-domain>.
+# Use a development domain here so a single trusted wildcard cert can cover
+# feature namespaces and eco-test, for example *.admin-web-app.eco.test.
+BASE_DOMAIN=eco.test
 INGRESS_CLASS_NAME=traefik
+INGRESS_TLS_SECRET_NAME=eco-local-ingress-tls
+INGRESS_SCHEME=https
 
 POSTGRES_DB=ecoDB
 POSTGRES_HOST=postgres.eco-foundation.svc.cluster.local
