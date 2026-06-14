@@ -11,6 +11,7 @@ adminWebAppApiIngress:
   pathType: Prefix
   serviceName: user-gateway
   servicePortName: http
+  paths: []
   tls: []
 
 adminWebAppStoriesIngress:

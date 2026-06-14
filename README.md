@@ -179,12 +179,16 @@ falls back to an OpenSSL self-signed certificate. The fallback is enough for
 Kubernetes TLS wiring, but browsers will warn unless they already trust the
 issuing CA.
 
-If you are using the browser proxy, point it at all namespaces you want to
-browse:
+If you are using the browser proxy, start it from the repository root. By
+default it watches ingresses in every namespace, so it will pick up `eco-test`,
+feature namespaces, and custom namespaces such as `admin`:
 
 ```sh
-scripts/local-ingress-proxy.py --namespace eco-test --namespace checkout
+scripts/local-ingress-proxy.py
 ```
+
+Then configure Firefox to use `127.0.0.1:18080` for both HTTP and HTTPS proxy
+traffic.
 
 ## Deployment Flow
 

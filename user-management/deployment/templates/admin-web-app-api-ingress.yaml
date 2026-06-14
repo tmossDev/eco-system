@@ -27,6 +27,8 @@ spec:
     - host: {{ .host | quote }}
       http:
         paths:
+          {{- if .paths }}
+          {{- range .paths }}
           - path: {{ .path | default "/api" }}
             pathType: {{ .pathType | default "Prefix" }}
             backend:
@@ -34,5 +36,15 @@ spec:
                 name: {{ .serviceName | default "user-gateway" }}
                 port:
                   name: {{ .servicePortName | default "http" }}
+          {{- end }}
+          {{- else }}
+          - path: {{ .path | default "/api" }}
+            pathType: {{ .pathType | default "Prefix" }}
+            backend:
+              service:
+                name: {{ .serviceName | default "user-gateway" }}
+                port:
+                  name: {{ .servicePortName | default "http" }}
+          {{- end }}
 {{- end }}
 {{- end }}

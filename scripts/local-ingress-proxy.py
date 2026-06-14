@@ -107,17 +107,16 @@ class IngressProxyHandler(BaseHTTPRequestHandler):
     def do_CONNECT(self) -> None:
         hosts, target_host, _, https_port = self.state()
         host, port = split_host_port(self.path, https_port)
-        if host not in hosts:
-            self.send_error(502, f"Unknown ingress host: {host}")
-            return
+        upstream_host = target_host if host in hosts else host
+        upstream_port = port if host not in hosts or port != 443 else https_port
 
         try:
             upstream = socket.create_connection(
-                (target_host, port if port != 443 else https_port),
+                (upstream_host, upstream_port),
                 timeout=10,
             )
         except OSError as exc:
-            self.send_error(502, f"Could not connect to ingress: {exc}")
+            self.send_error(502, f"Could not connect to upstream: {exc}")
             return
 
         self.send_response(200, "Connection Established")
@@ -161,11 +160,11 @@ class IngressProxyHandler(BaseHTTPRequestHandler):
             original_host, original_port = split_host_port(host_header, 80)
             path = self.path
 
-        if original_host not in hosts:
-            self.send_error(502, f"Unknown ingress host: {original_host}")
-            return
-
-        port = https_port if original_port == 443 else http_port
+        is_ingress_host = original_host in hosts
+        upstream_host = target_host if is_ingress_host else original_host
+        port = https_port if is_ingress_host and original_port == 443 else original_port
+        if is_ingress_host and original_port != 443:
+            port = http_port
         body = self.read_body()
         headers = {
             key: value
@@ -174,7 +173,7 @@ class IngressProxyHandler(BaseHTTPRequestHandler):
         }
         headers["Host"] = original_host
 
-        connection = http.client.HTTPConnection(target_host, port, timeout=30)
+        connection = http.client.HTTPConnection(upstream_host, port, timeout=30)
         try:
             connection.request(self.command, path, body=body, headers=headers)
             response = connection.getresponse()
@@ -272,7 +271,10 @@ def parse_args() -> argparse.Namespace:
         action="append",
         dest="namespaces",
         default=[],
-        help="Kubernetes namespace to read ingresses from. Can be passed more than once.",
+        help=(
+            "Kubernetes namespace to read ingresses from. Can be passed more than "
+            "once. Defaults to every namespace when omitted."
+        ),
     )
     parser.add_argument(
         "-A",
@@ -303,10 +305,11 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    namespaces = args.namespaces or ["eco-test"]
+    namespaces = args.namespaces
+    all_namespaces = args.all_namespaces or not namespaces
 
     try:
-        hosts, discovered_target = ingress_data(namespaces, args.all_namespaces)
+        hosts, discovered_target = ingress_data(namespaces, all_namespaces)
     except (RuntimeError, json.JSONDecodeError) as exc:
         raise SystemExit(str(exc))
 
@@ -314,7 +317,7 @@ def main() -> None:
     target_host = args.target_host or discovered_target
 
     if not hosts:
-        scope = "any namespace" if args.all_namespaces else ", ".join(namespaces)
+        scope = "any namespace" if all_namespaces else ", ".join(namespaces)
         raise SystemExit(f"No ingress hosts found in {scope}")
     if not target_host:
         raise SystemExit(
@@ -339,7 +342,7 @@ def main() -> None:
             target=refresh_ingress_state,
             args=(
                 namespaces,
-                args.all_namespaces,
+                all_namespaces,
                 args.extra_hosts,
                 args.target_host,
                 args.refresh_interval,
