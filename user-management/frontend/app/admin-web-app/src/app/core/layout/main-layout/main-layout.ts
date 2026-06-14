@@ -1,8 +1,7 @@
 import { Component, computed, inject } from '@angular/core';
 import { Router, RouterOutlet } from '@angular/router';
 import { NavigationBar, NavigationBarVariant, NavigationItem } from '@ds/navigation-bar';
-
-import { AuthService } from '../../services/auth/auth.service';
+import { AuthService } from '@eco/auth-features';
 
 @Component({
   selector: 'app-main-layout',

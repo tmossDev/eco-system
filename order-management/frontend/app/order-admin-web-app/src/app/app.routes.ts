@@ -1,28 +1,37 @@
 import { Routes } from '@angular/router';
-
-import { authGuard } from './core/guards/auth/auth.guard';
-import { guestGuard } from './core/guards/guest/guest.guard';
+import { authGuard, guestGuard } from '@eco/auth-features';
 
 export const routes: Routes = [
   {
     path: 'auth',
     canActivate: [guestGuard],
     loadComponent: () =>
-      import('./core/layout/auth-layout/auth-layout').then(
-        (m) => m.AuthLayout,
-      ),
+      import('@eco/auth-features').then((m) => m.AuthLayout),
+    data: {
+      authLayout: {
+        appName: 'Order Admin Web App',
+        appInitial: 'O',
+        eyebrow: 'Order management',
+        heading: 'Manage fulfillment with confidence.',
+        description:
+          'Securely access your admin tools, review customer orders, and keep your workspace organised.',
+        features: [
+          'Centralised order queue',
+          'Status and fulfillment updates',
+          'Secure admin experience',
+        ],
+      },
+    },
     children: [
       {
         path: 'login',
         loadComponent: () =>
-          import('./pages/auth/login/login.page').then((m) => m.LoginPage),
+          import('@eco/auth-features').then((m) => m.LoginPage),
       },
       {
         path: 'forgot-password',
         loadComponent: () =>
-          import('./pages/auth/forgot-password/forgot-password.page').then(
-            (m) => m.ForgotPasswordPage,
-          ),
+          import('@eco/auth-features').then((m) => m.ForgotPasswordPage),
       },
       {
         path: '',
@@ -48,15 +57,8 @@ export const routes: Routes = [
       },
       {
         path: 'orders',
-        loadComponent: () =>
-          import('./pages/orders/order-list.page').then((m) => m.OrderListPage),
-      },
-      {
-        path: 'orders/:id',
-        loadComponent: () =>
-          import('./pages/orders/order-detail.page').then(
-            (m) => m.OrderDetailPage,
-          ),
+        loadChildren: () =>
+          import('@eco/admin-features/order').then((m) => m.ORDER_ROUTES),
       },
     ],
   },

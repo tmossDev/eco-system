@@ -1,0 +1,456 @@
+import { Component, OnInit, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { finalize } from 'rxjs';
+
+import {
+  ProductPhoto,
+  ProductSummary,
+} from '../../../core/services/product/product.model';
+import {
+  calculateDiscountedPrice,
+  formatDiscountValue,
+} from '../../../core/services/product/product-pricing';
+import { ProductService } from '../../../core/services/product/product.service';
+
+@Component({
+  selector: 'app-product-list-page',
+  imports: [RouterLink],
+  template: `
+    <section class="products-page">
+      <div class="page-header">
+        <div>
+          <p class="eyebrow">Product management</p>
+          <h1>Products</h1>
+          <p class="description">
+            Manage the catalog for physical, digital, bundled, and service
+            products from one product workspace.
+          </p>
+        </div>
+
+        <a [routerLink]="['/products', '1', 'edit']" class="primary-action">
+          Edit sample
+        </a>
+      </div>
+
+      @if (isLoading()) {
+        <p class="state-message">Loading products...</p>
+      }
+
+      @if (errorMessage()) {
+        <p class="error-message">{{ errorMessage() }}</p>
+      }
+
+      <div class="table-card">
+        <div class="table-header">
+          <h2>All products</h2>
+          <span>{{ products().length }} products</span>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+            <tr>
+              <th>Name</th>
+              <th>SKU</th>
+              <th>Category</th>
+              <th>Labels</th>
+              <th>Price</th>
+              <th>Discounts</th>
+              <th>Inventory</th>
+              <th>Status</th>
+              <th class="actions-column">Actions</th>
+            </tr>
+            </thead>
+
+            <tbody>
+              @for (product of products(); track product.id) {
+                <tr>
+                  <td>
+                    <div class="product-cell">
+                      @if (primaryPhoto(product)) {
+                        <img
+                          [src]="photoPreviewUrl(primaryPhoto(product)!)"
+                          [alt]="primaryPhoto(product)!.alt_text || product.name"
+                          loading="lazy"
+                          decoding="async"
+                          width="44"
+                          height="44"
+                        />
+                      } @else {
+                        <span class="photo-fallback">
+                          {{ product.sku.slice(0, 2) }}
+                        </span>
+                      }
+
+                      <span>
+                        <strong>{{ product.name }}</strong>
+                        <small>{{ product.short_description }}</small>
+                      </span>
+                    </div>
+                  </td>
+                  <td>{{ product.sku }}</td>
+                  <td>{{ product.category }}</td>
+                  <td>
+                    <span class="label-list">
+                      @for (label of product.labels; track label) {
+                        <span>{{ label }}</span>
+                      }
+                    </span>
+                  </td>
+                  <td>
+                    <span class="price-stack">
+                      @if (discountedPrice(product).hasDiscount) {
+                        <strong>
+                          {{ formatMoney(discountedPrice(product).finalCents, product.currency) }}
+                        </strong>
+                        <span>{{ formatMoney(product.price_cents, product.currency) }}</span>
+                      } @else {
+                        <strong>{{ formatMoney(product.price_cents, product.currency) }}</strong>
+                      }
+                    </span>
+                  </td>
+                  <td>{{ discountSummary(product) }}</td>
+                  <td>{{ product.inventory_count }}</td>
+                  <td>
+                    <span class="status" [class]="product.status.toLowerCase()">
+                      {{ product.status }}
+                    </span>
+                  </td>
+                  <td class="actions">
+                    <a [routerLink]="['/products', product.id]">View</a>
+                    <a [routerLink]="['/products', product.id, 'edit']">Edit</a>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  `,
+  styles: `
+    .products-page {
+      padding: 2rem;
+      color: #172033;
+    }
+
+    .page-header,
+    .table-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .page-header {
+      margin-bottom: 2rem;
+    }
+
+    .eyebrow {
+      margin: 0 0 0.5rem;
+      color: #56657f;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    h1,
+    h2 {
+      margin: 0;
+    }
+
+    h1 {
+      font-size: clamp(2rem, 4vw, 3rem);
+      letter-spacing: -0.04em;
+    }
+
+    h2 {
+      font-size: 1.15rem;
+    }
+
+    .description {
+      max-width: 42rem;
+      margin: 0.75rem 0 0;
+      color: #56657f;
+      line-height: 1.6;
+    }
+
+    .state-message,
+    .success-message,
+    .error-message {
+      margin: 0 0 1rem;
+      border-radius: 0.75rem;
+      padding: 0.75rem 0.9rem;
+      font-weight: 700;
+    }
+
+    .state-message {
+      background: #eff6ff;
+      color: #1d4ed8;
+    }
+
+    .success-message {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .error-message {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .primary-action,
+    .secondary-action {
+      display: inline-flex;
+      border: 0;
+      border-radius: 999px;
+      padding: 0.75rem 1rem;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .primary-action {
+      background: #2563eb;
+      color: #ffffff;
+    }
+
+    .table-card {
+      overflow: hidden;
+      border: 1px solid #dbe3ef;
+      border-radius: 1rem;
+      background: #ffffff;
+      box-shadow: 0 10px 30px rgb(15 23 42 / 6%);
+    }
+
+    .table-header {
+      padding: 1.25rem;
+      border-bottom: 1px solid #dbe3ef;
+    }
+
+    .table-header span {
+      color: #56657f;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 1040px;
+    }
+
+    th,
+    td {
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid #eef2f7;
+      text-align: left;
+    }
+
+    th {
+      color: #56657f;
+      font-size: 0.8rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .product-cell {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      min-width: 18rem;
+    }
+
+    .product-cell img,
+    .photo-fallback {
+      flex: 0 0 auto;
+      width: 2.75rem;
+      height: 2.75rem;
+      border-radius: 0.5rem;
+    }
+
+    .product-cell img {
+      object-fit: cover;
+      background: #eef2f7;
+    }
+
+    .photo-fallback {
+      display: grid;
+      place-items: center;
+      background: #dbeafe;
+      color: #1d4ed8;
+      font-size: 0.8rem;
+      font-weight: 800;
+    }
+
+    .product-cell span:last-child {
+      display: grid;
+      gap: 0.2rem;
+      min-width: 0;
+    }
+
+    .product-cell small {
+      max-width: 24rem;
+      overflow: hidden;
+      color: #56657f;
+      font-size: 0.85rem;
+      font-weight: 500;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .price-stack {
+      display: inline-grid;
+      gap: 0.15rem;
+      white-space: nowrap;
+    }
+
+    .price-stack span {
+      color: #64748b;
+      font-size: 0.85rem;
+      text-decoration: line-through;
+    }
+
+    .label-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      min-width: 10rem;
+    }
+
+    .label-list span {
+      border-radius: 999px;
+      background: #eef2f7;
+      color: #334155;
+      padding: 0.2rem 0.5rem;
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    .status {
+      display: inline-flex;
+      border-radius: 999px;
+      padding: 0.3rem 0.65rem;
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
+
+    .active {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .draft {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .archived {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .actions-column {
+      width: 10rem;
+    }
+
+    .actions {
+      display: flex;
+      gap: 0.75rem;
+    }
+
+    .actions a {
+      color: #2563eb;
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    @media (max-width: 700px) {
+      .products-page {
+        padding: 1rem;
+      }
+
+      .page-header {
+        display: grid;
+      }
+
+    }
+  `,
+})
+export class ProductListPage implements OnInit {
+  private readonly productService = inject(ProductService);
+
+  protected readonly isLoading = signal(true);
+  protected readonly errorMessage = signal('');
+  protected readonly products = signal<ProductSummary[]>([]);
+
+  public ngOnInit(): void {
+    this.loadProducts();
+  }
+
+  protected formatMoney(priceCents: number, currency: string): string {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency,
+    }).format(priceCents / 100);
+  }
+
+  protected discountedPrice(product: ProductSummary) {
+    return calculateDiscountedPrice(product.price_cents, product.discounts);
+  }
+
+  protected discountSummary(product: ProductSummary): string {
+    const discounts = product.discounts ?? [];
+    if (discounts.length === 0) {
+      return 'None';
+    }
+
+    return discounts
+      .map((discount) => {
+        return formatDiscountValue(discount, this.formatMoney.bind(this));
+      })
+      .join(', ');
+  }
+
+  protected primaryPhoto(product: ProductSummary): ProductPhoto | null {
+    const photos = product.photos ?? [];
+
+    return (
+      photos.find((photo) => photo.is_primary) ?? photos[0] ?? null
+    );
+  }
+
+  protected photoPreviewUrl(photo: ProductPhoto): string {
+    return photo.thumbnail_url || photo.url;
+  }
+
+  private loadProducts(): void {
+    this.isLoading.set(true);
+
+    this.productService
+      .getProducts()
+      .pipe(
+        finalize(() => {
+          this.isLoading.set(false);
+        }),
+      )
+      .subscribe({
+        next: (products) => {
+          this.products.set(products);
+        },
+        error: () => {
+          this.errorMessage.set('Unable to load products.');
+        },
+      });
+  }
+
+}

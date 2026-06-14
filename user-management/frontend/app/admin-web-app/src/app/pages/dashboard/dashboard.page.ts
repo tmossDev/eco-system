@@ -67,12 +67,12 @@ import { CrossAppNavigationService } from '../../core/services/navigation/cross-
               <span>Open the customer storefront with your current session</span>
             </a>
 
-            <a [href]="productManagementUrl()" class="action-card">
+            <a routerLink="/products" class="action-card">
               <strong>Product management</strong>
               <span>Review catalog, pricing, and promotions</span>
             </a>
 
-            <a [href]="orderManagementUrl()" class="action-card">
+            <a routerLink="/orders" class="action-card">
               <strong>Order management</strong>
               <span>Track orders and fulfillment status</span>
             </a>
@@ -266,12 +266,6 @@ export class DashboardPage implements OnInit {
   protected readonly recentActivity = signal<string[]>([]);
   protected readonly storefrontUrl = computed(() =>
     this.crossAppNavigation.buildUrl('storefront-web-app'),
-  );
-  protected readonly productManagementUrl = computed(() =>
-    this.crossAppNavigation.buildUrl('product-admin-web-app'),
-  );
-  protected readonly orderManagementUrl = computed(() =>
-    this.crossAppNavigation.buildUrl('order-admin-web-app'),
   );
 
   public ngOnInit(): void {

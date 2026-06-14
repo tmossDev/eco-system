@@ -1,0 +1,30 @@
+{
+  "name": "@eco/auth-features",
+  "version": "0.0.1",
+  "scripts": {
+    "ng": "ng",
+    "build": "corepack pnpm --filter design-system build:login-form && ng build auth-features",
+    "watch": "ng build auth-features --watch --configuration development"
+  },
+  "private": true,
+  "packageManager": "pnpm@11.0.9",
+  "peerDependencies": {
+    "@angular/common": "catalog:",
+    "@angular/core": "catalog:",
+    "@angular/forms": "catalog:",
+    "@angular/router": "catalog:",
+    "rxjs": "catalog:"
+  },
+  "dependencies": {
+    "tslib": "catalog:"
+  },
+  "devDependencies": {
+    "@angular/build": "catalog:",
+    "@angular/cli": "catalog:",
+    "@angular/compiler-cli": "catalog:",
+    "login-form": "workspace:*",
+    "ng-packagr": "catalog:",
+    "typescript": "catalog:"
+  },
+  "sideEffects": false
+}

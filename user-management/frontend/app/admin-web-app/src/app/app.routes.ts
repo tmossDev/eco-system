@@ -1,28 +1,37 @@
 import { Routes } from '@angular/router';
-
-import { authGuard } from './core/guards/auth/auth.guard';
-import { guestGuard } from './core/guards/guest/guest.guard';
+import { authGuard, guestGuard } from '@eco/auth-features';
 
 export const routes: Routes = [
   {
     path: 'auth',
     canActivate: [guestGuard],
     loadComponent: () =>
-      import('./core/layout/auth-layout/auth-layout').then(
-        (m) => m.AuthLayout,
-      ),
+      import('@eco/auth-features').then((m) => m.AuthLayout),
+    data: {
+      authLayout: {
+        appName: 'Admin Web App',
+        appInitial: 'A',
+        eyebrow: 'User management',
+        heading: 'Manage users with confidence.',
+        description:
+          'Securely access your admin tools, review user accounts, and keep your workspace organised.',
+        features: [
+          'Centralised user administration',
+          'Role and access management',
+          'Secure admin experience',
+        ],
+      },
+    },
     children: [
       {
         path: 'login',
         loadComponent: () =>
-          import('./pages/auth/login/login.page').then((m) => m.LoginPage),
+          import('@eco/auth-features').then((m) => m.LoginPage),
       },
       {
         path: 'forgot-password',
         loadComponent: () =>
-          import('./pages/auth/forgot-password/forgot-password.page').then(
-            (m) => m.ForgotPasswordPage,
-          ),
+          import('@eco/auth-features').then((m) => m.ForgotPasswordPage),
       },
       {
         path: '',
@@ -53,27 +62,15 @@ export const routes: Routes = [
       },
       {
         path: 'products',
-        loadComponent: () =>
-          import('./pages/integrations/external-app-redirect.page').then(
-            (m) => m.ExternalAppRedirectPage,
+        loadChildren: () =>
+          import('@eco/admin-features/product').then(
+            (m) => m.PRODUCTS_ROUTES,
           ),
-        data: {
-          appHostSegment: 'product-admin-web-app',
-          path: '/products',
-          title: 'Product management',
-        },
       },
       {
         path: 'orders',
-        loadComponent: () =>
-          import('./pages/integrations/external-app-redirect.page').then(
-            (m) => m.ExternalAppRedirectPage,
-          ),
-        data: {
-          appHostSegment: 'order-admin-web-app',
-          path: '/orders',
-          title: 'Order management',
-        },
+        loadChildren: () =>
+          import('@eco/admin-features/order').then((m) => m.ORDER_ROUTES),
       },
       {
         path: 'settings',

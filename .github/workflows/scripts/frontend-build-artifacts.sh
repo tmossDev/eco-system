@@ -150,6 +150,18 @@ artifact_hash() {
     admin-web-app|product-admin-web-app|order-admin-web-app|storybook)
       paths+=(shared-components/frontend/package/design-system)
       ;;
+  esac
+
+  case "$artifact" in
+    admin-web-app|product-admin-web-app|order-admin-web-app)
+      paths+=(
+        shared-components/frontend/package/admin-features
+        shared-components/frontend/package/auth-features
+      )
+      ;;
+  esac
+
+  case "$artifact" in
     ds-button|ds-navigation-bar|ds-login-form)
       paths+=(shared-components/frontend/package/design-system/ds/tokens)
       ;;

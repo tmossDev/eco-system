@@ -2,13 +2,10 @@ import { HttpErrorResponse, HttpInterceptorFn, HttpResponse } from '@angular/com
 import { inject } from '@angular/core';
 import { of, throwError } from 'rxjs';
 import { delay } from 'rxjs/operators';
-
-import { RuntimeConfigService } from '../../config/runtime-config.service';
 import {
-  MOCK_LOGIN_RESPONSE,
-  isMockLoginValid,
-} from '../../services/auth/auth.mocks';
-import { LoginRequest } from '../../services/auth/auth.models';
+  RuntimeConfigService,
+  mockAuthApiResponse,
+} from '@eco/auth-features';
 import { MOCK_DASHBOARD_SUMMARY } from '../../services/dashboard/dashboard.mocks';
 import { MOCK_SETTINGS } from '../../services/settings/settings.mocks';
 import { ApplicationSettings } from '../../services/settings/settings.models';
@@ -35,18 +32,9 @@ export const mockApiInterceptor: HttpInterceptorFn = (request, next) => {
     return next(request);
   }
 
-  if (method === 'POST' && url === '/api/auth/login') {
-    const body = request.body as LoginRequest;
-
-    if (!isMockLoginValid(body.email, body.password)) {
-      return mockError(401, 'Invalid email or password');
-    }
-
-    return mockResponse(MOCK_LOGIN_RESPONSE);
-  }
-
-  if (method === 'POST' && url === '/api/auth/forgot-password') {
-    return mockResponse(undefined);
+  const authMockResponse = mockAuthApiResponse(request, url);
+  if (authMockResponse) {
+    return authMockResponse;
   }
 
   if (method === 'GET' && url === '/api/dashboard/summary') {

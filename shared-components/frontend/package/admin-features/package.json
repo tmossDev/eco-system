@@ -1,0 +1,29 @@
+{
+  "name": "@eco/admin-features",
+  "version": "0.0.1",
+  "scripts": {
+    "ng": "ng",
+    "build": "ng build admin-features",
+    "watch": "ng build admin-features --watch --configuration development"
+  },
+  "private": true,
+  "packageManager": "pnpm@11.0.9",
+  "peerDependencies": {
+    "@angular/common": "catalog:",
+    "@angular/core": "catalog:",
+    "@angular/forms": "catalog:",
+    "@angular/router": "catalog:",
+    "rxjs": "catalog:"
+  },
+  "dependencies": {
+    "tslib": "catalog:"
+  },
+  "devDependencies": {
+    "@angular/build": "catalog:",
+    "@angular/cli": "catalog:",
+    "@angular/compiler-cli": "catalog:",
+    "ng-packagr": "catalog:",
+    "typescript": "catalog:"
+  },
+  "sideEffects": false
+}
