@@ -29,6 +29,7 @@ app:
         port: 8081
         targetPort: http
         protocol: TCP
+        nodePort: 31328
       - name: docker
         port: 5000
         targetPort: docker

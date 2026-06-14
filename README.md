@@ -84,6 +84,7 @@ address is configured in `config/hp-prodesk-homelab.txt`:
 ```sh
 CI_CD_NAMESPACE=eco-cicd
 NEXUS_DOCKER_REGISTRY=172.18.0.4:30500
+NEXUS_HTTP_NODE_PORT=31328
 NEXUS_DOCKER_NODE_PORT=30500
 IMAGE_NAMESPACE=eco-system
 ```
@@ -91,6 +92,10 @@ IMAGE_NAMESPACE=eco-system
 `NEXUS_DOCKER_REGISTRY` must be reachable by the GitHub runner and every
 Kubernetes node. For multi-node clusters, do not use `127.0.0.1` or
 `localhost`.
+
+`NEXUS_HTTP_NODE_PORT` exposes the Nexus REST API for deployment automation.
+Workflows use this direct NodePort instead of `kubectl port-forward`, so Nexus
+setup does not depend on API-server-to-kubelet connection upgrades.
 
 Nexus is exposed as an HTTP Docker registry. The deploy workflow configures the
 GitHub runner Docker daemon as an insecure registry before pushing images. Each

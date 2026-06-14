@@ -393,6 +393,7 @@ jobs:
           echo "CI_CD_NAMESPACE=${{ needs.prepare.outputs.ci_cd_namespace }}" >> "$GITHUB_ENV"
           echo "NEXUS_DOCKER_REGISTRY=$NEXUS_DOCKER_REGISTRY" >> "$GITHUB_ENV"
           echo "NEXUS_ADMIN_PASSWORD=$NEXUS_ADMIN_PASSWORD" >> "$GITHUB_ENV"
+          echo "NEXUS_HTTP_NODE_PORT=${NEXUS_HTTP_NODE_PORT:-31328}" >> "$GITHUB_ENV"
           echo "NEXUS_DOCKER_NODE_PORT=${NEXUS_DOCKER_NODE_PORT:-30500}" >> "$GITHUB_ENV"
         env:
           NEXUS_ADMIN_PASSWORD_SECRET: ${{ secrets.NEXUS_ADMIN_PASSWORD }}
@@ -454,6 +455,7 @@ jobs:
             --set nexus.app.service.ports[0].port=8081 \
             --set nexus.app.service.ports[0].targetPort=http \
             --set nexus.app.service.ports[0].protocol=TCP \
+            --set nexus.app.service.ports[0].nodePort="$NEXUS_HTTP_NODE_PORT" \
             --set nexus.app.service.ports[1].name=docker \
             --set nexus.app.service.ports[1].port=5000 \
             --set nexus.app.service.ports[1].targetPort=docker \
@@ -517,12 +519,11 @@ jobs:
             -l app.kubernetes.io/name=nexus,app.kubernetes.io/instance=ci-cd \
             --timeout=600s
 
-          kubectl port-forward -n "$CI_CD_NAMESPACE" deployment/nexus 18081:8081 &
-          PORT_FORWARD_PID="$!"
-          trap 'kill "$PORT_FORWARD_PID" 2>/dev/null || true; show_nexus_status' EXIT
+          NEXUS_HTTP_URL="${NEXUS_HTTP_URL:-http://${NEXUS_DOCKER_REGISTRY%:*}:${NEXUS_HTTP_NODE_PORT:-31328}}"
+          trap 'show_nexus_status' EXIT
 
           for attempt in {1..90}; do
-            if curl --silent --fail http://127.0.0.1:18081/service/rest/v1/status >/dev/null; then
+            if curl --silent --fail "$NEXUS_HTTP_URL/service/rest/v1/status" >/dev/null; then
               break
             fi
 
@@ -535,27 +536,27 @@ jobs:
           done
 
           curl --silent --fail --user "admin:$NEXUS_ADMIN_PASSWORD" \
-            http://127.0.0.1:18081/service/rest/v1/system/eula \
+            "$NEXUS_HTTP_URL/service/rest/v1/system/eula" \
             | jq '.accepted = true' > nexus-eula-accepted.json
 
           curl --silent --fail --user "admin:$NEXUS_ADMIN_PASSWORD" \
             --request POST \
             --header "Content-Type: application/json" \
             --data-binary @nexus-eula-accepted.json \
-            http://127.0.0.1:18081/service/rest/v1/system/eula
+            "$NEXUS_HTTP_URL/service/rest/v1/system/eula"
 
           curl --silent --fail --user "admin:$NEXUS_ADMIN_PASSWORD" \
-            http://127.0.0.1:18081/service/rest/v1/security/realms/active \
+            "$NEXUS_HTTP_URL/service/rest/v1/security/realms/active" \
             | jq 'if index("DockerToken") then . else . + ["DockerToken"] end' > nexus-active-realms.json
 
           curl --silent --fail --user "admin:$NEXUS_ADMIN_PASSWORD" \
             --request PUT \
             --header "Content-Type: application/json" \
             --data-binary @nexus-active-realms.json \
-            http://127.0.0.1:18081/service/rest/v1/security/realms/active
+            "$NEXUS_HTTP_URL/service/rest/v1/security/realms/active"
 
           if curl --silent --fail --user "admin:$NEXUS_ADMIN_PASSWORD" \
-            http://127.0.0.1:18081/service/rest/v1/repositories/docker/hosted/eco-images >/dev/null; then
+            "$NEXUS_HTTP_URL/service/rest/v1/repositories/docker/hosted/eco-images" >/dev/null; then
             echo "Nexus Docker repository eco-images already exists"
           else
             curl --silent --fail --user "admin:$NEXUS_ADMIN_PASSWORD" \
@@ -581,11 +582,11 @@ jobs:
                   "proprietaryComponents": false
                 }
               }' \
-              http://127.0.0.1:18081/service/rest/v1/repositories/docker/hosted
+              "$NEXUS_HTTP_URL/service/rest/v1/repositories/docker/hosted"
           fi
 
           if curl --silent --fail --user "admin:$NEXUS_ADMIN_PASSWORD" \
-            http://127.0.0.1:18081/service/rest/v1/repositories/raw/hosted/eco-node-builds >/dev/null; then
+            "$NEXUS_HTTP_URL/service/rest/v1/repositories/raw/hosted/eco-node-builds" >/dev/null; then
             echo "Nexus raw repository eco-node-builds already exists"
           else
             curl --silent --fail --user "admin:$NEXUS_ADMIN_PASSWORD" \
@@ -609,7 +610,7 @@ jobs:
                   "contentDisposition": "ATTACHMENT"
                 }
               }' \
-              http://127.0.0.1:18081/service/rest/v1/repositories/raw/hosted
+              "$NEXUS_HTTP_URL/service/rest/v1/repositories/raw/hosted"
           fi
 
       - name: Show CI/CD rollout
