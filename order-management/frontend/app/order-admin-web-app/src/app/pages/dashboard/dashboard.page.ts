@@ -2,8 +2,7 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
-import { Order } from '../../core/services/order/order.models';
-import { OrderService } from '../../core/services/order/order.service';
+import { Order, OrderService } from '@eco/admin-features';
 
 @Component({
   selector: 'app-dashboard-page',

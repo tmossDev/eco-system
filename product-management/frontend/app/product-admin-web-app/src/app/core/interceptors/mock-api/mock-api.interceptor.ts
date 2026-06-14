@@ -14,6 +14,11 @@ import { MOCK_DASHBOARD_SUMMARY } from '../../services/dashboard/dashboard.mocks
 import { MOCK_SETTINGS } from '../../services/settings/settings.mocks';
 import { ApplicationSettings } from '../../services/settings/settings.models';
 import {
+  CreateDiscountRequest,
+  CreateProductRequest,
+  UpdateDiscountRequest,
+  UpdatePromotionSettingsRequest,
+  UpdateProductRequest,
   createMockDiscount,
   createMockProduct,
   deleteMockDiscount,
@@ -27,14 +32,7 @@ import {
   updateMockPromotionSettings,
   updateMockProduct,
   uploadMockProductPhoto,
-} from '../../services/product/product.mocks';
-import {
-  CreateDiscountRequest,
-  CreateProductRequest,
-  UpdateDiscountRequest,
-  UpdatePromotionSettingsRequest,
-  UpdateProductRequest,
-} from '../../services/product/product.model';
+} from '@eco/admin-features';
 
 const MOCK_API_DELAY_MS = 350;
 

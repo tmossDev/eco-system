@@ -6,11 +6,11 @@ import {
   CreateDiscountRequest,
   Discount,
   DiscountType,
+  formatDiscountValue,
   PromotionSettings,
+  ProductService,
   ProductSummary,
-} from '../../../core/services/product/product.model';
-import { formatDiscountValue } from '../../../core/services/product/product-pricing';
-import { ProductService } from '../../../core/services/product/product.service';
+} from '@eco/admin-features';
 
 type PromotionTarget = 'all' | 'category' | 'label' | 'selected';
 
