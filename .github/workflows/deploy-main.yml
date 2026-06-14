@@ -1809,7 +1809,7 @@ jobs:
         if: needs.prepare.outputs.deploy_user_management == 'true'
         shell: bash
         env:
-          GATEWAY_BASE_URL: http://127.0.0.1:18080
+          GATEWAY_BASE_URL: http://127.0.0.1:18180
           FUNCTIONAL_TEST_EMAIL: admin@test.com
           FUNCTIONAL_TEST_PASSWORD: password
         run: |
@@ -1820,7 +1820,7 @@ jobs:
             kubectl logs -n "$NAMESPACE" deployment/user-gateway --tail=120 || true
             echo "::endgroup::"
           }
-          kubectl port-forward -n "$NAMESPACE" service/user-gateway 18080:8080 &
+          kubectl port-forward -n "$NAMESPACE" service/user-gateway 18180:8080 &
           PORT_FORWARD_PID="$!"
           trap 'kill "$PORT_FORWARD_PID" 2>/dev/null || true; show_gateway_logs' EXIT
 

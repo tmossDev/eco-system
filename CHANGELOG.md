@@ -1,10 +1,11 @@
 # Project Change Log
 
-## v1.24.0 - (4 Changes)
+## v1.24.0 - (5 Changes)
 - Changed the local ingress proxy to watch all Kubernetes ingress namespaces by default and pass non-ingress browser traffic through normally.
 - Added HTTPS local ingress documentation for Firefox proxy setup and pipeline-managed Kubernetes TLS secrets.
 - Added multi-backend routing for the main admin web app API ingress so product and order feature routes can call their gateways from the shared admin host.
 - Updated main, changed-feature, full-feature, and local deployment workflows to route admin `/api/orders`, product, discount, and promotion paths to the correct gateways.
+- Changed deployed user-gateway functional tests to use local port `18180` so they do not collide with the local ingress proxy on `18080`.
 
 ## v1.23.0 - (6 Changes)
 - Added shared frontend admin feature routes for product and order management pages under `shared-components/frontend/package/admin-features`.
