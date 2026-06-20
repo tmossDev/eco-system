@@ -5,6 +5,9 @@
   ],
   "onboarding": false,
   "requireConfig": "optional",
+  "branchPrefix": "feature/",
+  "branchPrefixOld": "renovate/",
+  "hashedBranchLength": 18,
   "dependencyDashboard": true,
   "labels": [
     "dependencies"
