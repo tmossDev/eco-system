@@ -216,7 +216,9 @@ and waits for Kubernetes rollouts before running deployed smoke tests.
 - [.github/workflows/delete-deployment.yml](.github/workflows/delete-deployment.yml)
   removes application, foundation, or CI/CD releases.
 - [.github/workflows/renovate.yml](.github/workflows/renovate.yml) runs
-  Renovate manually from GitHub Actions.
+  Renovate manually from GitHub Actions. It requires a `RENOVATE_TOKEN`
+  repository secret containing a GitHub PAT that can create branches and pull
+  requests.
 - [.github/workflows/configs/renovate.json](.github/workflows/configs/renovate.json) configures dependency update behavior.
 
 ## Local Notes

@@ -35,6 +35,8 @@ jobs:
       build_order_management: ${{ steps.context.outputs.build_order_management }}
       build_online_storefront: ${{ steps.context.outputs.build_online_storefront }}
       build_storybook: ${{ steps.context.outputs.build_storybook }}
+      audit_frontend: ${{ steps.detect_security_audit.outputs.audit_frontend }}
+      audit_backend: ${{ steps.detect_security_audit.outputs.audit_backend }}
       namespace: ${{ steps.context.outputs.namespace }}
       ci_cd_namespace: ${{ steps.context.outputs.ci_cd_namespace }}
       foundation_namespace: ${{ steps.context.outputs.foundation_namespace }}
@@ -182,6 +184,45 @@ jobs:
             echo "order_management_changed=$ORDER_MANAGEMENT_CHANGED"
             echo "online_storefront_changed=$ONLINE_STOREFRONT_CHANGED"
             echo "storybook_changed=$STORYBOOK_CHANGED"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Detect dependency audit changes
+        id: detect_security_audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEPLOYMENT_MODE="feature-changed"
+          AUDIT_FRONTEND=false
+          AUDIT_BACKEND=false
+
+          changed_files="$(mktemp)"
+
+          if [[ "$DEPLOYMENT_MODE" == "standard" || "$DEPLOYMENT_MODE" == "main" ]]; then
+            if git rev-parse --verify HEAD~1 >/dev/null 2>&1; then
+              git diff --name-only HEAD~1 HEAD > "$changed_files"
+            else
+              git ls-tree -r --name-only HEAD > "$changed_files"
+            fi
+          elif [[ "$DEPLOYMENT_MODE" == "feature-changed" || "$DEPLOYMENT_MODE" == "feature-full" ]]; then
+            BASE_REF="${{ github.base_ref || 'main' }}"
+            if ! git show-ref --quiet "refs/remotes/origin/$BASE_REF"; then
+              git fetch origin "$BASE_REF":"refs/remotes/origin/$BASE_REF"
+            fi
+            git diff --name-only origin/"$BASE_REF" HEAD > "$changed_files"
+          else
+            : > "$changed_files"
+          fi
+
+          if grep -qE '(^|/)frontend/|^(package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml)$' "$changed_files"; then
+            AUDIT_FRONTEND=true
+          fi
+          if grep -qE '(^|/)backend/|^(go\.mod|go\.sum)$' "$changed_files"; then
+            AUDIT_BACKEND=true
+          fi
+
+          {
+            echo "audit_frontend=$AUDIT_FRONTEND"
+            echo "audit_backend=$AUDIT_BACKEND"
           } >> "$GITHUB_OUTPUT"
 
       - name: Resolve namespaces and hosts
@@ -360,6 +401,62 @@ jobs:
             echo "storefront_web_app_host=${NAMESPACE}.storefront-web-app.${BASE_DOMAIN}"
             echo "storybook_host=${NAMESPACE}.storybook.${BASE_DOMAIN}"
           } >> "$GITHUB_OUTPUT"
+
+  frontend_dependency_audit:
+    name: Frontend dependency CVE audit
+    needs: prepare
+    runs-on: [self-hosted, linux]
+    steps:
+      - name: Skip audit when frontend dependencies are unchanged
+        if: needs.prepare.outputs.audit_frontend != 'true'
+        shell: bash
+        run: echo "No frontend or pnpm dependency changes detected."
+
+      - name: Checkout
+        if: needs.prepare.outputs.audit_frontend == 'true'
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        if: needs.prepare.outputs.audit_frontend == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Set up pnpm
+        if: needs.prepare.outputs.audit_frontend == 'true'
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.0.9
+
+      - name: Run pnpm audit
+        if: needs.prepare.outputs.audit_frontend == 'true'
+        shell: bash
+        run: pnpm audit
+
+  backend_vulnerability_audit:
+    name: Backend dependency CVE audit
+    needs: prepare
+    runs-on: [self-hosted, linux]
+    steps:
+      - name: Skip audit when backend dependencies are unchanged
+        if: needs.prepare.outputs.audit_backend != 'true'
+        shell: bash
+        run: echo "No backend or Go module dependency changes detected."
+
+      - name: Checkout
+        if: needs.prepare.outputs.audit_backend == 'true'
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        if: needs.prepare.outputs.audit_backend == 'true'
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Run govulncheck
+        if: needs.prepare.outputs.audit_backend == 'true'
+        shell: bash
+        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 
   ci_cd:
     name: Deploy CI/CD services
