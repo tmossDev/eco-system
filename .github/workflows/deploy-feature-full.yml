@@ -1008,8 +1008,6 @@ jobs:
       - name: Set up pnpm
         if: needs.prepare.outputs.build_user_management == 'true' || needs.prepare.outputs.build_product_management == 'true' || needs.prepare.outputs.build_order_management == 'true' || needs.prepare.outputs.build_online_storefront == 'true' || needs.prepare.outputs.build_storybook == 'true'
         uses: pnpm/action-setup@v4
-        with:
-          version: 11.0.9
 
       - name: Set up kubectl for Nexus artifacts
         if: needs.prepare.outputs.build_user_management == 'true' || needs.prepare.outputs.build_product_management == 'true' || needs.prepare.outputs.build_order_management == 'true' || needs.prepare.outputs.build_online_storefront == 'true' || needs.prepare.outputs.build_storybook == 'true'
