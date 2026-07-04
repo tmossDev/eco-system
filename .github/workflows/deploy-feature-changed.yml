@@ -496,7 +496,7 @@ jobs:
           NEXUS_ADMIN_PASSWORD_SECRET: ${{ secrets.NEXUS_ADMIN_PASSWORD }}
 
       - name: Set up Helm
-        uses: azure/setup-helm@v4
+        uses: azure/setup-helm@v5
 
       - name: Set up kubectl
         uses: azure/setup-kubectl@v4
@@ -821,7 +821,7 @@ jobs:
           docker push "$IMAGE_PREFIX/liquibase:$IMAGE_TAG"
 
       - name: Set up Helm
-        uses: azure/setup-helm@v4
+        uses: azure/setup-helm@v5
 
       - name: Set up kubectl
         uses: azure/setup-kubectl@v4
@@ -1358,7 +1358,7 @@ jobs:
           fi
 
       - name: Set up Helm
-        uses: azure/setup-helm@v4
+        uses: azure/setup-helm@v5
 
       - name: Set up kubectl
         uses: azure/setup-kubectl@v4
