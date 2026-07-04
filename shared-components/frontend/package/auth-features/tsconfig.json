@@ -2,7 +2,7 @@
   "compileOnSave": false,
   "compilerOptions": {
     "paths": {
-      "@ds/login-form": ["../design-system/dist/login-form"]
+      "@shared/login-form": ["../design-system/dist/login-form"]
     },
     "strict": true,
     "noImplicitOverride": true,

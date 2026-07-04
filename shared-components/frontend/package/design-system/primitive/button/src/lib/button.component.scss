@@ -1,0 +1,45 @@
+@use "@foundation/tokens/scss" as tokens;
+
+.primitive-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: tokens.$size-spacing-2;
+  cursor: pointer;
+  border: 0;
+  border-radius: tokens.$size-radius-pill;
+  font-weight: 700;
+  line-height: 1;
+  font-family: "Nunito Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+.primitive-button--primary {
+  background-color: tokens.$color-brand-primary;
+  color: tokens.$color-text-inverse;
+}
+
+.primitive-button--secondary {
+  background-color: transparent;
+  color: tokens.$color-text-base;
+  box-shadow: tokens.$shadow-inset-border;
+}
+
+.primitive-button--small {
+  padding: 10px 16px;
+  font-size: tokens.$size-font-xs;
+}
+
+.primitive-button--medium {
+  padding: 11px 20px;
+  font-size: tokens.$size-font-sm;
+}
+
+.primitive-button--large {
+  padding: 12px 24px;
+  font-size: tokens.$size-font-md;
+}
+
+.primitive-button:disabled {
+  cursor: default;
+  opacity: 0.65;
+}

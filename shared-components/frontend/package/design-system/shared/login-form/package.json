@@ -1,0 +1,18 @@
+{
+  "name": "@shared/login-form",
+  "version": "0.0.1",
+  "peerDependencies": {
+    "@angular/common": "catalog:",
+    "@angular/core": "catalog:",
+    "@angular/forms": "catalog:",
+    "@primitive/button": "workspace:*",
+    "@primitive/form": "workspace:*"
+  },
+  "devDependencies": {
+    "@foundation/tokens": "workspace:*"
+  },
+  "dependencies": {
+    "tslib": "catalog:"
+  },
+  "sideEffects": false
+}

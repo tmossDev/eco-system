@@ -2,6 +2,41 @@
 
 This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.2.10.
 
+## Component Boundaries
+
+The design system is split into four layers. New components should enter the lowest layer that can honestly own them.
+
+### Foundation
+
+Foundation packages define the visual contract. They do not render product UI.
+
+- `@foundation/tokens`: colors, spacing, radius, type scale, motion, and shadows.
+
+### Primitives
+
+Primitive packages are small building blocks. They should be generic, token-driven, accessible, and free of product workflows, routing, data fetching, and business copy.
+
+- `@primitive/icon`
+- `@primitive/button`
+- `@primitive/form`
+
+Primitive components should expose constrained variants instead of arbitrary visual escape hatches. For example, prefer `variant="primary"` over passing custom colors.
+
+### Patterns
+
+Pattern packages compose primitives into reusable UI structures. They may know about common layout behavior, but they should still avoid owning application state or domain workflows.
+
+- `@shared/navigation-bar`
+- `@shared/login-form`
+
+Patterns depend on primitives, never the other way around. If a component starts needing service calls, feature-specific routes, permission checks, or domain state, it belongs outside the design system.
+
+### Features
+
+Feature components live in application or feature packages such as `auth-features` and `admin-features`. They can compose design-system primitives and patterns while owning product behavior.
+
+Examples: login pages, authenticated dashboard shells, route-aware pages, API-backed forms, and permission-specific navigation.
+
 ## Development server
 
 To start a local development server, run:
@@ -38,7 +73,7 @@ This will compile your project and store the build artifacts in the `dist/` dire
 
 ## Design Tokens
 
-Design tokens live in `ds/tokens/tokens` and are generated with Style Dictionary into `@ds/tokens`.
+Design tokens live in `foundation/tokens/tokens` and are generated with Style Dictionary into `@foundation/tokens`.
 
 ```bash
 corepack pnpm build:tokens
@@ -47,7 +82,7 @@ corepack pnpm build:tokens
 Components can use the generated SCSS module:
 
 ```scss
-@use "@ds/tokens/scss" as tokens;
+@use "@foundation/tokens/scss" as tokens;
 
 .example {
   color: tokens.$color-text-base;
@@ -57,10 +92,10 @@ Components can use the generated SCSS module:
 Applications that need runtime CSS custom properties can import:
 
 ```scss
-@use "@ds/tokens/scss/theme";
+@use "@foundation/tokens/scss/theme";
 ```
 
-When publishing a component package outside this repo, publish/install `@ds/tokens` with it so the component styles keep the same token contract.
+When publishing a component package outside this repo, publish/install `@foundation/tokens` with it so the component styles keep the same token contract.
 
 ## Running unit tests
 

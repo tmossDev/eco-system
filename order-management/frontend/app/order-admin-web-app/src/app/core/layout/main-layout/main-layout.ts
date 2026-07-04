@@ -4,7 +4,7 @@ import {
   NavigationBar,
   NavigationBarVariant,
   NavigationItem,
-} from '@ds/navigation-bar';
+} from '@shared/navigation-bar';
 import { AuthService } from '@eco/auth-features';
 
 @Component({

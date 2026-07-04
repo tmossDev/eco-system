@@ -4,7 +4,9 @@
   "compileOnSave": false,
   "compilerOptions": {
     "paths": {
-      "@ds/*": ["./../../../../shared-components/frontend/package/design-system/ds/*/src/public-api.ts"],
+      "@foundation/*": ["./../../../../shared-components/frontend/package/design-system/foundation/*/src/public-api.ts"],
+      "@primitive/*": ["./../../../../shared-components/frontend/package/design-system/primitive/*/src/public-api.ts"],
+      "@shared/*": ["./../../../../shared-components/frontend/package/design-system/shared/*/src/public-api.ts"],
       "@eco/auth-features": ["./../../../../shared-components/frontend/package/auth-features/src/public-api.ts"],
       "@eco/admin-features": ["./../../../../shared-components/frontend/package/admin-features/src/public-api.ts"],
       "@eco/admin-features/order": ["./../../../../shared-components/frontend/package/admin-features/src/lib/order/pages/orders/order.routes.ts"],

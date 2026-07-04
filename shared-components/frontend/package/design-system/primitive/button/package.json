@@ -1,0 +1,15 @@
+{
+  "name": "@primitive/button",
+  "version": "0.0.1",
+  "peerDependencies": {
+    "@angular/common": "catalog:",
+    "@angular/core": "catalog:"
+  },
+  "devDependencies": {
+    "@foundation/tokens": "workspace:*"
+  },
+  "dependencies": {
+    "tslib": "catalog:"
+  },
+  "sideEffects": false
+}

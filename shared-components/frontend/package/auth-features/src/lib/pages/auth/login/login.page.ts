@@ -1,6 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { LoginForm, LoginFormSubmitEvent } from '@ds/login-form';
+import { LoginForm, LoginFormSubmitEvent } from '@shared/login-form';
 import { finalize } from 'rxjs';
 
 import { AuthService } from '../../../core/services/auth/auth.service';
@@ -9,7 +9,7 @@ import { AuthService } from '../../../core/services/auth/auth.service';
   selector: 'app-login-page',
   imports: [LoginForm],
   template: `
-    <ds-login-form
+    <shared-login-form
       [isSubmitting]="isSubmitting()"
       [errorMessage]="errorMessage()"
       [emailPlaceholder]="emailPlaceholder"

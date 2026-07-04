@@ -2,7 +2,8 @@ import type { StorybookConfig } from '@storybook/angular';
 
 const config: StorybookConfig = {
   "stories": [
-    "../../../package/design-system/ds/*/src/**/*.stories.@(js|jsx|mjs|ts|tsx)"
+    "../../../package/design-system/primitive/*/src/**/*.stories.@(js|jsx|mjs|ts|tsx)",
+    "../../../package/design-system/shared/*/src/**/*.stories.@(js|jsx|mjs|ts|tsx)"
   ],
   "addons": [
     "@storybook/addon-a11y",

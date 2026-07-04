@@ -5,7 +5,9 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@ds/*": ["../../package/design-system/ds/*/src/public-api.ts"]
+      "@foundation/*": ["../../package/design-system/foundation/*/src/public-api.ts"],
+      "@primitive/*": ["../../package/design-system/primitive/*/src/public-api.ts"],
+      "@shared/*": ["../../package/design-system/shared/*/src/public-api.ts"]
     },
     "strict": true,
     "noImplicitOverride": true,

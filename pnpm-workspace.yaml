@@ -4,7 +4,9 @@ packages:
   - "order-management/frontend/app/*"
   - "online-storefront/frontend/app/*"
   - "shared-components/frontend/package/*"
-  - "shared-components/frontend/package/design-system/ds/*"
+  - "shared-components/frontend/package/design-system/foundation/*"
+  - "shared-components/frontend/package/design-system/primitive/*"
+  - "shared-components/frontend/package/design-system/shared/*"
   - "shared-components/frontend/app/*"
 
 allowBuilds:

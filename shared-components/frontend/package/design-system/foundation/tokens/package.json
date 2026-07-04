@@ -1,0 +1,27 @@
+{
+  "name": "@foundation/tokens",
+  "version": "0.0.1",
+  "description": "Design System tokens generated with Style Dictionary.",
+  "scripts": {
+    "build": "style-dictionary build --config style-dictionary.config.json",
+    "watch": "style-dictionary build --config style-dictionary.config.json --watch"
+  },
+  "exports": {
+    "./scss": "./src/scss/index.scss",
+    "./scss/theme": "./src/scss/theme.scss",
+    "./scss/variables": "./src/scss/_variables.scss",
+    "./scss/map": "./src/scss/_map.scss",
+    "./tokens/*": "./tokens/*"
+  },
+  "files": [
+    "src/scss",
+    "tokens",
+    "style-dictionary.config.json"
+  ],
+  "devDependencies": {
+    "style-dictionary": "catalog:"
+  },
+  "sideEffects": [
+    "**/*.scss"
+  ]
+}

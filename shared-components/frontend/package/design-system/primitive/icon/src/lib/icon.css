@@ -1,0 +1,35 @@
+.primitive-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: currentColor;
+  line-height: 1;
+  vertical-align: middle;
+}
+
+.primitive-icon svg {
+  display: block;
+  width: 1em;
+  height: 1em;
+  fill: currentColor;
+}
+
+.primitive-icon--xs {
+  font-size: 12px;
+}
+
+.primitive-icon--small {
+  font-size: 16px;
+}
+
+.primitive-icon--medium {
+  font-size: 24px;
+}
+
+.primitive-icon--large {
+  font-size: 32px;
+}
+
+.primitive-icon--xl {
+  font-size: 40px;
+}

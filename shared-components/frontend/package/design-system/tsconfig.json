@@ -4,8 +4,9 @@
   "compileOnSave": false,
   "compilerOptions": {
     "paths": {
-      "@ds/*": ["./dist/*"],
-      "login-form": ["./dist/login-form"]
+      "@foundation/*": ["./dist/*"],
+      "@primitive/*": ["./dist/*"],
+      "@shared/*": ["./dist/*"]
     },
     "strict": true,
     "noImplicitOverride": true,
@@ -28,28 +29,34 @@
   "files": [],
   "references": [
     {
-      "path": "./ds/button/tsconfig.lib.json"
+      "path": "./primitive/button/tsconfig.lib.json"
     },
     {
-      "path": "./ds/button/tsconfig.spec.json"
+      "path": "./primitive/button/tsconfig.spec.json"
     },
     {
-      "path": "./ds/navigation-bar/tsconfig.lib.json"
+      "path": "./shared/navigation-bar/tsconfig.lib.json"
     },
     {
-      "path": "./ds/navigation-bar/tsconfig.spec.json"
+      "path": "./shared/navigation-bar/tsconfig.spec.json"
     },
     {
-      "path": "./ds/icon/tsconfig.lib.json"
+      "path": "./primitive/icon/tsconfig.lib.json"
     },
     {
-      "path": "./ds/icon/tsconfig.spec.json"
+      "path": "./primitive/icon/tsconfig.spec.json"
     },
     {
-      "path": "./ds/login-form/tsconfig.lib.json"
+      "path": "./shared/login-form/tsconfig.lib.json"
     },
     {
-      "path": "./ds/login-form/tsconfig.spec.json"
+      "path": "./shared/login-form/tsconfig.spec.json"
+    },
+    {
+      "path": "./primitive/form/tsconfig.lib.json"
+    },
+    {
+      "path": "./primitive/form/tsconfig.spec.json"
     }
   ]
 }

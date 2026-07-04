@@ -1,0 +1,74 @@
+@use "@foundation/tokens/scss" as tokens;
+
+.shared-login-form {
+  display: grid;
+  gap: tokens.$size-spacing-4;
+  border: 1px solid tokens.$color-border-default;
+  border-radius: tokens.$size-radius-lg;
+  background: tokens.$color-surface-base;
+  padding: tokens.$size-spacing-6;
+  box-shadow: tokens.$shadow-lg;
+}
+
+.shared-login-form__header {
+  margin-bottom: tokens.$size-spacing-2;
+}
+
+.shared-login-form__eyebrow {
+  margin: 0 0 tokens.$size-spacing-2;
+  color: tokens.$color-brand-primary;
+  font-size: tokens.$size-font-xs;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+h2 {
+  margin: 0;
+  color: tokens.$color-text-base;
+  font-size: 2rem;
+}
+
+.shared-login-form__header p:last-child {
+  margin: tokens.$size-spacing-3 0 0;
+  color: tokens.$color-text-muted;
+  line-height: 1.6;
+}
+
+.shared-login-form__error-message {
+  margin: 0;
+  border-radius: tokens.$size-radius-md;
+  background: #fee2e2;
+  color: #991b1b;
+  padding: tokens.$size-spacing-3 0.9rem;
+  font-weight: 700;
+}
+
+.shared-login-form__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: tokens.$size-spacing-4;
+}
+
+.shared-login-form__remember-me {
+  display: flex;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 0.45rem;
+  color: tokens.$color-text-muted;
+  font-weight: 600;
+}
+
+a {
+  color: tokens.$color-brand-primary;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+@media (max-width: 420px) {
+  .shared-login-form__row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

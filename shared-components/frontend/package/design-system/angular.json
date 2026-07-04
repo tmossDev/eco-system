@@ -5,22 +5,22 @@
     "packageManager": "pnpm",
     "analytics": "193c01d7-5762-4b24-a53b-146e58325b64"
   },
-  "newProjectRoot": "ds",
+  "newProjectRoot": "primitive",
   "projects": {
     "button": {
       "projectType": "library",
-      "root": "ds/button",
-      "sourceRoot": "ds/button/src",
-      "prefix": "lib",
+      "root": "primitive/button",
+      "sourceRoot": "primitive/button/src",
+      "prefix": "primitive",
       "architect": {
         "build": {
           "builder": "@angular/build:ng-packagr",
           "configurations": {
             "production": {
-              "tsConfig": "ds/button/tsconfig.lib.prod.json"
+              "tsConfig": "primitive/button/tsconfig.lib.prod.json"
             },
             "development": {
-              "tsConfig": "ds/button/tsconfig.lib.json"
+              "tsConfig": "primitive/button/tsconfig.lib.json"
             }
           },
           "defaultConfiguration": "production"
@@ -28,25 +28,25 @@
         "test": {
           "builder": "@angular/build:unit-test",
           "options": {
-            "tsConfig": "ds/button/tsconfig.spec.json"
+            "tsConfig": "primitive/button/tsconfig.spec.json"
           }
         }
       }
     },
     "navigation-bar": {
       "projectType": "library",
-      "root": "ds/navigation-bar",
-      "sourceRoot": "ds/navigation-bar/src",
-      "prefix": "lib",
+      "root": "shared/navigation-bar",
+      "sourceRoot": "shared/navigation-bar/src",
+      "prefix": "shared",
       "architect": {
         "build": {
           "builder": "@angular/build:ng-packagr",
           "configurations": {
             "production": {
-              "tsConfig": "ds/navigation-bar/tsconfig.lib.prod.json"
+              "tsConfig": "shared/navigation-bar/tsconfig.lib.prod.json"
             },
             "development": {
-              "tsConfig": "ds/navigation-bar/tsconfig.lib.json"
+              "tsConfig": "shared/navigation-bar/tsconfig.lib.json"
             }
           },
           "defaultConfiguration": "production"
@@ -54,25 +54,25 @@
         "test": {
           "builder": "@angular/build:unit-test",
           "options": {
-            "tsConfig": "ds/navigation-bar/tsconfig.spec.json"
+            "tsConfig": "shared/navigation-bar/tsconfig.spec.json"
           }
         }
       }
     },
     "icon": {
       "projectType": "library",
-      "root": "ds/icon",
-      "sourceRoot": "ds/icon/src",
-      "prefix": "lib",
+      "root": "primitive/icon",
+      "sourceRoot": "primitive/icon/src",
+      "prefix": "primitive",
       "architect": {
         "build": {
           "builder": "@angular/build:ng-packagr",
           "configurations": {
             "production": {
-              "tsConfig": "ds/icon/tsconfig.lib.prod.json"
+              "tsConfig": "primitive/icon/tsconfig.lib.prod.json"
             },
             "development": {
-              "tsConfig": "ds/icon/tsconfig.lib.json"
+              "tsConfig": "primitive/icon/tsconfig.lib.json"
             }
           },
           "defaultConfiguration": "production"
@@ -80,25 +80,25 @@
         "test": {
           "builder": "@angular/build:unit-test",
           "options": {
-            "tsConfig": "ds/icon/tsconfig.spec.json"
+            "tsConfig": "primitive/icon/tsconfig.spec.json"
           }
         }
       }
     },
     "login-form": {
       "projectType": "library",
-      "root": "ds/login-form",
-      "sourceRoot": "ds/login-form/src",
-      "prefix": "lib",
+      "root": "shared/login-form",
+      "sourceRoot": "shared/login-form/src",
+      "prefix": "shared",
       "architect": {
         "build": {
           "builder": "@angular/build:ng-packagr",
           "configurations": {
             "production": {
-              "tsConfig": "ds/login-form/tsconfig.lib.prod.json"
+              "tsConfig": "shared/login-form/tsconfig.lib.prod.json"
             },
             "development": {
-              "tsConfig": "ds/login-form/tsconfig.lib.json"
+              "tsConfig": "shared/login-form/tsconfig.lib.json"
             }
           },
           "defaultConfiguration": "production"
@@ -106,7 +106,33 @@
         "test": {
           "builder": "@angular/build:unit-test",
           "options": {
-            "tsConfig": "ds/login-form/tsconfig.spec.json"
+            "tsConfig": "shared/login-form/tsconfig.spec.json"
+          }
+        }
+      }
+    },
+    "form": {
+      "projectType": "library",
+      "root": "primitive/form",
+      "sourceRoot": "primitive/form/src",
+      "prefix": "primitive",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:ng-packagr",
+          "configurations": {
+            "production": {
+              "tsConfig": "primitive/form/tsconfig.lib.prod.json"
+            },
+            "development": {
+              "tsConfig": "primitive/form/tsconfig.lib.json"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "tsConfig": "primitive/form/tsconfig.spec.json"
           }
         }
       }

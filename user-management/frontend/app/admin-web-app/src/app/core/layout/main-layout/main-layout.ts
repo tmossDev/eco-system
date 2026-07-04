@@ -1,6 +1,6 @@
 import { Component, computed, inject } from '@angular/core';
 import { Router, RouterOutlet } from '@angular/router';
-import { NavigationBar, NavigationBarVariant, NavigationItem } from '@ds/navigation-bar';
+import { NavigationBar, NavigationBarVariant, NavigationItem } from '@shared/navigation-bar';
 import { AuthService } from '@eco/auth-features';
 
 @Component({

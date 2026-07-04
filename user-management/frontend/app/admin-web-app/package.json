@@ -25,7 +25,7 @@
     "tslib": "catalog:"
   },
   "peerDependencies": {
-    "@ds/navigation-bar": "workspace:*"
+    "@shared/navigation-bar": "workspace:*"
   },
   "devDependencies": {
     "@angular/build": "catalog:",

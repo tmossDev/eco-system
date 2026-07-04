@@ -1,0 +1,16 @@
+{
+  "name": "@shared/navigation-bar",
+  "version": "0.0.1",
+  "peerDependencies": {
+    "@angular/common": "catalog:",
+    "@angular/core": "catalog:",
+    "@primitive/icon": "workspace:*"
+  },
+  "devDependencies": {
+    "@foundation/tokens": "workspace:*"
+  },
+  "dependencies": {
+    "tslib": "catalog:"
+  },
+  "sideEffects": false
+}

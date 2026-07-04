@@ -1,0 +1,106 @@
+<nav
+  class="shared-nav"
+  [class.shared-nav--sidebar]="variant === 'sidebar'"
+  [class.shared-nav--header]="variant === 'header'"
+  [class.shared-nav--to-header]="transitioningTo === 'header'"
+  [class.shared-nav--to-sidebar]="transitioningTo === 'sidebar'"
+  aria-label="Main navigation"
+>
+  <div class="shared-nav__brand-row">
+    <div class="shared-nav__brand">
+      <span class="shared-nav__title">{{ title }}</span>
+      <span class="shared-nav__subtitle">{{ subtitle }}</span>
+    </div>
+
+    <button
+      type="button"
+      class="shared-nav__toggle shared-nav__toggle--brand"
+      [attr.aria-label]="toggleAriaLabel"
+      [title]="toggleAriaLabel"
+      [disabled]="isTransitioning"
+      (click)="toggleVariant()"
+    >
+      <primitive-icon [name]="toggleIcon"></primitive-icon>
+    </button>
+  </div>
+
+  <div class="shared-nav__items-row">
+    <div class="shared-nav__items">
+      @for (item of items; track item.route) {
+        <a
+          [routerLink]="item.route"
+          routerLinkActive="active"
+          [routerLinkActiveOptions]="{ exact: item.route === '/' }"
+        >
+          <span class="shared-nav__icon">
+            <primitive-icon [name]="item.icon"></primitive-icon>
+          </span>
+          <span class="shared-nav__item-text">{{ item.text }}</span>
+        </a>
+      }
+    </div>
+
+    @if (user) {
+      <div class="shared-nav__user-menu" [class.shared-nav__user-menu--open]="isUserMenuOpen">
+        <button
+          type="button"
+          class="shared-nav__user-trigger"
+          [attr.aria-expanded]="isUserMenuOpen"
+          aria-haspopup="menu"
+          [attr.aria-label]="userMenuLabel"
+          [title]="userMenuLabel"
+          (click)="toggleUserMenu()"
+          (keydown.escape)="closeUserMenu()"
+        >
+          <span class="shared-nav__avatar">{{ userInitials }}</span>
+          <primitive-icon name="chevron-down"></primitive-icon>
+        </button>
+
+        @if (isUserMenuOpen) {
+          <div class="shared-nav__user-popover" role="menu">
+            <div class="shared-nav__user-summary">
+              <span class="shared-nav__avatar shared-nav__avatar--large">{{ userInitials }}</span>
+              <span>
+                <span class="shared-nav__user-name">{{ user.name }}</span>
+                <span class="shared-nav__user-email">{{ user.email }}</span>
+              </span>
+            </div>
+
+            @if (profileRoute) {
+              <a
+                class="shared-nav__user-action"
+                [routerLink]="profileRoute"
+                role="menuitem"
+                (click)="closeUserMenu()"
+              >
+                <primitive-icon name="user"></primitive-icon>
+                <span>View profile</span>
+              </a>
+            }
+
+            <button
+              type="button"
+              class="shared-nav__user-action"
+              role="menuitem"
+              (click)="onLogout()"
+            >
+              <primitive-icon name="log-out"></primitive-icon>
+              <span>Log out</span>
+            </button>
+          </div>
+        }
+      </div>
+    }
+
+    <button
+      type="button"
+      class="shared-nav__toggle shared-nav__toggle--items"
+      [attr.aria-label]="toggleAriaLabel"
+      [title]="toggleAriaLabel"
+      [disabled]="isTransitioning"
+      (click)="toggleVariant()"
+    >
+      <primitive-icon [name]="toggleIcon"></primitive-icon>
+    </button>
+  </div>
+</nav>

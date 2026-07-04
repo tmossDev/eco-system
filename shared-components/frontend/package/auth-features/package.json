@@ -22,7 +22,7 @@
     "@angular/build": "catalog:",
     "@angular/cli": "catalog:",
     "@angular/compiler-cli": "catalog:",
-    "login-form": "workspace:*",
+    "@shared/login-form": "workspace:*",
     "ng-packagr": "catalog:",
     "typescript": "catalog:"
   },
