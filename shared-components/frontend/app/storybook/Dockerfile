@@ -1,4 +1,4 @@
-FROM nginx:1.27-alpine
+FROM nginx:1.31-alpine
 
 COPY shared-components/frontend/app/storybook/storybook-static /var/www/storybook
 

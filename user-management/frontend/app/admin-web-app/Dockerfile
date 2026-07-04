@@ -1,4 +1,4 @@
-FROM nginx:1.27-alpine
+FROM nginx:1.31-alpine
 
 COPY user-management/frontend/app/admin-web-app/dist/admin-web-app/browser /usr/share/nginx/html
 COPY user-management/frontend/app/admin-web-app/storybook-static /usr/share/nginx/html/storybook

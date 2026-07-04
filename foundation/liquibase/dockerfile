@@ -1,4 +1,4 @@
-FROM liquibase/liquibase:4.27
+FROM liquibase/liquibase:4.33
 
 COPY . .
 
