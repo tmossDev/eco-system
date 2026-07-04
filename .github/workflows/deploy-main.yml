@@ -71,7 +71,7 @@ jobs:
       storybook_host: ${{ steps.context.outputs.storybook_host }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -388,7 +388,7 @@ jobs:
     runs-on: [self-hosted, linux]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Load environment config
         shell: bash
@@ -647,7 +647,7 @@ jobs:
     runs-on: [self-hosted, linux]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Load environment config
         shell: bash
@@ -891,7 +891,7 @@ jobs:
     runs-on: [self-hosted, linux]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Load environment config
         shell: bash

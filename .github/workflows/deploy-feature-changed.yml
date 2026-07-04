@@ -53,7 +53,7 @@ jobs:
       storybook_host: ${{ steps.context.outputs.storybook_host }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -414,7 +414,7 @@ jobs:
 
       - name: Checkout
         if: needs.prepare.outputs.audit_frontend == 'true'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Node
         if: needs.prepare.outputs.audit_frontend == 'true'
@@ -445,7 +445,7 @@ jobs:
 
       - name: Checkout
         if: needs.prepare.outputs.audit_backend == 'true'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Go
         if: needs.prepare.outputs.audit_backend == 'true'
@@ -465,7 +465,7 @@ jobs:
     runs-on: [self-hosted, linux]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Load environment config
         shell: bash
@@ -724,7 +724,7 @@ jobs:
     runs-on: [self-hosted, linux]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Load environment config
         shell: bash
@@ -968,7 +968,7 @@ jobs:
     runs-on: [self-hosted, linux]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Load environment config
         shell: bash
