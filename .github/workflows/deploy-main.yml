@@ -995,7 +995,7 @@ jobs:
 
       - name: Set up Go
         if: needs.prepare.outputs.deploy_user_management == 'true' || needs.prepare.outputs.deploy_product_management == 'true' || needs.prepare.outputs.deploy_order_management == 'true' || needs.prepare.outputs.deploy_online_storefront == 'true'
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
 
