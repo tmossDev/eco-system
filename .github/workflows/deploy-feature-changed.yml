@@ -424,7 +424,7 @@ jobs:
 
       - name: Set up pnpm
         if: needs.prepare.outputs.audit_frontend == 'true'
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         with:
           version: 11.0.9
 
@@ -1110,7 +1110,7 @@ jobs:
 
       - name: Set up pnpm
         if: needs.prepare.outputs.build_user_management == 'true' || needs.prepare.outputs.build_product_management == 'true' || needs.prepare.outputs.build_order_management == 'true' || needs.prepare.outputs.build_online_storefront == 'true' || needs.prepare.outputs.build_storybook == 'true'
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         with:
           version: 11.0.9
 
