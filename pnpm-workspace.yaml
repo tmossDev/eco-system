@@ -13,6 +13,26 @@ allowBuilds:
   lmdb: true
   msgpackr-extract: true
 
+overrides:
+  "@babel/core": "7.29.7"
+  "@sigstore/core": "3.2.1"
+  "@sigstore/verify": "3.1.1"
+  esbuild: "0.28.1"
+  hono: "4.12.25"
+  "http-proxy-middleware@2": "2.0.10"
+  "http-proxy-middleware@3": "3.0.7"
+  js-yaml: "4.3.0"
+  launch-editor: "2.14.1"
+  qs: "6.15.2"
+  shell-quote: "1.8.4"
+  sigstore: "4.1.1"
+  tar: "7.5.16"
+  "undici@6": "6.27.0"
+  "undici@7": "7.28.0"
+  uuid: "11.1.1"
+  webpack-dev-server: "5.2.5"
+  ws: "8.21.0"
+
 catalog:
   "@angular/common": "^22.0.5"
   "@angular/compiler": "^22.0.5"
