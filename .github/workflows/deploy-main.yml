@@ -1963,7 +1963,7 @@ jobs:
 
       - name: Comment useful links on pull request
         if: github.event_name == 'pull_request'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const marker = '<!-- deployment-useful-links -->';
