@@ -41,4 +41,4 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          pnpm run build
+          pnpm -r --if-present build
