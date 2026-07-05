@@ -1088,6 +1088,8 @@ jobs:
       - name: Build frontend applications and storybooks
         if: needs.prepare.outputs.build_user_management == 'true' || needs.prepare.outputs.build_product_management == 'true' || needs.prepare.outputs.build_order_management == 'true' || needs.prepare.outputs.build_online_storefront == 'true' || needs.prepare.outputs.build_storybook == 'true'
         shell: bash
+        env:
+          FRONTEND_ARTIFACT_CACHE: "false"
         run: |
           set -euo pipefail
           pnpm install --frozen-lockfile
