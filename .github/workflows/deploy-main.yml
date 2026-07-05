@@ -1412,14 +1412,14 @@ jobs:
           echo "NEXUS_DOCKER_REGISTRY=$NEXUS_DOCKER_PULL_REGISTRY" >> "$GITHUB_ENV"
           echo "IMAGE_PREFIX=$NEXUS_DOCKER_PULL_REGISTRY/$IMAGE_NAMESPACE" >> "$GITHUB_ENV"
 
-      - name: Configure k3d node registry mirror for Nexus pulls
+      - name: Verify k3d node registry mirror for Nexus pulls
         if: needs.prepare.outputs.build_user_management == 'true' || needs.prepare.outputs.build_product_management == 'true' || needs.prepare.outputs.build_order_management == 'true' || needs.prepare.outputs.build_online_storefront == 'true' || needs.prepare.outputs.build_storybook == 'true'
         shell: bash
         run: |
           set -euo pipefail
 
           if ! command -v docker >/dev/null 2>&1; then
-            echo "Docker is not available; skipping k3d registry mirror configuration"
+            echo "Docker is not available; skipping k3d registry mirror verification"
             exit 0
           fi
 
@@ -1430,51 +1430,27 @@ jobs:
             | grep -E '^k3d-.+-(server|agent)-[0-9]+$' || true)
 
           if [[ "${#K3D_NODES[@]}" -eq 0 ]]; then
-            echo "No k3d node containers found; skipping registry mirror configuration"
+            echo "No k3d node containers found; skipping registry mirror verification"
             exit 0
           fi
 
-          nodes_to_restart=()
+          missing_mirrors=()
           for node in "${K3D_NODES[@]}"; do
             if docker exec "$node" sh -c "test -f /etc/rancher/k3s/registries.yaml && grep -F '\"${NEXUS_DOCKER_PULL_REGISTRY}\":' /etc/rancher/k3s/registries.yaml >/dev/null && grep -F '\"http://${NEXUS_DOCKER_PULL_REGISTRY}\"' /etc/rancher/k3s/registries.yaml >/dev/null"; then
               echo "Registry mirror for $NEXUS_DOCKER_PULL_REGISTRY already configured on $node"
               continue
             fi
 
-            echo "Configuring registry mirror for $NEXUS_DOCKER_PULL_REGISTRY on $node"
-            docker exec "$node" sh -c "mkdir -p /etc/rancher/k3s && printf '%s\n' \
-              'mirrors:' \
-              '  \"${NEXUS_DOCKER_PULL_REGISTRY}\":' \
-              '    endpoint:' \
-              '      - \"http://${NEXUS_DOCKER_PULL_REGISTRY}\"' \
-              > /etc/rancher/k3s/registries.yaml"
-            nodes_to_restart+=("$node")
+            missing_mirrors+=("$node")
           done
 
-          if [[ "${#nodes_to_restart[@]}" -eq 0 ]]; then
-            echo "All k3d registry mirrors are already configured; skipping node restarts."
-            exit 0
-          fi
-
-          for node in "${nodes_to_restart[@]}"; do
-            docker restart "$node"
-          done
-
-          nodes_ready=false
-          for attempt in {1..60}; do
-            if kubectl get nodes >/dev/null 2>&1 && kubectl wait --for=condition=Ready nodes --all --timeout=10s; then
-              nodes_ready=true
-              break
-            fi
-            echo "Waiting for Kubernetes API and k3d nodes to recover after registry mirror restart..."
-            sleep 5
-          done
-
-          if [[ "$nodes_ready" != "true" ]]; then
-            echo "Timed out waiting for Kubernetes API and k3d nodes to recover after registry mirror restart." >&2
-            kubectl get nodes || true
+          if [[ "${#missing_mirrors[@]}" -gt 0 ]]; then
+            printf 'Missing Nexus registry mirror %s on k3d node(s): %s\n' "$NEXUS_DOCKER_PULL_REGISTRY" "${missing_mirrors[*]}" >&2
+            echo "Configure k3d registry mirrors outside the application deploy before running this workflow." >&2
             exit 1
           fi
+
+          echo "All k3d registry mirrors are configured; no node restarts needed."
 
       - name: Set up Helm
         uses: azure/setup-helm@v4
