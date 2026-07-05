@@ -730,6 +730,11 @@ jobs:
         run: |
           set -euo pipefail
 
+          if [[ "$NEXUS_DOCKER_REGISTRY" =~ ^(127\.|localhost:|0\.0\.0\.0:) ]]; then
+            echo "Using local Nexus registry forward $NEXUS_DOCKER_REGISTRY; Docker daemon insecure-registry configuration is not required."
+            exit 0
+          fi
+
           if docker info 2>/dev/null | grep -F "$NEXUS_DOCKER_REGISTRY" >/dev/null; then
             echo "Docker already trusts insecure registry $NEXUS_DOCKER_REGISTRY"
             exit 0
@@ -1200,6 +1205,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+
+          if [[ "$NEXUS_DOCKER_REGISTRY" =~ ^(127\.|localhost:|0\.0\.0\.0:) ]]; then
+            echo "Using local Nexus registry forward $NEXUS_DOCKER_REGISTRY; Docker daemon insecure-registry configuration is not required."
+            exit 0
+          fi
 
           if docker info 2>/dev/null | grep -F "$NEXUS_DOCKER_REGISTRY" >/dev/null; then
             echo "Docker already trusts insecure registry $NEXUS_DOCKER_REGISTRY"
