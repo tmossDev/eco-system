@@ -35,11 +35,7 @@ NEXUS_USERNAME="${NEXUS_USERNAME:-admin}"
 NEXUS_PASSWORD="${NEXUS_PASSWORD:-${NEXUS_ADMIN_PASSWORD:-}}"
 CI_CD_NAMESPACE="${CI_CD_NAMESPACE:-eco-cicd}"
 PNPM_CMD="${PNPM_CMD:-corepack pnpm}"
-
-if [[ -z "$NEXUS_PASSWORD" ]]; then
-  echo "Missing NEXUS_PASSWORD or NEXUS_ADMIN_PASSWORD for Nexus artifact access." >&2
-  exit 1
-fi
+FRONTEND_ARTIFACT_CACHE="${FRONTEND_ARTIFACT_CACHE:-true}"
 
 declare -A PACKAGE_DIRS=(
   [admin-web-app]="user-management/frontend/app/admin-web-app"
@@ -102,7 +98,7 @@ start_nexus_tunnel() {
   done
 
   echo "Timed out waiting for Nexus artifact API." >&2
-  exit 1
+  return 1
 }
 
 ensure_raw_repository() {
@@ -233,12 +229,31 @@ build_and_publish() {
   echo "Building $artifact because no Nexus artifact matched its input hash."
   clean_outputs "$artifact"
   eval "${BUILD_COMMANDS[$artifact]}"
+  mkdir -p .frontend-artifacts
   tar -czf ".frontend-artifacts/$artifact.tgz" ${OUTPUTS[$artifact]}
   publish_artifact "$artifact" "$hash"
 }
 
-start_nexus_tunnel
-ensure_raw_repository
+build_without_cache() {
+  local artifact="$1"
+
+  echo "Building $artifact without Nexus artifact cache."
+  clean_outputs "$artifact"
+  eval "${BUILD_COMMANDS[$artifact]}"
+}
+
+cache_available=false
+if [[ "$FRONTEND_ARTIFACT_CACHE" == "true" ]]; then
+  if [[ -z "$NEXUS_PASSWORD" ]]; then
+    echo "Missing NEXUS_PASSWORD or NEXUS_ADMIN_PASSWORD; building without Nexus artifact cache."
+  elif start_nexus_tunnel && ensure_raw_repository; then
+    cache_available=true
+  else
+    echo "Nexus artifact cache is unavailable; building without cache."
+  fi
+else
+  echo "Nexus artifact cache disabled; building frontend artifacts locally."
+fi
 
 for artifact in "$@"; do
   if [[ -z "${PACKAGE_DIRS[$artifact]:-}" ]]; then
@@ -248,7 +263,9 @@ for artifact in "$@"; do
   fi
 
   hash="$(artifact_hash "$artifact")"
-  if [[ "${FORCE_FRONTEND_ARTIFACT_BUILD:-false}" == "true" ]]; then
+  if [[ "$cache_available" != "true" ]]; then
+    build_without_cache "$artifact"
+  elif [[ "${FORCE_FRONTEND_ARTIFACT_BUILD:-false}" == "true" ]]; then
     build_and_publish "$artifact" "$hash"
   elif ! restore_artifact "$artifact" "$hash"; then
     build_and_publish "$artifact" "$hash"

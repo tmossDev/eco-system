@@ -484,7 +484,13 @@ jobs:
             exit 0
           fi
 
+          nodes_to_restart=()
           for node in "${K3D_NODES[@]}"; do
+            if docker exec "$node" sh -c "test -f /etc/rancher/k3s/registries.yaml && grep -F '\"${NEXUS_DOCKER_REGISTRY}\":' /etc/rancher/k3s/registries.yaml >/dev/null && grep -F '\"http://${NEXUS_DOCKER_REGISTRY}\"' /etc/rancher/k3s/registries.yaml >/dev/null"; then
+              echo "Registry mirror already configured on $node"
+              continue
+            fi
+
             echo "Configuring registry mirror on $node"
             docker exec "$node" sh -c "mkdir -p /etc/rancher/k3s && printf '%s\n' \
               'mirrors:' \
@@ -492,13 +498,33 @@ jobs:
               '    endpoint:' \
               '      - \"http://${NEXUS_DOCKER_REGISTRY}\"' \
               > /etc/rancher/k3s/registries.yaml"
+            nodes_to_restart+=("$node")
           done
 
-          for node in "${K3D_NODES[@]}"; do
+          if [[ "${#nodes_to_restart[@]}" -eq 0 ]]; then
+            echo "All k3d registry mirrors are already configured; skipping node restarts."
+            exit 0
+          fi
+
+          for node in "${nodes_to_restart[@]}"; do
             docker restart "$node"
           done
 
-          kubectl wait --for=condition=Ready nodes --all --timeout=180s
+          nodes_ready=false
+          for attempt in {1..60}; do
+            if kubectl get nodes >/dev/null 2>&1 && kubectl wait --for=condition=Ready nodes --all --timeout=10s; then
+              nodes_ready=true
+              break
+            fi
+            echo "Waiting for Kubernetes API and k3d nodes to recover after registry mirror restart..."
+            sleep 5
+          done
+
+          if [[ "$nodes_ready" != "true" ]]; then
+            echo "Timed out waiting for Kubernetes API and k3d nodes to recover after registry mirror restart." >&2
+            kubectl get nodes || true
+            exit 1
+          fi
 
       - name: Configure Nexus Docker repository
         shell: bash
@@ -652,6 +678,8 @@ jobs:
           NEXUS_ADMIN_PASSWORD="${NEXUS_ADMIN_PASSWORD:-${NEXUS_ADMIN_PASSWORD_SECRET:-admin123}}"
 
           echo "FOUNDATION_NAMESPACE=${{ needs.prepare.outputs.foundation_namespace }}" >> "$GITHUB_ENV"
+          echo "CI_CD_NAMESPACE=${{ needs.prepare.outputs.ci_cd_namespace }}" >> "$GITHUB_ENV"
+          echo "IMAGE_NAMESPACE=$IMAGE_NAMESPACE" >> "$GITHUB_ENV"
           echo "NEXUS_DOCKER_REGISTRY=$NEXUS_DOCKER_REGISTRY" >> "$GITHUB_ENV"
           echo "IMAGE_PREFIX=$IMAGE_PREFIX" >> "$GITHUB_ENV"
           echo "NEXUS_ADMIN_PASSWORD=$NEXUS_ADMIN_PASSWORD" >> "$GITHUB_ENV"
@@ -661,10 +689,58 @@ jobs:
         env:
           NEXUS_ADMIN_PASSWORD_SECRET: ${{ secrets.NEXUS_ADMIN_PASSWORD }}
 
+      - name: Set up kubectl for Nexus registry
+        uses: azure/setup-kubectl@v4
+
+      - name: Configure kubeconfig for Nexus registry
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.kube"
+          if [[ -f "$HOME/.kube/config" ]] && kubectl config current-context >/dev/null 2>&1; then
+            echo "Using existing runner kubeconfig at $HOME/.kube/config"
+          elif [[ -f "$HOME/.config/k3d/kubeconfig-${K3D_CLUSTER:-eco-cluster}.yaml" ]]; then
+            cp "$HOME/.config/k3d/kubeconfig-${K3D_CLUSTER:-eco-cluster}.yaml" "$HOME/.kube/config"
+          elif command -v k3d >/dev/null 2>&1 && k3d cluster list "${K3D_CLUSTER:-eco-cluster}" >/dev/null 2>&1; then
+            k3d kubeconfig get "${K3D_CLUSTER:-eco-cluster}" > "$HOME/.kube/config"
+          elif [[ -f /etc/rancher/k3s/k3s.yaml ]]; then
+            sudo cat /etc/rancher/k3s/k3s.yaml > "$HOME/.kube/config"
+          elif [[ -n "${KUBE_CONFIG_B64:-}" ]]; then
+            echo "$KUBE_CONFIG_B64" | base64 --decode > "$HOME/.kube/config"
+          else
+            echo "No usable kubeconfig found. Add one at $HOME/.kube/config on the runner, install k3s config at /etc/rancher/k3s/k3s.yaml, or set KUBE_CONFIG_B64." >&2
+            exit 1
+          fi
+          chmod 600 "$HOME/.kube/config"
+        env:
+          KUBE_CONFIG_B64: ${{ secrets.KUBE_CONFIG_B64 }}
+
+      - name: Resolve Nexus Docker registries
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker_port="$(kubectl get svc nexus -n "$CI_CD_NAMESPACE" -o jsonpath='{.spec.ports[?(@.name=="docker")].port}')"
+          cluster_ip="$(kubectl get svc nexus -n "$CI_CD_NAMESPACE" -o jsonpath='{.spec.clusterIP}')"
+          push_port="${NEXUS_DOCKER_PUSH_PORT:-${NEXUS_DOCKER_NODE_PORT:-30500}}"
+          pull_registry="${NEXUS_DOCKER_PULL_REGISTRY:-$cluster_ip:$docker_port}"
+          push_registry="${NEXUS_DOCKER_PUSH_REGISTRY:-127.0.0.1:$push_port}"
+
+          echo "NEXUS_DOCKER_PULL_REGISTRY=$pull_registry" >> "$GITHUB_ENV"
+          echo "NEXUS_DOCKER_PUSH_REGISTRY=$push_registry" >> "$GITHUB_ENV"
+          echo "NEXUS_DOCKER_REGISTRY=$push_registry" >> "$GITHUB_ENV"
+          echo "IMAGE_PREFIX=$push_registry/$IMAGE_NAMESPACE" >> "$GITHUB_ENV"
+          echo "Docker push registry: $push_registry"
+          echo "Kubernetes pull registry: $pull_registry"
+
       - name: Configure Docker insecure registry
         shell: bash
         run: |
           set -euo pipefail
+
+          if [[ "$NEXUS_DOCKER_REGISTRY" =~ ^(127\.|localhost:|0\.0\.0\.0:) ]]; then
+            echo "Using local Nexus registry forward $NEXUS_DOCKER_REGISTRY; Docker daemon insecure-registry configuration is not required."
+            exit 0
+          fi
 
           if docker info 2>/dev/null | grep -F "$NEXUS_DOCKER_REGISTRY" >/dev/null; then
             echo "Docker already trusts insecure registry $NEXUS_DOCKER_REGISTRY"
@@ -721,8 +797,41 @@ jobs:
       - name: Push liquibase image to Nexus
         shell: bash
         run: |
-          echo "$NEXUS_ADMIN_PASSWORD" | docker login "$NEXUS_DOCKER_REGISTRY" --username admin --password-stdin
+          set -euo pipefail
+          for attempt in {1..60}; do
+            endpoints="$(kubectl get endpoints nexus -n "$CI_CD_NAMESPACE" -o jsonpath='{.subsets[*].addresses[*].ip}' 2>/dev/null || true)"
+            if [[ -n "$endpoints" ]]; then
+              break
+            fi
+            if [[ "$attempt" == "60" ]]; then
+              echo "Timed out waiting for existing Nexus service endpoints in namespace $CI_CD_NAMESPACE." >&2
+              kubectl get deploy,pod,svc,endpoints -n "$CI_CD_NAMESPACE" -l app.kubernetes.io/name=nexus -o wide || true
+              exit 1
+            fi
+            sleep 2
+          done
+
+          kubectl port-forward -n "$CI_CD_NAMESPACE" svc/nexus "${NEXUS_DOCKER_PUSH_REGISTRY##*:}:5000" &
+          NEXUS_DOCKER_PORT_FORWARD_PID="$!"
+          trap 'kill "$NEXUS_DOCKER_PORT_FORWARD_PID" 2>/dev/null || true' EXIT
+
+          for attempt in {1..60}; do
+            status="$(curl --silent --output /dev/null --write-out '%{http_code}' "http://$NEXUS_DOCKER_PUSH_REGISTRY/v2/" || true)"
+            if [[ "$status" == "200" || "$status" == "401" ]]; then
+              break
+            fi
+            if [[ "$attempt" == "60" ]]; then
+              echo "Timed out waiting for local Nexus Docker registry forward at $NEXUS_DOCKER_PUSH_REGISTRY" >&2
+              exit 1
+            fi
+            sleep 2
+          done
+
+          echo "$NEXUS_ADMIN_PASSWORD" | docker login "$NEXUS_DOCKER_PUSH_REGISTRY" --username admin --password-stdin
           docker push "$IMAGE_PREFIX/liquibase:$IMAGE_TAG"
+          docker image rm "$IMAGE_PREFIX/liquibase:$IMAGE_TAG" >/dev/null 2>&1 || true
+          echo "NEXUS_DOCKER_REGISTRY=$NEXUS_DOCKER_PULL_REGISTRY" >> "$GITHUB_ENV"
+          echo "IMAGE_PREFIX=$NEXUS_DOCKER_PULL_REGISTRY/$IMAGE_NAMESPACE" >> "$GITHUB_ENV"
 
       - name: Set up Helm
         uses: azure/setup-helm@v4
@@ -929,6 +1038,7 @@ jobs:
           echo "CI_CD_NAMESPACE=${{ needs.prepare.outputs.ci_cd_namespace }}" >> "$GITHUB_ENV"
           echo "FOUNDATION_NAMESPACE=${{ needs.prepare.outputs.foundation_namespace }}" >> "$GITHUB_ENV"
           echo "K3D_CLUSTER=${K3D_CLUSTER:-eco-cluster}" >> "$GITHUB_ENV"
+          echo "IMAGE_NAMESPACE=$IMAGE_NAMESPACE" >> "$GITHUB_ENV"
           echo "NEXUS_DOCKER_REGISTRY=$NEXUS_DOCKER_REGISTRY" >> "$GITHUB_ENV"
           echo "IMAGE_PREFIX=$IMAGE_PREFIX" >> "$GITHUB_ENV"
           echo "NEXUS_ADMIN_PASSWORD=$NEXUS_ADMIN_PASSWORD" >> "$GITHUB_ENV"
@@ -1008,8 +1118,6 @@ jobs:
       - name: Set up pnpm
         if: needs.prepare.outputs.build_user_management == 'true' || needs.prepare.outputs.build_product_management == 'true' || needs.prepare.outputs.build_order_management == 'true' || needs.prepare.outputs.build_online_storefront == 'true' || needs.prepare.outputs.build_storybook == 'true'
         uses: pnpm/action-setup@v4
-        with:
-          version: 11.0.9
 
       - name: Set up kubectl for Nexus artifacts
         if: needs.prepare.outputs.build_user_management == 'true' || needs.prepare.outputs.build_product_management == 'true' || needs.prepare.outputs.build_order_management == 'true' || needs.prepare.outputs.build_online_storefront == 'true' || needs.prepare.outputs.build_storybook == 'true'
@@ -1038,6 +1146,24 @@ jobs:
           chmod 600 "$HOME/.kube/config"
         env:
           KUBE_CONFIG_B64: ${{ secrets.KUBE_CONFIG_B64 }}
+
+      - name: Resolve Nexus Docker registries
+        if: needs.prepare.outputs.build_user_management == 'true' || needs.prepare.outputs.build_product_management == 'true' || needs.prepare.outputs.build_order_management == 'true' || needs.prepare.outputs.build_online_storefront == 'true' || needs.prepare.outputs.build_storybook == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker_port="$(kubectl get svc nexus -n "$CI_CD_NAMESPACE" -o jsonpath='{.spec.ports[?(@.name=="docker")].port}')"
+          cluster_ip="$(kubectl get svc nexus -n "$CI_CD_NAMESPACE" -o jsonpath='{.spec.clusterIP}')"
+          push_port="${NEXUS_DOCKER_PUSH_PORT:-${NEXUS_DOCKER_NODE_PORT:-30500}}"
+          pull_registry="${NEXUS_DOCKER_PULL_REGISTRY:-$cluster_ip:$docker_port}"
+          push_registry="${NEXUS_DOCKER_PUSH_REGISTRY:-127.0.0.1:$push_port}"
+
+          echo "NEXUS_DOCKER_PULL_REGISTRY=$pull_registry" >> "$GITHUB_ENV"
+          echo "NEXUS_DOCKER_PUSH_REGISTRY=$push_registry" >> "$GITHUB_ENV"
+          echo "NEXUS_DOCKER_REGISTRY=$push_registry" >> "$GITHUB_ENV"
+          echo "IMAGE_PREFIX=$push_registry/$IMAGE_NAMESPACE" >> "$GITHUB_ENV"
+          echo "Docker push registry: $push_registry"
+          echo "Kubernetes pull registry: $pull_registry"
 
       - name: Build backend binaries
         if: needs.prepare.outputs.build_user_management == 'true' || needs.prepare.outputs.build_product_management == 'true' || needs.prepare.outputs.build_order_management == 'true' || needs.prepare.outputs.build_online_storefront == 'true'
@@ -1071,6 +1197,8 @@ jobs:
       - name: Build frontend applications and storybooks
         if: needs.prepare.outputs.build_user_management == 'true' || needs.prepare.outputs.build_product_management == 'true' || needs.prepare.outputs.build_order_management == 'true' || needs.prepare.outputs.build_online_storefront == 'true' || needs.prepare.outputs.build_storybook == 'true'
         shell: bash
+        env:
+          FRONTEND_ARTIFACT_CACHE: "false"
         run: |
           set -euo pipefail
           pnpm install --frozen-lockfile
@@ -1097,6 +1225,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+
+          if [[ "$NEXUS_DOCKER_REGISTRY" =~ ^(127\.|localhost:|0\.0\.0\.0:) ]]; then
+            echo "Using local Nexus registry forward $NEXUS_DOCKER_REGISTRY; Docker daemon insecure-registry configuration is not required."
+            exit 0
+          fi
 
           if docker info 2>/dev/null | grep -F "$NEXUS_DOCKER_REGISTRY" >/dev/null; then
             echo "Docker already trusts insecure registry $NEXUS_DOCKER_REGISTRY"
@@ -1220,14 +1353,45 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          echo "$NEXUS_ADMIN_PASSWORD" | docker login "$NEXUS_DOCKER_REGISTRY" --username admin --password-stdin
+          for attempt in {1..60}; do
+            endpoints="$(kubectl get endpoints nexus -n "$CI_CD_NAMESPACE" -o jsonpath='{.subsets[*].addresses[*].ip}' 2>/dev/null || true)"
+            if [[ -n "$endpoints" ]]; then
+              break
+            fi
+            if [[ "$attempt" == "60" ]]; then
+              echo "Timed out waiting for existing Nexus service endpoints in namespace $CI_CD_NAMESPACE." >&2
+              kubectl get deploy,pod,svc,endpoints -n "$CI_CD_NAMESPACE" -l app.kubernetes.io/name=nexus -o wide || true
+              exit 1
+            fi
+            sleep 2
+          done
+
+          kubectl port-forward -n "$CI_CD_NAMESPACE" svc/nexus "${NEXUS_DOCKER_PUSH_REGISTRY##*:}:5000" &
+          NEXUS_DOCKER_PORT_FORWARD_PID="$!"
+          trap 'kill "$NEXUS_DOCKER_PORT_FORWARD_PID" 2>/dev/null || true' EXIT
+
+          for attempt in {1..60}; do
+            status="$(curl --silent --output /dev/null --write-out '%{http_code}' "http://$NEXUS_DOCKER_PUSH_REGISTRY/v2/" || true)"
+            if [[ "$status" == "200" || "$status" == "401" ]]; then
+              break
+            fi
+            if [[ "$attempt" == "60" ]]; then
+              echo "Timed out waiting for local Nexus Docker registry forward at $NEXUS_DOCKER_PUSH_REGISTRY" >&2
+              exit 1
+            fi
+            sleep 2
+          done
+
+          echo "$NEXUS_ADMIN_PASSWORD" | docker login "$NEXUS_DOCKER_PUSH_REGISTRY" --username admin --password-stdin
           push_image() {
             local name="$1"
             docker push "$IMAGE_PREFIX/$name:$IMAGE_TAG"
             if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == "refs/heads/main" ]]; then
               docker tag "$IMAGE_PREFIX/$name:$IMAGE_TAG" "$IMAGE_PREFIX/$name:latest"
               docker push "$IMAGE_PREFIX/$name:latest"
+              docker image rm "$IMAGE_PREFIX/$name:latest" >/dev/null 2>&1 || true
             fi
+            docker image rm "$IMAGE_PREFIX/$name:$IMAGE_TAG" >/dev/null 2>&1 || true
           }
 
           if [[ "${{ needs.prepare.outputs.build_user_management }}" == "true" ]]; then
@@ -1253,6 +1417,48 @@ jobs:
           if [[ "${{ needs.prepare.outputs.build_storybook }}" == "true" ]]; then
             push_image storybook
           fi
+          echo "NEXUS_DOCKER_REGISTRY=$NEXUS_DOCKER_PULL_REGISTRY" >> "$GITHUB_ENV"
+          echo "IMAGE_PREFIX=$NEXUS_DOCKER_PULL_REGISTRY/$IMAGE_NAMESPACE" >> "$GITHUB_ENV"
+
+      - name: Verify k3d node registry mirror for Nexus pulls
+        if: needs.prepare.outputs.build_user_management == 'true' || needs.prepare.outputs.build_product_management == 'true' || needs.prepare.outputs.build_order_management == 'true' || needs.prepare.outputs.build_online_storefront == 'true' || needs.prepare.outputs.build_storybook == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if ! command -v docker >/dev/null 2>&1; then
+            echo "Docker is not available; skipping k3d registry mirror verification"
+            exit 0
+          fi
+
+          K3D_CLUSTER_NAME="${K3D_CLUSTER:-eco-cluster}"
+          mapfile -t K3D_NODES < <(docker ps \
+            --filter "name=k3d-${K3D_CLUSTER_NAME}-" \
+            --format '{{.Names}}' \
+            | grep -E '^k3d-.+-(server|agent)-[0-9]+$' || true)
+
+          if [[ "${#K3D_NODES[@]}" -eq 0 ]]; then
+            echo "No k3d node containers found; skipping registry mirror verification"
+            exit 0
+          fi
+
+          missing_mirrors=()
+          for node in "${K3D_NODES[@]}"; do
+            if docker exec "$node" sh -c "test -f /etc/rancher/k3s/registries.yaml && grep -F '\"${NEXUS_DOCKER_PULL_REGISTRY}\":' /etc/rancher/k3s/registries.yaml >/dev/null && grep -F '\"http://${NEXUS_DOCKER_PULL_REGISTRY}\"' /etc/rancher/k3s/registries.yaml >/dev/null"; then
+              echo "Registry mirror for $NEXUS_DOCKER_PULL_REGISTRY already configured on $node"
+              continue
+            fi
+
+            missing_mirrors+=("$node")
+          done
+
+          if [[ "${#missing_mirrors[@]}" -gt 0 ]]; then
+            printf 'Missing Nexus registry mirror %s on k3d node(s): %s\n' "$NEXUS_DOCKER_PULL_REGISTRY" "${missing_mirrors[*]}" >&2
+            echo "Configure k3d registry mirrors outside the application deploy before running this workflow." >&2
+            exit 1
+          fi
+
+          echo "All k3d registry mirrors are configured; no node restarts needed."
 
       - name: Set up Helm
         uses: azure/setup-helm@v4
