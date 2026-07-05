@@ -797,7 +797,19 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          kubectl rollout status deployment/nexus -n "$CI_CD_NAMESPACE" --timeout=600s
+          for attempt in {1..60}; do
+            endpoints="$(kubectl get endpoints nexus -n "$CI_CD_NAMESPACE" -o jsonpath='{.subsets[*].addresses[*].ip}' 2>/dev/null || true)"
+            if [[ -n "$endpoints" ]]; then
+              break
+            fi
+            if [[ "$attempt" == "60" ]]; then
+              echo "Timed out waiting for existing Nexus service endpoints in namespace $CI_CD_NAMESPACE." >&2
+              kubectl get deploy,pod,svc,endpoints -n "$CI_CD_NAMESPACE" -l app.kubernetes.io/name=nexus -o wide || true
+              exit 1
+            fi
+            sleep 2
+          done
+
           kubectl port-forward -n "$CI_CD_NAMESPACE" svc/nexus "${NEXUS_DOCKER_PUSH_REGISTRY##*:}:5000" &
           NEXUS_DOCKER_PORT_FORWARD_PID="$!"
           trap 'kill "$NEXUS_DOCKER_PORT_FORWARD_PID" 2>/dev/null || true' EXIT
@@ -816,6 +828,7 @@ jobs:
 
           echo "$NEXUS_ADMIN_PASSWORD" | docker login "$NEXUS_DOCKER_PUSH_REGISTRY" --username admin --password-stdin
           docker push "$IMAGE_PREFIX/liquibase:$IMAGE_TAG"
+          docker image rm "$IMAGE_PREFIX/liquibase:$IMAGE_TAG" >/dev/null 2>&1 || true
           echo "NEXUS_DOCKER_REGISTRY=$NEXUS_DOCKER_PULL_REGISTRY" >> "$GITHUB_ENV"
           echo "IMAGE_PREFIX=$NEXUS_DOCKER_PULL_REGISTRY/$IMAGE_NAMESPACE" >> "$GITHUB_ENV"
 
@@ -1346,7 +1359,19 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          kubectl rollout status deployment/nexus -n "$CI_CD_NAMESPACE" --timeout=600s
+          for attempt in {1..60}; do
+            endpoints="$(kubectl get endpoints nexus -n "$CI_CD_NAMESPACE" -o jsonpath='{.subsets[*].addresses[*].ip}' 2>/dev/null || true)"
+            if [[ -n "$endpoints" ]]; then
+              break
+            fi
+            if [[ "$attempt" == "60" ]]; then
+              echo "Timed out waiting for existing Nexus service endpoints in namespace $CI_CD_NAMESPACE." >&2
+              kubectl get deploy,pod,svc,endpoints -n "$CI_CD_NAMESPACE" -l app.kubernetes.io/name=nexus -o wide || true
+              exit 1
+            fi
+            sleep 2
+          done
+
           kubectl port-forward -n "$CI_CD_NAMESPACE" svc/nexus "${NEXUS_DOCKER_PUSH_REGISTRY##*:}:5000" &
           NEXUS_DOCKER_PORT_FORWARD_PID="$!"
           trap 'kill "$NEXUS_DOCKER_PORT_FORWARD_PID" 2>/dev/null || true' EXIT
@@ -1370,7 +1395,9 @@ jobs:
             if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == "refs/heads/main" ]]; then
               docker tag "$IMAGE_PREFIX/$name:$IMAGE_TAG" "$IMAGE_PREFIX/$name:latest"
               docker push "$IMAGE_PREFIX/$name:latest"
+              docker image rm "$IMAGE_PREFIX/$name:latest" >/dev/null 2>&1 || true
             fi
+            docker image rm "$IMAGE_PREFIX/$name:$IMAGE_TAG" >/dev/null 2>&1 || true
           }
 
           if [[ "${{ needs.prepare.outputs.build_user_management }}" == "true" ]]; then
