@@ -16,6 +16,9 @@
     "watch:login-for ": "ng build login-form --watch --configuration development",
     "test": "ng test"
   },
+  "nx": {
+    "tags": ["layer:frontend", "scope:shared-components", "type:design-system", "type:lib"]
+  },
   "private": true,
   "packageManager": "pnpm@11.9.0",
   "dependencies": {

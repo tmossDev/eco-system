@@ -6,6 +6,9 @@
     "build": "ng build admin-features",
     "watch": "ng build admin-features --watch --configuration development"
   },
+  "nx": {
+    "tags": ["layer:frontend", "scope:shared-components", "type:lib"]
+  },
   "private": true,
   "packageManager": "pnpm@11.9.0",
   "peerDependencies": {

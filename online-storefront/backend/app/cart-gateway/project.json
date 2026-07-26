@@ -1,0 +1,11 @@
+{
+  "name": "cart-gateway",
+  "root": "online-storefront/backend/app/cart-gateway",
+  "projectType": "application",
+  "targets": {
+    "build": {
+      "command": "CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/bin/cart-gateway ./online-storefront/backend/app/cart-gateway/cmd"
+    }
+  },
+  "tags": ["layer:application", "layer:backend", "scope:online-storefront", "type:gateway"]
+}
