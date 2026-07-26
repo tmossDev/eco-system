@@ -670,12 +670,15 @@ jobs:
           IMAGE_NAMESPACE="${IMAGE_NAMESPACE:-eco-system}"
           IMAGE_PREFIX="${IMAGE_PREFIX:-$NEXUS_DOCKER_REGISTRY/$IMAGE_NAMESPACE}"
           NEXUS_ADMIN_PASSWORD="${NEXUS_ADMIN_PASSWORD:-${NEXUS_ADMIN_PASSWORD_SECRET:-admin123}}"
+          FEATURE_NAMESPACE="${{ needs.prepare.outputs.namespace }}"
+          IMAGE_TAG="feature-${FEATURE_NAMESPACE}-${GITHUB_SHA}"
 
           echo "FOUNDATION_NAMESPACE=${{ needs.prepare.outputs.foundation_namespace }}" >> "$GITHUB_ENV"
           echo "CI_CD_NAMESPACE=${{ needs.prepare.outputs.ci_cd_namespace }}" >> "$GITHUB_ENV"
           echo "IMAGE_NAMESPACE=$IMAGE_NAMESPACE" >> "$GITHUB_ENV"
           echo "NEXUS_DOCKER_REGISTRY=$NEXUS_DOCKER_REGISTRY" >> "$GITHUB_ENV"
           echo "IMAGE_PREFIX=$IMAGE_PREFIX" >> "$GITHUB_ENV"
+          echo "IMAGE_TAG=$IMAGE_TAG" >> "$GITHUB_ENV"
           echo "NEXUS_ADMIN_PASSWORD=$NEXUS_ADMIN_PASSWORD" >> "$GITHUB_ENV"
           echo "POSTGRES_DB=${POSTGRES_DB:-ecoDB}" >> "$GITHUB_ENV"
           echo "LIQUIBASE_JDBC_URL=${LIQUIBASE_JDBC_URL:-jdbc:postgresql://postgres:5432/${POSTGRES_DB:-ecoDB}}" >> "$GITHUB_ENV"
@@ -877,6 +880,10 @@ jobs:
               exit 1
             fi
           fi
+          kubectl label namespace "$FOUNDATION_NAMESPACE" \
+            eco-system-managed-by=github-actions \
+            eco-system-deployment=feature \
+            --overwrite
 
       - name: Create Nexus image pull secret
         shell: bash
@@ -1087,6 +1094,8 @@ jobs:
           IMAGE_NAMESPACE="${IMAGE_NAMESPACE:-eco-system}"
           IMAGE_PREFIX="${IMAGE_PREFIX:-$NEXUS_DOCKER_REGISTRY/$IMAGE_NAMESPACE}"
           NEXUS_ADMIN_PASSWORD="${NEXUS_ADMIN_PASSWORD:-${NEXUS_ADMIN_PASSWORD_SECRET:-admin123}}"
+          FEATURE_NAMESPACE="${{ needs.prepare.outputs.namespace }}"
+          IMAGE_TAG="feature-${FEATURE_NAMESPACE}-${GITHUB_SHA}"
 
           echo "NAMESPACE=${{ needs.prepare.outputs.namespace }}" >> "$GITHUB_ENV"
           echo "CI_CD_NAMESPACE=${{ needs.prepare.outputs.ci_cd_namespace }}" >> "$GITHUB_ENV"
@@ -1094,6 +1103,7 @@ jobs:
           echo "IMAGE_NAMESPACE=$IMAGE_NAMESPACE" >> "$GITHUB_ENV"
           echo "NEXUS_DOCKER_REGISTRY=$NEXUS_DOCKER_REGISTRY" >> "$GITHUB_ENV"
           echo "IMAGE_PREFIX=$IMAGE_PREFIX" >> "$GITHUB_ENV"
+          echo "IMAGE_TAG=$IMAGE_TAG" >> "$GITHUB_ENV"
           echo "NEXUS_ADMIN_PASSWORD=$NEXUS_ADMIN_PASSWORD" >> "$GITHUB_ENV"
         env:
           NEXUS_ADMIN_PASSWORD_SECRET: ${{ secrets.NEXUS_ADMIN_PASSWORD }}
@@ -1177,6 +1187,8 @@ jobs:
           IMAGE_NAMESPACE="${IMAGE_NAMESPACE:-eco-system}"
           IMAGE_PREFIX="${IMAGE_PREFIX:-$NEXUS_DOCKER_REGISTRY/$IMAGE_NAMESPACE}"
           NEXUS_ADMIN_PASSWORD="${NEXUS_ADMIN_PASSWORD:-${NEXUS_ADMIN_PASSWORD_SECRET:-admin123}}"
+          FEATURE_NAMESPACE="${{ needs.prepare.outputs.namespace }}"
+          IMAGE_TAG="feature-${FEATURE_NAMESPACE}-${GITHUB_SHA}"
           UNCHANGED_APPLICATION_IMAGE_TAG="latest"
 
           USER_MANAGEMENT_IMAGE_TAG="$UNCHANGED_APPLICATION_IMAGE_TAG"
@@ -1214,6 +1226,7 @@ jobs:
           echo "IMAGE_NAMESPACE=$IMAGE_NAMESPACE" >> "$GITHUB_ENV"
           echo "NEXUS_DOCKER_REGISTRY=$NEXUS_DOCKER_REGISTRY" >> "$GITHUB_ENV"
           echo "IMAGE_PREFIX=$IMAGE_PREFIX" >> "$GITHUB_ENV"
+          echo "IMAGE_TAG=$IMAGE_TAG" >> "$GITHUB_ENV"
           echo "NEXUS_ADMIN_PASSWORD=$NEXUS_ADMIN_PASSWORD" >> "$GITHUB_ENV"
           echo "USER_MANAGEMENT_IMAGE_TAG=$USER_MANAGEMENT_IMAGE_TAG" >> "$GITHUB_ENV"
           echo "PRODUCT_MANAGEMENT_IMAGE_TAG=$PRODUCT_MANAGEMENT_IMAGE_TAG" >> "$GITHUB_ENV"
@@ -1294,6 +1307,10 @@ jobs:
               exit 1
             fi
           fi
+          kubectl label namespace "$NAMESPACE" \
+            eco-system-managed-by=github-actions \
+            eco-system-deployment=feature \
+            --overwrite
 
       - name: Create ingress TLS secret
         shell: bash
