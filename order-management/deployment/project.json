@@ -1,0 +1,6 @@
+{
+  "name": "order-management-deployment",
+  "root": "order-management/deployment",
+  "projectType": "application",
+  "tags": ["layer:application", "layer:deployment", "scope:order-management", "type:helm"]
+}

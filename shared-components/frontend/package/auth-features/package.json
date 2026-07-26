@@ -6,6 +6,9 @@
     "build": "corepack pnpm --filter design-system build:login-form && ng build auth-features",
     "watch": "ng build auth-features --watch --configuration development"
   },
+  "nx": {
+    "tags": ["layer:frontend", "scope:shared-components", "type:lib"]
+  },
   "private": true,
   "packageManager": "pnpm@11.9.0",
   "peerDependencies": {

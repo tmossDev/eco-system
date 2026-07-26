@@ -1,6 +1,9 @@
 {
   "name": "@ds/navigation-bar",
   "version": "0.0.1",
+  "nx": {
+    "tags": ["layer:frontend", "scope:shared-components", "type:design-system", "type:lib"]
+  },
   "peerDependencies": {
     "@angular/common": "catalog:",
     "@angular/core": "catalog:",

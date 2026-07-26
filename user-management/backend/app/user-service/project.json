@@ -1,0 +1,11 @@
+{
+  "name": "user-service",
+  "root": "user-management/backend/app/user-service",
+  "projectType": "application",
+  "targets": {
+    "build": {
+      "command": "CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/bin/user-service ./user-management/backend/app/user-service/cmd"
+    }
+  },
+  "tags": ["layer:application", "layer:backend", "scope:user-management", "type:service"]
+}

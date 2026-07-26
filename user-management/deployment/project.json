@@ -1,0 +1,6 @@
+{
+  "name": "user-management-deployment",
+  "root": "user-management/deployment",
+  "projectType": "application",
+  "tags": ["layer:application", "layer:deployment", "scope:user-management", "type:helm"]
+}

@@ -9,6 +9,9 @@
     "storybook": "ng run storybook:storybook",
     "build-storybook": "ng run storybook:build-storybook"
   },
+  "nx": {
+    "tags": ["layer:application", "layer:frontend", "scope:shared-components", "type:storybook"]
+  },
   "private": true,
   "packageManager": "pnpm@11.9.0",
   "dependencies": {

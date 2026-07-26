@@ -1,0 +1,6 @@
+{
+  "name": "shared-components-deployment",
+  "root": "shared-components/deployment",
+  "projectType": "application",
+  "tags": ["layer:application", "layer:deployment", "scope:shared-components", "type:helm"]
+}

@@ -6,6 +6,14 @@
     "build": "style-dictionary build --config style-dictionary.config.json",
     "watch": "style-dictionary build --config style-dictionary.config.json --watch"
   },
+  "nx": {
+    "tags": [
+      "layer:frontend",
+      "scope:shared-components",
+      "type:design-system",
+      "type:tokens"
+    ]
+  },
   "exports": {
     "./scss": "./src/scss/index.scss",
     "./scss/theme": "./src/scss/theme.scss",

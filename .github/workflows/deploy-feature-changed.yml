@@ -55,6 +55,18 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Set up Node.js for Nx
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Set up pnpm for Nx
+        uses: pnpm/action-setup@v4
+
+      - name: Install workspace dependencies for Nx
+        run: pnpm install --frozen-lockfile
+
       - name: Detect foundation changes
         id: detect_foundation
         shell: bash
@@ -129,51 +141,34 @@ jobs:
           ORDER_MANAGEMENT_CHANGED=false
           ONLINE_STOREFRONT_CHANGED=false
           STORYBOOK_CHANGED=false
-          SHARED_APPLICATION_CHANGED=false
-
-          changed_files="$(mktemp)"
 
           if [[ "$DEPLOYMENT_MODE" == "standard" || "$DEPLOYMENT_MODE" == "main" ]]; then
             if git rev-parse --verify HEAD~1 >/dev/null 2>&1; then
-              git diff --name-only HEAD~1 HEAD > "$changed_files"
+              BASE_REF="HEAD~1"
             else
-              git ls-tree -r --name-only HEAD > "$changed_files"
+              USER_MANAGEMENT_CHANGED=true
+              PRODUCT_MANAGEMENT_CHANGED=true
+              ORDER_MANAGEMENT_CHANGED=true
+              ONLINE_STOREFRONT_CHANGED=true
+              STORYBOOK_CHANGED=true
+              BASE_REF=""
             fi
           elif [[ "$DEPLOYMENT_MODE" == "feature-changed" || "$DEPLOYMENT_MODE" == "feature-full" ]]; then
             BASE_REF="${{ github.base_ref || 'main' }}"
             if ! git show-ref --quiet "refs/remotes/origin/$BASE_REF"; then
               git fetch origin "$BASE_REF":"refs/remotes/origin/$BASE_REF"
             fi
-            git diff --name-only origin/"$BASE_REF" HEAD > "$changed_files"
+            BASE_REF="origin/$BASE_REF"
           else
-            : > "$changed_files"
+            BASE_REF=""
           fi
 
-          if grep -qE '^user-management/' "$changed_files"; then
-            USER_MANAGEMENT_CHANGED=true
-          fi
-          if grep -qE '^product-management/' "$changed_files"; then
-            PRODUCT_MANAGEMENT_CHANGED=true
-          fi
-          if grep -qE '^order-management/' "$changed_files"; then
-            ORDER_MANAGEMENT_CHANGED=true
-          fi
-          if grep -qE '^online-storefront/' "$changed_files"; then
-            ONLINE_STOREFRONT_CHANGED=true
-          fi
-          if grep -qE '^shared-components/' "$changed_files"; then
-            STORYBOOK_CHANGED=true
-            SHARED_APPLICATION_CHANGED=true
-          fi
-          if grep -qE '^(go\.mod|go\.sum|dockerfile|pnpm-lock\.yaml|pnpm-workspace\.yaml)$' "$changed_files"; then
-            SHARED_APPLICATION_CHANGED=true
-          fi
-
-          if [[ "$SHARED_APPLICATION_CHANGED" == "true" ]]; then
-            USER_MANAGEMENT_CHANGED=true
-            PRODUCT_MANAGEMENT_CHANGED=true
-            ORDER_MANAGEMENT_CHANGED=true
-            ONLINE_STOREFRONT_CHANGED=true
+          if [[ -n "$BASE_REF" ]]; then
+            USER_MANAGEMENT_CHANGED="$(.github/workflows/scripts/nx-affected-tag.sh scope:user-management "$BASE_REF")"
+            PRODUCT_MANAGEMENT_CHANGED="$(.github/workflows/scripts/nx-affected-tag.sh scope:product-management "$BASE_REF")"
+            ORDER_MANAGEMENT_CHANGED="$(.github/workflows/scripts/nx-affected-tag.sh scope:order-management "$BASE_REF")"
+            ONLINE_STOREFRONT_CHANGED="$(.github/workflows/scripts/nx-affected-tag.sh scope:online-storefront "$BASE_REF")"
+            STORYBOOK_CHANGED="$(.github/workflows/scripts/nx-affected-tag.sh scope:shared-components "$BASE_REF")"
           fi
 
           {
@@ -970,13 +965,194 @@ jobs:
         run: |
           kubectl get all -n "$FOUNDATION_NAMESPACE"
 
+  build_frontend:
+    name: Build frontend artifacts
+    needs: prepare
+    if: needs.prepare.outputs.build_user_management == 'true' || needs.prepare.outputs.build_product_management == 'true' || needs.prepare.outputs.build_order_management == 'true' || needs.prepare.outputs.build_online_storefront == 'true' || needs.prepare.outputs.build_storybook == 'true'
+    runs-on: [self-hosted, linux]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Build frontend applications and storybooks
+        shell: bash
+        env:
+          FRONTEND_ARTIFACT_CACHE: "false"
+        run: |
+          set -euo pipefail
+          pnpm install --frozen-lockfile
+          artifacts=()
+          if [[ "${{ needs.prepare.outputs.build_user_management }}" == "true" ]]; then
+            artifacts+=(admin-web-app)
+          fi
+          if [[ "${{ needs.prepare.outputs.build_product_management }}" == "true" ]]; then
+            artifacts+=(product-admin-web-app)
+          fi
+          if [[ "${{ needs.prepare.outputs.build_order_management }}" == "true" ]]; then
+            artifacts+=(order-admin-web-app)
+          fi
+          if [[ "${{ needs.prepare.outputs.build_online_storefront }}" == "true" ]]; then
+            artifacts+=(storefront-web-app)
+          fi
+          if [[ "${{ needs.prepare.outputs.build_storybook }}" == "true" ]]; then
+            artifacts+=(storybook)
+          fi
+          .github/workflows/scripts/frontend-build-artifacts.sh "${artifacts[@]}"
+
+      - name: Upload frontend artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build
+          if-no-files-found: error
+          retention-days: 1
+          path: |
+            user-management/frontend/app/admin-web-app/dist
+            user-management/frontend/app/admin-web-app/storybook-static
+            product-management/frontend/app/product-admin-web-app/dist
+            product-management/frontend/app/product-admin-web-app/storybook-static
+            order-management/frontend/app/order-admin-web-app/dist
+            order-management/frontend/app/order-admin-web-app/storybook-static
+            online-storefront/frontend/app/storefront-web-app/dist
+            shared-components/frontend/app/storybook/storybook-static
+
+  build_backend:
+    name: Build backend binaries
+    needs: prepare
+    if: needs.prepare.outputs.build_user_management == 'true' || needs.prepare.outputs.build_product_management == 'true' || needs.prepare.outputs.build_order_management == 'true' || needs.prepare.outputs.build_online_storefront == 'true'
+    runs-on: [self-hosted, linux]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Run backend tests and build binaries
+        shell: bash
+        env:
+          BUILD_USER_MANAGEMENT: ${{ needs.prepare.outputs.build_user_management }}
+          BUILD_PRODUCT_MANAGEMENT: ${{ needs.prepare.outputs.build_product_management }}
+          BUILD_ORDER_MANAGEMENT: ${{ needs.prepare.outputs.build_order_management }}
+          BUILD_ONLINE_STOREFRONT: ${{ needs.prepare.outputs.build_online_storefront }}
+        run: .github/workflows/scripts/build-backend-binaries.sh
+
+      - name: Upload backend binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-binaries
+          if-no-files-found: error
+          retention-days: 1
+          path: build/bin/*
+
+  build_images:
+    name: Build and push application images
+    needs:
+      - prepare
+      - ci_cd
+      - build_frontend
+      - build_backend
+    if: always() && (needs.prepare.outputs.build_user_management == 'true' || needs.prepare.outputs.build_product_management == 'true' || needs.prepare.outputs.build_order_management == 'true' || needs.prepare.outputs.build_online_storefront == 'true' || needs.prepare.outputs.build_storybook == 'true') && (needs.ci_cd.result == 'success' || needs.ci_cd.result == 'skipped') && (needs.build_frontend.result == 'success' || needs.build_frontend.result == 'skipped') && (needs.build_backend.result == 'success' || needs.build_backend.result == 'skipped')
+    runs-on: [self-hosted, linux]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Load image build config
+        shell: bash
+        run: |
+          set -euo pipefail
+          set -a
+          . "config/${ENVIRONMENT_FILE}"
+          set +a
+
+          if [[ -z "${NEXUS_DOCKER_REGISTRY:-}" ]]; then
+            echo "Missing NEXUS_DOCKER_REGISTRY. Set it to an address reachable by the runner and every Kubernetes node." >&2
+            exit 1
+          fi
+
+          if [[ "$NEXUS_DOCKER_REGISTRY" =~ ^(127\.|localhost:|0\.0\.0\.0:) ]]; then
+            echo "NEXUS_DOCKER_REGISTRY must be node-reachable for multi-node clusters. Do not use loopback: $NEXUS_DOCKER_REGISTRY" >&2
+            exit 1
+          fi
+
+          IMAGE_NAMESPACE="${IMAGE_NAMESPACE:-eco-system}"
+          IMAGE_PREFIX="${IMAGE_PREFIX:-$NEXUS_DOCKER_REGISTRY/$IMAGE_NAMESPACE}"
+          NEXUS_ADMIN_PASSWORD="${NEXUS_ADMIN_PASSWORD:-${NEXUS_ADMIN_PASSWORD_SECRET:-admin123}}"
+
+          echo "NAMESPACE=${{ needs.prepare.outputs.namespace }}" >> "$GITHUB_ENV"
+          echo "CI_CD_NAMESPACE=${{ needs.prepare.outputs.ci_cd_namespace }}" >> "$GITHUB_ENV"
+          echo "K3D_CLUSTER=${K3D_CLUSTER:-eco-cluster}" >> "$GITHUB_ENV"
+          echo "IMAGE_NAMESPACE=$IMAGE_NAMESPACE" >> "$GITHUB_ENV"
+          echo "NEXUS_DOCKER_REGISTRY=$NEXUS_DOCKER_REGISTRY" >> "$GITHUB_ENV"
+          echo "IMAGE_PREFIX=$IMAGE_PREFIX" >> "$GITHUB_ENV"
+          echo "NEXUS_ADMIN_PASSWORD=$NEXUS_ADMIN_PASSWORD" >> "$GITHUB_ENV"
+        env:
+          NEXUS_ADMIN_PASSWORD_SECRET: ${{ secrets.NEXUS_ADMIN_PASSWORD }}
+
+      - name: Download frontend artifacts
+        if: needs.prepare.outputs.build_user_management == 'true' || needs.prepare.outputs.build_product_management == 'true' || needs.prepare.outputs.build_order_management == 'true' || needs.prepare.outputs.build_online_storefront == 'true' || needs.prepare.outputs.build_storybook == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-build
+          path: .
+
+      - name: Download backend binaries
+        if: needs.prepare.outputs.build_user_management == 'true' || needs.prepare.outputs.build_product_management == 'true' || needs.prepare.outputs.build_order_management == 'true' || needs.prepare.outputs.build_online_storefront == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-binaries
+          path: build/bin
+
+      - name: Set up kubectl for Nexus
+        uses: azure/setup-kubectl@v4
+
+      - name: Configure kubeconfig for Nexus
+        shell: bash
+        run: .github/workflows/scripts/configure-kubeconfig.sh
+        env:
+          KUBE_CONFIG_B64: ${{ secrets.KUBE_CONFIG_B64 }}
+
+      - name: Resolve Nexus Docker registries
+        shell: bash
+        run: .github/workflows/scripts/resolve-nexus-docker-registry.sh push
+
+      - name: Configure Docker insecure registry
+        shell: bash
+        run: .github/workflows/scripts/configure-docker-insecure-registry.sh
+
+      - name: Build and push application images
+        shell: bash
+        env:
+          BUILD_USER_MANAGEMENT: ${{ needs.prepare.outputs.build_user_management }}
+          BUILD_PRODUCT_MANAGEMENT: ${{ needs.prepare.outputs.build_product_management }}
+          BUILD_ORDER_MANAGEMENT: ${{ needs.prepare.outputs.build_order_management }}
+          BUILD_ONLINE_STOREFRONT: ${{ needs.prepare.outputs.build_online_storefront }}
+          BUILD_STORYBOOK: ${{ needs.prepare.outputs.build_storybook }}
+          TAG_LATEST: false
+        run: .github/workflows/scripts/build-push-application-images.sh
+
+      - name: Verify k3d node registry mirror for Nexus pulls
+        shell: bash
+        run: .github/workflows/scripts/verify-k3d-registry-mirror.sh
+
   application:
-    name: Build and deploy application
+    name: Deploy application
     needs:
       - prepare
       - ci_cd
       - foundation
-    if: always() && needs.prepare.outputs.deploy_application == 'true' && (needs.ci_cd.result == 'success' || needs.ci_cd.result == 'skipped') && (needs.foundation.result == 'success' || needs.foundation.result == 'skipped')
+      - build_images
+    if: always() && needs.prepare.outputs.deploy_application == 'true' && (needs.ci_cd.result == 'success' || needs.ci_cd.result == 'skipped') && (needs.foundation.result == 'success' || needs.foundation.result == 'skipped') && (needs.build_images.result == 'success' || (needs.build_images.result == 'skipped' && needs.prepare.outputs.build_user_management != 'true' && needs.prepare.outputs.build_product_management != 'true' && needs.prepare.outputs.build_order_management != 'true' && needs.prepare.outputs.build_online_storefront != 'true' && needs.prepare.outputs.build_storybook != 'true'))
     runs-on: [self-hosted, linux]
     steps:
       - name: Checkout
@@ -1090,382 +1266,6 @@ jobs:
         env:
           NEXUS_ADMIN_PASSWORD_SECRET: ${{ secrets.NEXUS_ADMIN_PASSWORD }}
 
-      - name: Set up Go
-        if: needs.prepare.outputs.deploy_user_management == 'true' || needs.prepare.outputs.deploy_product_management == 'true' || needs.prepare.outputs.deploy_order_management == 'true' || needs.prepare.outputs.deploy_online_storefront == 'true'
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-
-      - name: Run in-process Go gateway functional tests
-        if: needs.prepare.outputs.build_user_management == 'true' || needs.prepare.outputs.build_product_management == 'true' || needs.prepare.outputs.build_order_management == 'true' || needs.prepare.outputs.build_online_storefront == 'true'
-        shell: bash
-        run: |
-          if [[ "${{ needs.prepare.outputs.build_user_management }}" == "true" ]]; then
-            go test ./user-management/backend/app/user-gateway/routes -run 'TestGatewayFunctional'
-          fi
-          if [[ "${{ needs.prepare.outputs.build_product_management }}" == "true" ]]; then
-            go test ./product-management/backend/app/product-gateway/routes -run 'TestProductGatewayFunctional'
-          fi
-          if [[ "${{ needs.prepare.outputs.build_order_management }}" == "true" ]]; then
-            go test ./order-management/backend/app/order-gateway/routes
-            go test ./order-management/backend/app/order-service/routes
-          fi
-          if [[ "${{ needs.prepare.outputs.build_online_storefront }}" == "true" ]]; then
-            go test ./online-storefront/backend/app/cart-gateway/routes
-            go test ./online-storefront/backend/app/storefront-gateway/routes
-          fi
-
-      - name: Set up Node
-        if: needs.prepare.outputs.build_user_management == 'true' || needs.prepare.outputs.build_product_management == 'true' || needs.prepare.outputs.build_order_management == 'true' || needs.prepare.outputs.build_online_storefront == 'true' || needs.prepare.outputs.build_storybook == 'true'
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-
-      - name: Set up pnpm
-        if: needs.prepare.outputs.build_user_management == 'true' || needs.prepare.outputs.build_product_management == 'true' || needs.prepare.outputs.build_order_management == 'true' || needs.prepare.outputs.build_online_storefront == 'true' || needs.prepare.outputs.build_storybook == 'true'
-        uses: pnpm/action-setup@v4
-
-      - name: Set up kubectl for Nexus artifacts
-        if: needs.prepare.outputs.build_user_management == 'true' || needs.prepare.outputs.build_product_management == 'true' || needs.prepare.outputs.build_order_management == 'true' || needs.prepare.outputs.build_online_storefront == 'true' || needs.prepare.outputs.build_storybook == 'true'
-        uses: azure/setup-kubectl@v4
-
-      - name: Configure kubeconfig for Nexus artifacts
-        if: needs.prepare.outputs.build_user_management == 'true' || needs.prepare.outputs.build_product_management == 'true' || needs.prepare.outputs.build_order_management == 'true' || needs.prepare.outputs.build_online_storefront == 'true' || needs.prepare.outputs.build_storybook == 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p "$HOME/.kube"
-          if [[ -f "$HOME/.kube/config" ]] && kubectl config current-context >/dev/null 2>&1; then
-            echo "Using existing runner kubeconfig at $HOME/.kube/config"
-          elif [[ -f "$HOME/.config/k3d/kubeconfig-${K3D_CLUSTER:-eco-cluster}.yaml" ]]; then
-            cp "$HOME/.config/k3d/kubeconfig-${K3D_CLUSTER:-eco-cluster}.yaml" "$HOME/.kube/config"
-          elif command -v k3d >/dev/null 2>&1 && k3d cluster list "${K3D_CLUSTER:-eco-cluster}" >/dev/null 2>&1; then
-            k3d kubeconfig get "${K3D_CLUSTER:-eco-cluster}" > "$HOME/.kube/config"
-          elif [[ -f /etc/rancher/k3s/k3s.yaml ]]; then
-            sudo cat /etc/rancher/k3s/k3s.yaml > "$HOME/.kube/config"
-          elif [[ -n "${KUBE_CONFIG_B64:-}" ]]; then
-            echo "$KUBE_CONFIG_B64" | base64 --decode > "$HOME/.kube/config"
-          else
-            echo "No usable kubeconfig found. Add one at $HOME/.kube/config on the runner, install k3s config at /etc/rancher/k3s/k3s.yaml, or set KUBE_CONFIG_B64." >&2
-            exit 1
-          fi
-          chmod 600 "$HOME/.kube/config"
-        env:
-          KUBE_CONFIG_B64: ${{ secrets.KUBE_CONFIG_B64 }}
-
-      - name: Resolve Nexus Docker registries
-        if: needs.prepare.outputs.build_user_management == 'true' || needs.prepare.outputs.build_product_management == 'true' || needs.prepare.outputs.build_order_management == 'true' || needs.prepare.outputs.build_online_storefront == 'true' || needs.prepare.outputs.build_storybook == 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-          docker_port="$(kubectl get svc nexus -n "$CI_CD_NAMESPACE" -o jsonpath='{.spec.ports[?(@.name=="docker")].port}')"
-          cluster_ip="$(kubectl get svc nexus -n "$CI_CD_NAMESPACE" -o jsonpath='{.spec.clusterIP}')"
-          push_port="${NEXUS_DOCKER_PUSH_PORT:-${NEXUS_DOCKER_NODE_PORT:-30500}}"
-          pull_registry="${NEXUS_DOCKER_PULL_REGISTRY:-$cluster_ip:$docker_port}"
-          push_registry="${NEXUS_DOCKER_PUSH_REGISTRY:-127.0.0.1:$push_port}"
-
-          echo "NEXUS_DOCKER_PULL_REGISTRY=$pull_registry" >> "$GITHUB_ENV"
-          echo "NEXUS_DOCKER_PUSH_REGISTRY=$push_registry" >> "$GITHUB_ENV"
-          echo "NEXUS_DOCKER_REGISTRY=$push_registry" >> "$GITHUB_ENV"
-          echo "IMAGE_PREFIX=$push_registry/$IMAGE_NAMESPACE" >> "$GITHUB_ENV"
-          echo "Docker push registry: $push_registry"
-          echo "Kubernetes pull registry: $pull_registry"
-
-      - name: Build backend binaries
-        if: needs.prepare.outputs.build_user_management == 'true' || needs.prepare.outputs.build_product_management == 'true' || needs.prepare.outputs.build_order_management == 'true' || needs.prepare.outputs.build_online_storefront == 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p build/bin
-          built_bins=()
-          if [[ "${{ needs.prepare.outputs.build_user_management }}" == "true" ]]; then
-            CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/bin/user-service ./user-management/backend/app/user-service/cmd
-            CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/bin/user-gateway ./user-management/backend/app/user-gateway/cmd
-            built_bins+=(build/bin/user-service build/bin/user-gateway)
-          fi
-          if [[ "${{ needs.prepare.outputs.build_product_management }}" == "true" ]]; then
-            CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/bin/product-service ./product-management/backend/app/product-service/cmd
-            CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/bin/product-gateway ./product-management/backend/app/product-gateway/cmd
-            built_bins+=(build/bin/product-service build/bin/product-gateway)
-          fi
-          if [[ "${{ needs.prepare.outputs.build_order_management }}" == "true" ]]; then
-            CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/bin/order-service ./order-management/backend/app/order-service/cmd
-            CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/bin/order-gateway ./order-management/backend/app/order-gateway/cmd
-            built_bins+=(build/bin/order-service build/bin/order-gateway)
-          fi
-          if [[ "${{ needs.prepare.outputs.build_online_storefront }}" == "true" ]]; then
-            CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/bin/cart-gateway ./online-storefront/backend/app/cart-gateway/cmd
-            CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/bin/storefront-gateway ./online-storefront/backend/app/storefront-gateway/cmd
-            built_bins+=(build/bin/cart-gateway build/bin/storefront-gateway)
-          fi
-          file "${built_bins[@]}"
-
-      - name: Build frontend applications and storybooks
-        if: needs.prepare.outputs.build_user_management == 'true' || needs.prepare.outputs.build_product_management == 'true' || needs.prepare.outputs.build_order_management == 'true' || needs.prepare.outputs.build_online_storefront == 'true' || needs.prepare.outputs.build_storybook == 'true'
-        shell: bash
-        env:
-          FRONTEND_ARTIFACT_CACHE: "false"
-        run: |
-          set -euo pipefail
-          pnpm install --frozen-lockfile
-          artifacts=()
-          if [[ "${{ needs.prepare.outputs.build_user_management }}" == "true" ]]; then
-            artifacts+=(admin-web-app)
-          fi
-          if [[ "${{ needs.prepare.outputs.build_product_management }}" == "true" ]]; then
-            artifacts+=(product-admin-web-app)
-          fi
-          if [[ "${{ needs.prepare.outputs.build_order_management }}" == "true" ]]; then
-            artifacts+=(order-admin-web-app)
-          fi
-          if [[ "${{ needs.prepare.outputs.build_online_storefront }}" == "true" ]]; then
-            artifacts+=(storefront-web-app)
-          fi
-          if [[ "${{ needs.prepare.outputs.build_storybook }}" == "true" ]]; then
-            artifacts+=(storybook)
-          fi
-          .github/workflows/scripts/frontend-build-artifacts.sh "${artifacts[@]}"
-
-      - name: Configure Docker insecure registry
-        if: needs.prepare.outputs.build_user_management == 'true' || needs.prepare.outputs.build_product_management == 'true' || needs.prepare.outputs.build_order_management == 'true' || needs.prepare.outputs.build_online_storefront == 'true' || needs.prepare.outputs.build_storybook == 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          if [[ "$NEXUS_DOCKER_REGISTRY" =~ ^(127\.|localhost:|0\.0\.0\.0:) ]]; then
-            echo "Using local Nexus registry forward $NEXUS_DOCKER_REGISTRY; Docker daemon insecure-registry configuration is not required."
-            exit 0
-          fi
-
-          if docker info 2>/dev/null | grep -F "$NEXUS_DOCKER_REGISTRY" >/dev/null; then
-            echo "Docker already trusts insecure registry $NEXUS_DOCKER_REGISTRY"
-            exit 0
-          fi
-
-          if ! sudo -n true 2>/dev/null; then
-            echo "Docker must be configured to trust HTTP registry $NEXUS_DOCKER_REGISTRY before images can be pushed." >&2
-            echo "Either preconfigure /etc/docker/daemon.json on the self-hosted runner or allow passwordless sudo for the runner user." >&2
-            exit 1
-          fi
-
-          sudo mkdir -p /etc/docker
-          if [[ -f /etc/docker/daemon.json ]]; then
-            sudo cp /etc/docker/daemon.json /tmp/docker-daemon.json
-          else
-            printf '{}\n' > /tmp/docker-daemon.json
-          fi
-
-          python3 - "$NEXUS_DOCKER_REGISTRY" /tmp/docker-daemon.json <<'PY'
-          import json
-          import sys
-
-          registry = sys.argv[1]
-          path = sys.argv[2]
-
-          with open(path, "r", encoding="utf-8") as fh:
-              config = json.load(fh)
-
-          registries = config.setdefault("insecure-registries", [])
-          if registry not in registries:
-              registries.append(registry)
-
-          with open(path, "w", encoding="utf-8") as fh:
-              json.dump(config, fh, indent=2)
-              fh.write("\n")
-          PY
-
-          sudo cp /tmp/docker-daemon.json /etc/docker/daemon.json
-          sudo systemctl restart docker || sudo service docker restart
-          docker info
-
-      - name: Build local application images
-        if: needs.prepare.outputs.build_user_management == 'true' || needs.prepare.outputs.build_product_management == 'true' || needs.prepare.outputs.build_order_management == 'true' || needs.prepare.outputs.build_online_storefront == 'true' || needs.prepare.outputs.build_storybook == 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [[ "${{ needs.prepare.outputs.build_user_management }}" == "true" ]]; then
-            docker build \
-              -f dockerfile \
-              --build-arg APP_NAME=user-service \
-              -t "$IMAGE_PREFIX/user-service:$IMAGE_TAG" \
-              .
-            docker build \
-              -f dockerfile \
-              --build-arg APP_NAME=user-gateway \
-              -t "$IMAGE_PREFIX/user-gateway:$IMAGE_TAG" \
-              .
-            docker build \
-              -f user-management/frontend/app/admin-web-app/Dockerfile \
-              -t "$IMAGE_PREFIX/admin-web-app:$IMAGE_TAG" \
-              .
-          fi
-          if [[ "${{ needs.prepare.outputs.build_product_management }}" == "true" ]]; then
-            docker build \
-              -f dockerfile \
-              --build-arg APP_NAME=product-service \
-              -t "$IMAGE_PREFIX/product-service:$IMAGE_TAG" \
-              .
-            docker build \
-              -f dockerfile \
-              --build-arg APP_NAME=product-gateway \
-              -t "$IMAGE_PREFIX/product-gateway:$IMAGE_TAG" \
-              .
-            docker build \
-              -f product-management/frontend/app/product-admin-web-app/Dockerfile \
-              -t "$IMAGE_PREFIX/product-admin-web-app:$IMAGE_TAG" \
-              .
-          fi
-          if [[ "${{ needs.prepare.outputs.build_order_management }}" == "true" ]]; then
-            docker build \
-              -f dockerfile \
-              --build-arg APP_NAME=order-service \
-              -t "$IMAGE_PREFIX/order-service:$IMAGE_TAG" \
-              .
-            docker build \
-              -f dockerfile \
-              --build-arg APP_NAME=order-gateway \
-              -t "$IMAGE_PREFIX/order-gateway:$IMAGE_TAG" \
-              .
-            docker build \
-              -f order-management/frontend/app/order-admin-web-app/Dockerfile \
-              -t "$IMAGE_PREFIX/order-admin-web-app:$IMAGE_TAG" \
-              .
-          fi
-          if [[ "${{ needs.prepare.outputs.build_online_storefront }}" == "true" ]]; then
-            docker build \
-              -f dockerfile \
-              --build-arg APP_NAME=cart-gateway \
-              -t "$IMAGE_PREFIX/cart-gateway:$IMAGE_TAG" \
-              .
-            docker build \
-              -f dockerfile \
-              --build-arg APP_NAME=storefront-gateway \
-              -t "$IMAGE_PREFIX/storefront-gateway:$IMAGE_TAG" \
-              .
-            docker build \
-              -f online-storefront/frontend/app/storefront-web-app/Dockerfile \
-              -t "$IMAGE_PREFIX/storefront-web-app:$IMAGE_TAG" \
-              .
-          fi
-          if [[ "${{ needs.prepare.outputs.build_storybook }}" == "true" ]]; then
-            docker build \
-              -f shared-components/frontend/app/storybook/Dockerfile \
-              -t "$IMAGE_PREFIX/storybook:$IMAGE_TAG" \
-              .
-          fi
-
-      - name: Push application images to Nexus
-        if: needs.prepare.outputs.build_user_management == 'true' || needs.prepare.outputs.build_product_management == 'true' || needs.prepare.outputs.build_order_management == 'true' || needs.prepare.outputs.build_online_storefront == 'true' || needs.prepare.outputs.build_storybook == 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-          for attempt in {1..60}; do
-            endpoints="$(kubectl get endpoints nexus -n "$CI_CD_NAMESPACE" -o jsonpath='{.subsets[*].addresses[*].ip}' 2>/dev/null || true)"
-            if [[ -n "$endpoints" ]]; then
-              break
-            fi
-            if [[ "$attempt" == "60" ]]; then
-              echo "Timed out waiting for existing Nexus service endpoints in namespace $CI_CD_NAMESPACE." >&2
-              kubectl get deploy,pod,svc,endpoints -n "$CI_CD_NAMESPACE" -l app.kubernetes.io/name=nexus -o wide || true
-              exit 1
-            fi
-            sleep 2
-          done
-
-          kubectl port-forward -n "$CI_CD_NAMESPACE" svc/nexus "${NEXUS_DOCKER_PUSH_REGISTRY##*:}:5000" &
-          NEXUS_DOCKER_PORT_FORWARD_PID="$!"
-          trap 'kill "$NEXUS_DOCKER_PORT_FORWARD_PID" 2>/dev/null || true' EXIT
-
-          for attempt in {1..60}; do
-            status="$(curl --silent --output /dev/null --write-out '%{http_code}' "http://$NEXUS_DOCKER_PUSH_REGISTRY/v2/" || true)"
-            if [[ "$status" == "200" || "$status" == "401" ]]; then
-              break
-            fi
-            if [[ "$attempt" == "60" ]]; then
-              echo "Timed out waiting for local Nexus Docker registry forward at $NEXUS_DOCKER_PUSH_REGISTRY" >&2
-              exit 1
-            fi
-            sleep 2
-          done
-
-          echo "$NEXUS_ADMIN_PASSWORD" | docker login "$NEXUS_DOCKER_PUSH_REGISTRY" --username admin --password-stdin
-          push_image() {
-            local name="$1"
-            docker push "$IMAGE_PREFIX/$name:$IMAGE_TAG"
-            if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == "refs/heads/main" ]]; then
-              docker tag "$IMAGE_PREFIX/$name:$IMAGE_TAG" "$IMAGE_PREFIX/$name:latest"
-              docker push "$IMAGE_PREFIX/$name:latest"
-              docker image rm "$IMAGE_PREFIX/$name:latest" >/dev/null 2>&1 || true
-            fi
-            docker image rm "$IMAGE_PREFIX/$name:$IMAGE_TAG" >/dev/null 2>&1 || true
-          }
-
-          if [[ "${{ needs.prepare.outputs.build_user_management }}" == "true" ]]; then
-            push_image user-service
-            push_image user-gateway
-            push_image admin-web-app
-          fi
-          if [[ "${{ needs.prepare.outputs.build_product_management }}" == "true" ]]; then
-            push_image product-service
-            push_image product-gateway
-            push_image product-admin-web-app
-          fi
-          if [[ "${{ needs.prepare.outputs.build_order_management }}" == "true" ]]; then
-            push_image order-service
-            push_image order-gateway
-            push_image order-admin-web-app
-          fi
-          if [[ "${{ needs.prepare.outputs.build_online_storefront }}" == "true" ]]; then
-            push_image cart-gateway
-            push_image storefront-gateway
-            push_image storefront-web-app
-          fi
-          if [[ "${{ needs.prepare.outputs.build_storybook }}" == "true" ]]; then
-            push_image storybook
-          fi
-          echo "NEXUS_DOCKER_REGISTRY=$NEXUS_DOCKER_PULL_REGISTRY" >> "$GITHUB_ENV"
-          echo "IMAGE_PREFIX=$NEXUS_DOCKER_PULL_REGISTRY/$IMAGE_NAMESPACE" >> "$GITHUB_ENV"
-
-      - name: Verify k3d node registry mirror for Nexus pulls
-        if: needs.prepare.outputs.build_user_management == 'true' || needs.prepare.outputs.build_product_management == 'true' || needs.prepare.outputs.build_order_management == 'true' || needs.prepare.outputs.build_online_storefront == 'true' || needs.prepare.outputs.build_storybook == 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          if ! command -v docker >/dev/null 2>&1; then
-            echo "Docker is not available; skipping k3d registry mirror verification"
-            exit 0
-          fi
-
-          K3D_CLUSTER_NAME="${K3D_CLUSTER:-eco-cluster}"
-          mapfile -t K3D_NODES < <(docker ps \
-            --filter "name=k3d-${K3D_CLUSTER_NAME}-" \
-            --format '{{.Names}}' \
-            | grep -E '^k3d-.+-(server|agent)-[0-9]+$' || true)
-
-          if [[ "${#K3D_NODES[@]}" -eq 0 ]]; then
-            echo "No k3d node containers found; skipping registry mirror verification"
-            exit 0
-          fi
-
-          missing_mirrors=()
-          for node in "${K3D_NODES[@]}"; do
-            if docker exec "$node" sh -c "test -f /etc/rancher/k3s/registries.yaml && grep -F '\"${NEXUS_DOCKER_PULL_REGISTRY}\":' /etc/rancher/k3s/registries.yaml >/dev/null && grep -F '\"http://${NEXUS_DOCKER_PULL_REGISTRY}\"' /etc/rancher/k3s/registries.yaml >/dev/null"; then
-              echo "Registry mirror for $NEXUS_DOCKER_PULL_REGISTRY already configured on $node"
-              continue
-            fi
-
-            missing_mirrors+=("$node")
-          done
-
-          if [[ "${#missing_mirrors[@]}" -gt 0 ]]; then
-            printf 'Missing Nexus registry mirror %s on k3d node(s): %s\n' "$NEXUS_DOCKER_PULL_REGISTRY" "${missing_mirrors[*]}" >&2
-            echo "Configure k3d registry mirrors outside the application deploy before running this workflow." >&2
-            exit 1
-          fi
-
-          echo "All k3d registry mirrors are configured; no node restarts needed."
-
       - name: Set up Helm
         uses: azure/setup-helm@v4
 
@@ -1474,24 +1274,7 @@ jobs:
 
       - name: Configure kubeconfig
         shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p "$HOME/.kube"
-          if [[ -f "$HOME/.kube/config" ]] && kubectl config current-context >/dev/null 2>&1; then
-            echo "Using existing runner kubeconfig at $HOME/.kube/config"
-          elif [[ -f "$HOME/.config/k3d/kubeconfig-${K3D_CLUSTER:-eco-cluster}.yaml" ]]; then
-            cp "$HOME/.config/k3d/kubeconfig-${K3D_CLUSTER:-eco-cluster}.yaml" "$HOME/.kube/config"
-          elif command -v k3d >/dev/null 2>&1 && k3d cluster list "${K3D_CLUSTER:-eco-cluster}" >/dev/null 2>&1; then
-            k3d kubeconfig get "${K3D_CLUSTER:-eco-cluster}" > "$HOME/.kube/config"
-          elif [[ -f /etc/rancher/k3s/k3s.yaml ]]; then
-            sudo cat /etc/rancher/k3s/k3s.yaml > "$HOME/.kube/config"
-          elif [[ -n "${KUBE_CONFIG_B64:-}" ]]; then
-            echo "$KUBE_CONFIG_B64" | base64 --decode > "$HOME/.kube/config"
-          else
-            echo "No usable kubeconfig found. Add one at $HOME/.kube/config on the runner, install k3s config at /etc/rancher/k3s/k3s.yaml, or set KUBE_CONFIG_B64." >&2
-            exit 1
-          fi
-          chmod 600 "$HOME/.kube/config"
+        run: .github/workflows/scripts/configure-kubeconfig.sh
         env:
           KUBE_CONFIG_B64: ${{ secrets.KUBE_CONFIG_B64 }}
 
@@ -1504,6 +1287,11 @@ jobs:
           kubectl version --client
           kubectl get --raw=/version
           kubectl get --raw=/api
+
+
+      - name: Resolve Nexus Docker pull registry
+        shell: bash
+        run: .github/workflows/scripts/resolve-nexus-docker-registry.sh
 
       - name: Create application namespace
         shell: bash
@@ -1899,223 +1687,6 @@ jobs:
           kubectl rollout status deployment/storefront-cart-gateway -n "$NAMESPACE" --timeout=180s
           kubectl rollout status deployment/storefront-web-app -n "$NAMESPACE" --timeout=180s
 
-      - name: Run deployed online storefront smoke test
-        if: needs.prepare.outputs.deploy_online_storefront == 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-          kubectl port-forward -n "$NAMESPACE" service/storefront-gateway 18082:8080 &
-          GATEWAY_PORT_FORWARD_PID="$!"
-          kubectl port-forward -n "$NAMESPACE" service/storefront-web-app 18083:80 &
-          WEB_PORT_FORWARD_PID="$!"
-          trap 'kill "$GATEWAY_PORT_FORWARD_PID" "$WEB_PORT_FORWARD_PID" 2>/dev/null || true' EXIT
-
-          for attempt in {1..30}; do
-            if curl --silent --fail http://127.0.0.1:18082/health >/dev/null \
-              && curl --silent --fail http://127.0.0.1:18083/ >/dev/null; then
-              break
-            fi
-            if [[ "$attempt" == "30" ]]; then
-              echo "Timed out waiting for online storefront services" >&2
-              exit 1
-            fi
-            sleep 1
-          done
-
-          curl --silent --fail http://127.0.0.1:18082/api/products >/dev/null
-
-      - name: Run deployed storefront gateway functional tests
-        if: needs.prepare.outputs.deploy_online_storefront == 'true'
-        shell: bash
-        env:
-          STOREFRONT_GATEWAY_BASE_URL: http://127.0.0.1:18082
-          STOREFRONT_FUNCTIONAL_TEST_EMAIL: admin@test.com
-          STOREFRONT_FUNCTIONAL_TEST_PASSWORD: password
-        run: |
-          set -euo pipefail
-
-          show_gateway_logs() {
-            echo "::group::Recent storefront-gateway logs"
-            kubectl logs -n "$NAMESPACE" deployment/storefront-gateway --tail=120 || true
-            echo "::endgroup::"
-          }
-          kubectl port-forward -n "$NAMESPACE" service/storefront-gateway 18082:8080 &
-          PORT_FORWARD_PID="$!"
-          trap 'kill "$PORT_FORWARD_PID" 2>/dev/null || true; show_gateway_logs' EXIT
-
-          for attempt in {1..30}; do
-            if curl --silent --fail "$STOREFRONT_GATEWAY_BASE_URL/health" >/dev/null; then
-              break
-            fi
-
-            if [[ "$attempt" == "30" ]]; then
-              echo "Timed out waiting for port-forwarded storefront-gateway service" >&2
-              exit 1
-            fi
-
-            sleep 1
-          done
-
-          go test ./online-storefront/backend/app/storefront-gateway/routes \
-            -tags integration \
-            -run TestDeployedStorefrontGatewayFunctional \
-            -v
-
-      - name: Run deployed cart gateway functional tests
-        if: needs.prepare.outputs.deploy_online_storefront == 'true'
-        shell: bash
-        env:
-          CART_GATEWAY_BASE_URL: http://127.0.0.1:18084
-          STOREFRONT_GATEWAY_BASE_URL: http://127.0.0.1:18082
-          CART_FUNCTIONAL_TEST_EMAIL: admin@test.com
-          CART_FUNCTIONAL_TEST_PASSWORD: password
-        run: |
-          set -euo pipefail
-
-          show_gateway_logs() {
-            echo "::group::Recent storefront-cart-gateway logs"
-            kubectl logs -n "$NAMESPACE" deployment/storefront-cart-gateway --tail=120 || true
-            echo "::endgroup::"
-            echo "::group::Recent storefront-gateway logs"
-            kubectl logs -n "$NAMESPACE" deployment/storefront-gateway --tail=120 || true
-            echo "::endgroup::"
-          }
-          kubectl port-forward -n "$NAMESPACE" service/storefront-cart-gateway 18084:8080 &
-          CART_PORT_FORWARD_PID="$!"
-          kubectl port-forward -n "$NAMESPACE" service/storefront-gateway 18082:8080 &
-          STOREFRONT_PORT_FORWARD_PID="$!"
-          trap 'kill "$CART_PORT_FORWARD_PID" "$STOREFRONT_PORT_FORWARD_PID" 2>/dev/null || true; show_gateway_logs' EXIT
-
-          for attempt in {1..30}; do
-            if curl --silent --fail "$CART_GATEWAY_BASE_URL/health" >/dev/null \
-              && curl --silent --fail "$STOREFRONT_GATEWAY_BASE_URL/health" >/dev/null; then
-              break
-            fi
-
-            if [[ "$attempt" == "30" ]]; then
-              echo "Timed out waiting for port-forwarded online storefront backend services" >&2
-              exit 1
-            fi
-
-            sleep 1
-          done
-
-          go test ./online-storefront/backend/app/cart-gateway/routes \
-            -tags integration \
-            -run TestDeployedCartGatewayFunctional \
-            -v
-
-      - name: Run deployed gateway functional tests
-        if: needs.prepare.outputs.deploy_user_management == 'true'
-        shell: bash
-        env:
-          GATEWAY_BASE_URL: http://127.0.0.1:18180
-          FUNCTIONAL_TEST_EMAIL: admin@test.com
-          FUNCTIONAL_TEST_PASSWORD: password
-        run: |
-          set -euo pipefail
-
-          show_gateway_logs() {
-            echo "::group::Recent user-gateway logs"
-            kubectl logs -n "$NAMESPACE" deployment/user-gateway --tail=120 || true
-            echo "::endgroup::"
-          }
-          kubectl port-forward -n "$NAMESPACE" service/user-gateway 18180:8080 &
-          PORT_FORWARD_PID="$!"
-          trap 'kill "$PORT_FORWARD_PID" 2>/dev/null || true; show_gateway_logs' EXIT
-
-          for attempt in {1..30}; do
-            if curl --silent --fail --request OPTIONS "$GATEWAY_BASE_URL/api/auth/login" >/dev/null; then
-              break
-            fi
-
-            if [[ "$attempt" == "30" ]]; then
-              echo "Timed out waiting for port-forwarded user-gateway service" >&2
-              exit 1
-            fi
-
-            sleep 1
-          done
-
-          go test ./user-management/backend/app/user-gateway/routes \
-            -tags integration \
-            -run TestDeployedGatewayFunctional \
-            -v
-
-      - name: Run deployed product gateway functional tests
-        if: needs.prepare.outputs.deploy_product_management == 'true'
-        shell: bash
-        env:
-          PRODUCT_GATEWAY_BASE_URL: http://127.0.0.1:18081
-          PRODUCT_FUNCTIONAL_TEST_EMAIL: admin@test.com
-          PRODUCT_FUNCTIONAL_TEST_PASSWORD: password
-        run: |
-          set -euo pipefail
-
-          show_gateway_logs() {
-            echo "::group::Recent product-gateway logs"
-            kubectl logs -n "$NAMESPACE" deployment/product-gateway --tail=120 || true
-            echo "::endgroup::"
-          }
-          kubectl port-forward -n "$NAMESPACE" service/product-gateway 18081:8080 &
-          PORT_FORWARD_PID="$!"
-          trap 'kill "$PORT_FORWARD_PID" 2>/dev/null || true; show_gateway_logs' EXIT
-
-          for attempt in {1..30}; do
-            if curl --silent --fail --request OPTIONS "$PRODUCT_GATEWAY_BASE_URL/api/auth/login" >/dev/null; then
-              break
-            fi
-
-            if [[ "$attempt" == "30" ]]; then
-              echo "Timed out waiting for port-forwarded product-gateway service" >&2
-              exit 1
-            fi
-
-            sleep 1
-          done
-
-          go test ./product-management/backend/app/product-gateway/routes \
-            -tags integration \
-            -run TestDeployedProductGatewayFunctional \
-            -v
-
-      - name: Run deployed order gateway functional tests
-        if: needs.prepare.outputs.deploy_order_management == 'true'
-        shell: bash
-        env:
-          ORDER_GATEWAY_BASE_URL: http://127.0.0.1:18085
-          ORDER_FUNCTIONAL_TEST_EMAIL: admin@test.com
-          ORDER_FUNCTIONAL_TEST_PASSWORD: password
-        run: |
-          set -euo pipefail
-
-          show_gateway_logs() {
-            echo "::group::Recent order-gateway logs"
-            kubectl logs -n "$NAMESPACE" deployment/order-gateway --tail=120 || true
-            echo "::endgroup::"
-          }
-          kubectl port-forward -n "$NAMESPACE" service/order-gateway 18085:8080 &
-          PORT_FORWARD_PID="$!"
-          trap 'kill "$PORT_FORWARD_PID" 2>/dev/null || true; show_gateway_logs' EXIT
-
-          for attempt in {1..30}; do
-            if curl --silent --fail "$ORDER_GATEWAY_BASE_URL/health" >/dev/null; then
-              break
-            fi
-
-            if [[ "$attempt" == "30" ]]; then
-              echo "Timed out waiting for port-forwarded order-gateway service" >&2
-              exit 1
-            fi
-
-            sleep 1
-          done
-
-          go test ./order-management/backend/app/order-gateway/routes \
-            -tags integration \
-            -run TestDeployedOrderGatewayFunctional \
-            -v
-
       - name: Enable ingress TLS
         shell: bash
         run: |
@@ -2250,3 +1821,47 @@ jobs:
                 body,
               });
             }
+
+  functional_tests:
+    name: Run deployed functional tests
+    needs:
+      - prepare
+      - application
+    if: always() && needs.application.result == 'success' && (needs.prepare.outputs.deploy_user_management == 'true' || needs.prepare.outputs.deploy_product_management == 'true' || needs.prepare.outputs.deploy_order_management == 'true' || needs.prepare.outputs.deploy_online_storefront == 'true')
+    runs-on: [self-hosted, linux]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Load test environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          set -a
+          . "config/${ENVIRONMENT_FILE}"
+          set +a
+          echo "NAMESPACE=${{ needs.prepare.outputs.namespace }}" >> "$GITHUB_ENV"
+          echo "K3D_CLUSTER=${K3D_CLUSTER:-eco-cluster}" >> "$GITHUB_ENV"
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Configure kubeconfig
+        shell: bash
+        run: .github/workflows/scripts/configure-kubeconfig.sh
+        env:
+          KUBE_CONFIG_B64: ${{ secrets.KUBE_CONFIG_B64 }}
+
+      - name: Run deployed functional tests
+        shell: bash
+        env:
+          DEPLOY_USER_MANAGEMENT: ${{ needs.prepare.outputs.deploy_user_management }}
+          DEPLOY_PRODUCT_MANAGEMENT: ${{ needs.prepare.outputs.deploy_product_management }}
+          DEPLOY_ORDER_MANAGEMENT: ${{ needs.prepare.outputs.deploy_order_management }}
+          DEPLOY_ONLINE_STOREFRONT: ${{ needs.prepare.outputs.deploy_online_storefront }}
+        run: .github/workflows/scripts/run-deployed-functional-tests.sh

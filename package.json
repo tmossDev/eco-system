@@ -6,6 +6,10 @@
   "scripts": {
     "dev": "pnpm -r dev",
     "build": "corepack pnpm -r --if-present build",
+    "nx": "nx",
+    "affected:build": "nx affected --target=build",
+    "projects:application": "nx show projects --projects tag:layer:application",
+    "projects:frontend": "nx show projects --projects tag:layer:frontend",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -18,6 +22,9 @@
       "version": "11.9.0",
       "onFail": "download"
     }
+  },
+  "devDependencies": {
+    "nx": "23.1.0"
   },
   "type": "module"
 }
