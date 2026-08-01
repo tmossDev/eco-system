@@ -1,0 +1,11 @@
+{
+  "name": "product-service",
+  "root": "product-management/backend/app/product-service",
+  "projectType": "application",
+  "targets": {
+    "build": {
+      "command": "CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/bin/product-service ./product-management/backend/app/product-service/cmd"
+    }
+  },
+  "tags": ["layer:application", "layer:backend", "scope:product-management", "type:service"]
+}

@@ -1,0 +1,6 @@
+{
+  "name": "online-storefront-deployment",
+  "root": "online-storefront/deployment",
+  "projectType": "application",
+  "tags": ["layer:application", "layer:deployment", "scope:online-storefront", "type:helm"]
+}

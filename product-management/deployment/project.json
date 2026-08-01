@@ -1,0 +1,6 @@
+{
+  "name": "product-management-deployment",
+  "root": "product-management/deployment",
+  "projectType": "application",
+  "tags": ["layer:application", "layer:deployment", "scope:product-management", "type:helm"]
+}

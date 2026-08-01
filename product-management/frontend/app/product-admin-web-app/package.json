@@ -10,6 +10,9 @@
     "storybook": "ng run product-admin-web-app:storybook",
     "build-storybook": "ng run product-admin-web-app:build-storybook"
   },
+  "nx": {
+    "tags": ["layer:application", "layer:frontend", "scope:product-management", "type:app"]
+  },
   "private": true,
   "packageManager": "pnpm@11.9.0",
   "dependencies": {

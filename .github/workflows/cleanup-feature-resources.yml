@@ -1,0 +1,84 @@
+name: Cleanup Feature Resources
+
+on:
+  schedule:
+    - cron: "17 2 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Print what would be deleted without deleting it.
+        required: true
+        default: true
+        type: boolean
+      environment_file:
+        description: Environment config file under config/
+        required: true
+        default: hp-prodesk-homelab.txt
+
+permissions:
+  contents: read
+
+env:
+  ENVIRONMENT_FILE: ${{ github.event_name == 'workflow_dispatch' && inputs.environment_file || 'hp-prodesk-homelab.txt' }}
+  DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || false }}
+
+jobs:
+  cleanup:
+    name: Cleanup inactive feature namespaces and images
+    runs-on: [self-hosted, linux]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Load cleanup config
+        shell: bash
+        run: |
+          set -euo pipefail
+          set -a
+          . "config/${ENVIRONMENT_FILE}"
+          set +a
+
+          if [[ -z "${NEXUS_DOCKER_REGISTRY:-}" ]]; then
+            echo "Missing NEXUS_DOCKER_REGISTRY. Set it to an address reachable by the runner and every Kubernetes node." >&2
+            exit 1
+          fi
+
+          IMAGE_NAMESPACE="${IMAGE_NAMESPACE:-eco-system}"
+          CI_CD_NAMESPACE="${CI_CD_NAMESPACE:-eco-cicd}"
+          FOUNDATION_NAMESPACE="${FOUNDATION_NAMESPACE:-eco-foundation}"
+          NEXUS_ADMIN_PASSWORD="${NEXUS_ADMIN_PASSWORD:-${NEXUS_ADMIN_PASSWORD_SECRET:-admin123}}"
+          KEEP_NAMESPACES="${KEEP_NAMESPACES:-${DEFAULT_APPLICATION_NAMESPACE:-eco-test} $FOUNDATION_NAMESPACE $CI_CD_NAMESPACE default kube-system kube-public kube-node-lease}"
+
+          echo "IMAGE_NAMESPACE=$IMAGE_NAMESPACE" >> "$GITHUB_ENV"
+          echo "CI_CD_NAMESPACE=$CI_CD_NAMESPACE" >> "$GITHUB_ENV"
+          echo "K3D_CLUSTER=${K3D_CLUSTER:-eco-cluster}" >> "$GITHUB_ENV"
+          echo "NEXUS_DOCKER_REGISTRY=$NEXUS_DOCKER_REGISTRY" >> "$GITHUB_ENV"
+          echo "NEXUS_ADMIN_PASSWORD=$NEXUS_ADMIN_PASSWORD" >> "$GITHUB_ENV"
+          echo "KEEP_NAMESPACES=$KEEP_NAMESPACES" >> "$GITHUB_ENV"
+          echo "KEEP_FEATURE_IMAGES=${KEEP_FEATURE_IMAGES:-1}" >> "$GITHUB_ENV"
+          echo "KEEP_MAIN_IMAGES=${KEEP_MAIN_IMAGES:-5}" >> "$GITHUB_ENV"
+        env:
+          NEXUS_ADMIN_PASSWORD_SECRET: ${{ secrets.NEXUS_ADMIN_PASSWORD }}
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Configure kubeconfig
+        shell: bash
+        run: .github/workflows/scripts/configure-kubeconfig.sh
+        env:
+          KUBE_CONFIG_B64: ${{ secrets.KUBE_CONFIG_B64 }}
+
+      - name: Resolve Nexus Docker registries
+        shell: bash
+        run: .github/workflows/scripts/resolve-nexus-docker-registry.sh push
+
+      - name: Cleanup inactive feature namespaces
+        shell: bash
+        run: .github/workflows/scripts/cleanup-feature-namespaces.sh
+
+      - name: Apply container image retention
+        shell: bash
+        run: .github/workflows/scripts/cleanup-feature-images.sh

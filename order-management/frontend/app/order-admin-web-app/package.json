@@ -10,6 +10,9 @@
     "storybook": "ng run order-admin-web-app:storybook",
     "build-storybook": "ng run order-admin-web-app:build-storybook"
   },
+  "nx": {
+    "tags": ["layer:application", "layer:frontend", "scope:order-management", "type:app"]
+  },
   "private": true,
   "packageManager": "pnpm@11.9.0",
   "dependencies": {
