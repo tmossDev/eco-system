@@ -1,5 +1,13 @@
 # Project Change Log
 
+## v1.25.0 - (6 Changes)
+- Added Nx 23 workspace configuration and project metadata for Go backends, Angular packages and applications, Storybook, and Helm deployments.
+- Added scope and layer tags plus Nx affected-project detection so main, changed-feature, and full-feature workflows build and deploy only impacted use-cases.
+- Extracted backend builds, container image publishing, Kubernetes configuration, registry setup, and deployed functional tests into reusable workflow scripts.
+- Added scheduled cleanup for inactive feature namespaces and container images after their feature branches are removed.
+- Added Nexus image retention that keeps the newest five main images and newest active-feature image while protecting `latest`, running images, shared manifests, and custom tags.
+- Updated Go, pnpm, and workspace dependency overrides to remediate reported security vulnerabilities.
+
 ## v1.24.0 - (5 Changes)
 - Changed the local ingress proxy to watch all Kubernetes ingress namespaces by default and pass non-ingress browser traffic through normally.
 - Added HTTPS local ingress documentation for Firefox proxy setup and pipeline-managed Kubernetes TLS secrets.

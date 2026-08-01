@@ -64,3 +64,26 @@ flowchart TD
 - Changed feature deploy: open or update a PR from a valid feature branch.
 - Full feature deploy: add the `deploy:full-feature` label to the PR.
 - Operational deploy: run `Deploy Main` from the Actions tab and choose the layer.
+
+## Container Images and Retention
+
+All application images are stored below the `eco-system` namespace in Nexus:
+
+| Use case | Images |
+| --- | --- |
+| User management | `user-service`, `user-gateway`, `admin-web-app` |
+| Product management | `product-service`, `product-gateway`, `product-admin-web-app` |
+| Order management | `order-service`, `order-gateway`, `order-admin-web-app` |
+| Online storefront | `cart-gateway`, `storefront-gateway`, `storefront-web-app` |
+| Shared components | `storybook` |
+| Foundation | `liquibase` |
+
+`cleanup-feature-resources.yml` applies the registry retention policy every day:
+
+- always keep `latest`, currently running Kubernetes images, and unrecognized tags;
+- keep the newest 5 main-branch SHA tags per repository;
+- keep the newest feature tag per active feature branch and repository;
+- delete older active-feature tags and every tag for closed feature branches.
+
+Set `KEEP_MAIN_IMAGES` or `KEEP_FEATURE_IMAGES` in the environment config to
+override the defaults. Manual cleanup runs default to dry-run mode.

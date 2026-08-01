@@ -57,6 +57,8 @@ jobs:
           echo "NEXUS_DOCKER_REGISTRY=$NEXUS_DOCKER_REGISTRY" >> "$GITHUB_ENV"
           echo "NEXUS_ADMIN_PASSWORD=$NEXUS_ADMIN_PASSWORD" >> "$GITHUB_ENV"
           echo "KEEP_NAMESPACES=$KEEP_NAMESPACES" >> "$GITHUB_ENV"
+          echo "KEEP_FEATURE_IMAGES=${KEEP_FEATURE_IMAGES:-1}" >> "$GITHUB_ENV"
+          echo "KEEP_MAIN_IMAGES=${KEEP_MAIN_IMAGES:-5}" >> "$GITHUB_ENV"
         env:
           NEXUS_ADMIN_PASSWORD_SECRET: ${{ secrets.NEXUS_ADMIN_PASSWORD }}
 
@@ -77,6 +79,6 @@ jobs:
         shell: bash
         run: .github/workflows/scripts/cleanup-feature-namespaces.sh
 
-      - name: Cleanup inactive feature images
+      - name: Apply container image retention
         shell: bash
         run: .github/workflows/scripts/cleanup-feature-images.sh
