@@ -1,32 +1,34 @@
 package aws
 
-// If you need more information about configurations or implementing the sample code, visit the AWS docs:
-// https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/setting-up.html
-
 import (
-	"encoding/base64"
+	"context"
 	"encoding/json"
 
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/secretsmanager"
+	awsconfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/config"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/config/types"
 
 	log "tmossDev.github.com/eco-system/shared-components/backend/package/logger"
 )
 
-// SecretConfigManager struct
+type secretsClient interface {
+	GetSecretValue(context.Context, *secretsmanager.GetSecretValueInput, ...func(*secretsmanager.Options)) (*secretsmanager.GetSecretValueOutput, error)
+}
+
+// Config loads application configuration from AWS Secrets Manager.
 type Config struct {
-	client *secretsmanager.SecretsManager
+	client secretsClient
 }
 
 func NewSecretConfigManager() config.Config {
-	sess := session.Must(session.NewSessionWithOptions(session.Options{
-		SharedConfigState: session.SharedConfigEnable,
-	}))
+	cfg, err := awsconfig.LoadDefaultConfig(context.Background())
+	if err != nil {
+		panic(err)
+	}
 
 	return &Config{
-		client: secretsmanager.New(sess),
+		client: secretsmanager.NewFromConfig(cfg),
 	}
 }
 
@@ -35,7 +37,7 @@ func (sh *Config) getSecretValue(secretName string) (*string, error) {
 		SecretId: &secretName,
 	}
 
-	result, err := sh.client.GetSecretValue(input)
+	result, err := sh.client.GetSecretValue(context.Background(), input)
 	if err != nil {
 		return nil, err
 	}
@@ -48,12 +50,7 @@ func (sh *Config) getSecretValue(secretName string) (*string, error) {
 	if result.SecretString != nil {
 		secretValue = *result.SecretString
 	} else if result.SecretBinary != nil {
-		decodedBinarySecretBytes := make([]byte, base64.StdEncoding.DecodedLen(len(result.SecretBinary)))
-		len, err := base64.StdEncoding.Decode(decodedBinarySecretBytes, result.SecretBinary)
-		if err != nil {
-			return nil, err
-		}
-		secretValue = string(decodedBinarySecretBytes[:len])
+		secretValue = string(result.SecretBinary)
 	}
 
 	return &secretValue, err

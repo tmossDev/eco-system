@@ -71,17 +71,17 @@ jobs:
       storybook_host: ${{ steps.context.outputs.storybook_host }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
 
       - name: Set up Node.js for Nx
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7.1.0
         with:
           node-version: 24
 
       - name: Set up pnpm for Nx
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6.1.1
 
       - name: Install workspace dependencies for Nx
         run: pnpm install --frozen-lockfile
@@ -382,7 +382,7 @@ jobs:
     runs-on: [self-hosted, linux]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7.0.1
 
       - name: Load environment config
         shell: bash
@@ -413,10 +413,10 @@ jobs:
           NEXUS_ADMIN_PASSWORD_SECRET: ${{ secrets.NEXUS_ADMIN_PASSWORD }}
 
       - name: Set up Helm
-        uses: azure/setup-helm@v4
+        uses: azure/setup-helm@v5.1.0
 
       - name: Set up kubectl
-        uses: azure/setup-kubectl@v4
+        uses: azure/setup-kubectl@v5.2.0
 
       - name: Configure kubeconfig
         shell: bash
@@ -667,7 +667,7 @@ jobs:
     runs-on: [self-hosted, linux]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7.0.1
 
       - name: Load environment config
         shell: bash
@@ -703,7 +703,7 @@ jobs:
           NEXUS_ADMIN_PASSWORD_SECRET: ${{ secrets.NEXUS_ADMIN_PASSWORD }}
 
       - name: Set up kubectl for Nexus registry
-        uses: azure/setup-kubectl@v4
+        uses: azure/setup-kubectl@v5.2.0
 
       - name: Configure kubeconfig for Nexus registry
         shell: bash
@@ -797,7 +797,7 @@ jobs:
           docker info
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4.4.1
 
       - name: Build liquibase image
         shell: bash
@@ -847,10 +847,10 @@ jobs:
           echo "IMAGE_PREFIX=$NEXUS_DOCKER_PULL_REGISTRY/$IMAGE_NAMESPACE" >> "$GITHUB_ENV"
 
       - name: Set up Helm
-        uses: azure/setup-helm@v4
+        uses: azure/setup-helm@v5.1.0
 
       - name: Set up kubectl
-        uses: azure/setup-kubectl@v4
+        uses: azure/setup-kubectl@v5.2.0
 
       - name: Configure kubeconfig
         shell: bash
@@ -991,15 +991,15 @@ jobs:
     runs-on: [self-hosted, linux]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7.0.1
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7.1.0
         with:
           node-version: 24
 
       - name: Set up pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6.1.1
 
       - name: Build frontend applications and storybooks
         shell: bash
@@ -1027,7 +1027,7 @@ jobs:
           .github/workflows/scripts/frontend-build-artifacts.sh "${artifacts[@]}"
 
       - name: Upload frontend artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: frontend-build
           if-no-files-found: error
@@ -1049,12 +1049,13 @@ jobs:
     runs-on: [self-hosted, linux]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7.0.1
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v7.1.0
         with:
           go-version-file: go.mod
+          cache: false
 
       - name: Run backend tests and build binaries
         shell: bash
@@ -1066,7 +1067,7 @@ jobs:
         run: .github/workflows/scripts/build-backend-binaries.sh
 
       - name: Upload backend binaries
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: backend-binaries
           if-no-files-found: error
@@ -1084,7 +1085,7 @@ jobs:
     runs-on: [self-hosted, linux]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7.0.1
 
       - name: Load image build config
         shell: bash
@@ -1120,20 +1121,20 @@ jobs:
 
       - name: Download frontend artifacts
         if: needs.prepare.outputs.build_user_management == 'true' || needs.prepare.outputs.build_product_management == 'true' || needs.prepare.outputs.build_order_management == 'true' || needs.prepare.outputs.build_online_storefront == 'true' || needs.prepare.outputs.build_storybook == 'true'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8.0.2
         with:
           name: frontend-build
           path: .
 
       - name: Download backend binaries
         if: needs.prepare.outputs.build_user_management == 'true' || needs.prepare.outputs.build_product_management == 'true' || needs.prepare.outputs.build_order_management == 'true' || needs.prepare.outputs.build_online_storefront == 'true'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8.0.2
         with:
           name: backend-binaries
           path: build/bin
 
       - name: Set up kubectl for Nexus
-        uses: azure/setup-kubectl@v4
+        uses: azure/setup-kubectl@v5.2.0
 
       - name: Configure kubeconfig for Nexus
         shell: bash
@@ -1175,7 +1176,7 @@ jobs:
     runs-on: [self-hosted, linux]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7.0.1
 
       - name: Load environment config
         shell: bash
@@ -1279,10 +1280,10 @@ jobs:
           NEXUS_ADMIN_PASSWORD_SECRET: ${{ secrets.NEXUS_ADMIN_PASSWORD }}
 
       - name: Set up Helm
-        uses: azure/setup-helm@v4
+        uses: azure/setup-helm@v5.1.0
 
       - name: Set up kubectl
-        uses: azure/setup-kubectl@v4
+        uses: azure/setup-kubectl@v5.2.0
 
       - name: Configure kubeconfig
         shell: bash
@@ -1739,7 +1740,7 @@ jobs:
 
       - name: Comment useful links on pull request
         if: github.event_name == 'pull_request'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9.0.0
         with:
           script: |
             const marker = '<!-- deployment-useful-links -->';
@@ -1835,7 +1836,7 @@ jobs:
     runs-on: [self-hosted, linux]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7.0.1
 
       - name: Load test environment
         shell: bash
@@ -1848,12 +1849,13 @@ jobs:
           echo "K3D_CLUSTER=${K3D_CLUSTER:-eco-cluster}" >> "$GITHUB_ENV"
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v7.1.0
         with:
           go-version-file: go.mod
+          cache: false
 
       - name: Set up kubectl
-        uses: azure/setup-kubectl@v4
+        uses: azure/setup-kubectl@v5.2.0
 
       - name: Configure kubeconfig
         shell: bash

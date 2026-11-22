@@ -2,6 +2,7 @@ package repository
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"image"
@@ -13,11 +14,10 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/google/uuid"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/env"
 	"tmossDev.github.com/eco-system/shared-components/backend/package/logger"
@@ -44,7 +44,7 @@ type ProductMediaStore interface {
 }
 
 type s3ProductMediaStore struct {
-	client     *s3.S3
+	client     *s3.Client
 	bucket     string
 	publicBase string
 	once       sync.Once
@@ -58,14 +58,18 @@ func NewS3ProductMediaStoreFromEnv() ProductMediaStore {
 	secretKey := env.Getenv("S3_SECRET_ACCESS_KEY", "minioadmin")
 	forcePathStyle := strings.EqualFold(env.Getenv("S3_FORCE_PATH_STYLE", "true"), "true")
 
-	awsConfig := aws.NewConfig().
-		WithEndpoint(endpoint).
-		WithRegion(region).
-		WithS3ForcePathStyle(forcePathStyle).
-		WithCredentials(credentials.NewStaticCredentials(accessKey, secretKey, ""))
+	awsConfig := aws.Config{
+		Region:                     region,
+		Credentials:                credentials.NewStaticCredentialsProvider(accessKey, secretKey, ""),
+		RequestChecksumCalculation: aws.RequestChecksumCalculationWhenRequired,
+		ResponseChecksumValidation: aws.ResponseChecksumValidationWhenRequired,
+	}
 
 	return &s3ProductMediaStore{
-		client:     s3.New(session.Must(session.NewSession(awsConfig))),
+		client: s3.NewFromConfig(awsConfig, func(options *s3.Options) {
+			options.BaseEndpoint = aws.String(endpoint)
+			options.UsePathStyle = forcePathStyle
+		}),
 		bucket:     env.Getenv("PRODUCT_MEDIA_BUCKET", defaultMediaBucket),
 		publicBase: strings.TrimRight(env.Getenv("PRODUCT_MEDIA_PUBLIC_BASE_URL", defaultMediaPublicPrefix), "/"),
 	}
@@ -119,7 +123,7 @@ func (store *s3ProductMediaStore) GetObject(objectKey string) (*ProductMediaObje
 		return nil, types.NewInvalidInputError()
 	}
 
-	output, err := store.client.GetObject(&s3.GetObjectInput{
+	output, err := store.client.GetObject(context.Background(), &s3.GetObjectInput{
 		Bucket: aws.String(store.bucket),
 		Key:    aws.String(cleanKey),
 	})
@@ -128,7 +132,7 @@ func (store *s3ProductMediaStore) GetObject(objectKey string) (*ProductMediaObje
 		return nil, types.NewNoTFoundOrNoRecordError()
 	}
 
-	contentType := aws.StringValue(output.ContentType)
+	contentType := aws.ToString(output.ContentType)
 	if contentType == "" {
 		contentType = mime.TypeByExtension(filepath.Ext(cleanKey))
 	}
@@ -139,20 +143,20 @@ func (store *s3ProductMediaStore) GetObject(objectKey string) (*ProductMediaObje
 	return &ProductMediaObject{
 		Body:          output.Body,
 		ContentType:   contentType,
-		ContentLength: aws.Int64Value(output.ContentLength),
+		ContentLength: aws.ToInt64(output.ContentLength),
 	}, nil
 }
 
 func (store *s3ProductMediaStore) ensureBucket() error {
 	store.once.Do(func() {
-		_, err := store.client.HeadBucket(&s3.HeadBucketInput{
+		_, err := store.client.HeadBucket(context.Background(), &s3.HeadBucketInput{
 			Bucket: aws.String(store.bucket),
 		})
 		if err == nil {
 			return
 		}
 
-		_, err = store.client.CreateBucket(&s3.CreateBucketInput{
+		_, err = store.client.CreateBucket(context.Background(), &s3.CreateBucketInput{
 			Bucket: aws.String(store.bucket),
 		})
 		if err != nil && !isBucketAlreadyOwned(err) {
@@ -165,7 +169,7 @@ func (store *s3ProductMediaStore) ensureBucket() error {
 }
 
 func (store *s3ProductMediaStore) putObject(key string, body []byte) error {
-	_, err := store.client.PutObject(&s3.PutObjectInput{
+	_, err := store.client.PutObject(context.Background(), &s3.PutObjectInput{
 		Bucket:       aws.String(store.bucket),
 		Key:          aws.String(key),
 		Body:         bytes.NewReader(body),
@@ -185,8 +189,8 @@ func (store *s3ProductMediaStore) publicURL(key string) string {
 }
 
 func isBucketAlreadyOwned(err error) bool {
-	var awsErr awserr.Error
-	return errors.As(err, &awsErr) && awsErr.Code() == s3.ErrCodeBucketAlreadyOwnedByYou
+	var owned *s3types.BucketAlreadyOwnedByYou
+	return errors.As(err, &owned)
 }
 
 func sanitizedBaseName(fileName string) string {

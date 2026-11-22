@@ -1,7 +1,8 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:recommended"
+    "config:recommended",
+    "group:all"
   ],
   "onboarding": false,
   "requireConfig": "optional",
@@ -31,49 +32,34 @@
   ],
   "packageRules": [
     {
-      "description": "Group non-major frontend dependency updates",
-      "matchManagers": [
-        "npm"
+      "description": "Keep all dependency updates in one pull request",
+      "matchPackageNames": [
+        "*"
       ],
-      "matchUpdateTypes": [
-        "minor",
-        "patch"
-      ],
-      "groupName": "frontend dependencies"
+      "groupName": "all dependencies",
+      "groupSlug": "all",
+      "separateMajorMinor": false
     },
     {
-      "description": "Group non-major backend dependency updates",
-      "matchManagers": [
-        "gomod"
+      "description": "Iris 12 requires the pre-0.2 golog API",
+      "matchPackageNames": [
+        "github.com/kataras/golog"
       ],
-      "matchUpdateTypes": [
-        "minor",
-        "patch"
-      ],
-      "groupName": "backend dependencies"
+      "allowedVersions": "<0.2.0"
     },
     {
-      "description": "Group non-major container image updates",
-      "matchManagers": [
-        "dockerfile"
+      "description": "Iris 12 requires the pre-0.0.14 pio rich-text API",
+      "matchPackageNames": [
+        "github.com/kataras/pio"
       ],
-      "matchUpdateTypes": [
-        "minor",
-        "patch"
-      ],
-      "groupName": "container images"
-    },
-    {
-      "description": "Group non-major deployment dependency updates",
-      "matchManagers": [
-        "github-actions",
-        "helmv3"
-      ],
-      "matchUpdateTypes": [
-        "minor",
-        "patch"
-      ],
-      "groupName": "deployment dependencies"
+      "allowedVersions": "<0.0.14"
     }
-  ]
+  ],
+  "vulnerabilityAlerts": {
+    "groupName": "all dependencies",
+    "groupSlug": "all",
+    "branchTopic": "all",
+    "commitMessageSuffix": ""
+  },
+  "separateMajorMinor": false
 }

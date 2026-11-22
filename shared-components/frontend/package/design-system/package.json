@@ -20,7 +20,7 @@
     "tags": ["layer:frontend", "scope:shared-components", "type:design-system", "type:lib"]
   },
   "private": true,
-  "packageManager": "pnpm@11.9.0",
+  "packageManager": "pnpm@11.11.0",
   "dependencies": {
     "@angular/common": "catalog:",
     "@angular/compiler": "catalog:",
