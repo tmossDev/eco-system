@@ -1042,6 +1042,7 @@ jobs:
         uses: actions/setup-go@v7.1.0
         with:
           go-version-file: go.mod
+          cache: false
 
       - name: Run backend tests and build binaries
         shell: bash
@@ -1846,6 +1847,7 @@ jobs:
         uses: actions/setup-go@v7.1.0
         with:
           go-version-file: go.mod
+          cache: false
 
       - name: Set up kubectl
         uses: azure/setup-kubectl@v5.2.0
